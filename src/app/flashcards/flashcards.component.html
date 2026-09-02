@@ -1,0 +1,276 @@
+<section class="max-w-2xl mx-auto px-6 py-10 space-y-6" style="background: var(--paper); min-height: 100vh;">
+  <header class="space-y-3">
+    <a routerLink="/" class="inline-flex items-center gap-1.5 text-sm transition-colors hover:text-[var(--primary)]" style="color: var(--muted);">
+      ← all lessons
+    </a>
+    <div class="flex items-baseline justify-between gap-3 flex-wrap">
+      <h1 class="font-display text-4xl font-semibold" style="color: var(--ink);">
+        Flashcards
+      </h1>
+      <span class="text-sm font-mono" style="color: var(--ink-2);">
+        @if (isMini()) {
+          <span style="color: var(--primary);">{{ miniDone() }}</span>/{{ miniLimit() }} mini
+        } @else if (mode() === 'type') {
+          <span style="color: var(--primary);">{{ dailyDone() }}</span>/{{ DAILY_LIMIT }} today
+        } @else {
+          <span style="color: var(--primary);">{{ pairsDone() }}</span>/{{ PAIRS_LIMIT }} rounds
+        }
+      </span>
+    </div>
+    @if (lessonFilter(); as slug) {
+      <p class="text-xs" style="color: var(--muted);">
+        @if (isMini()) {
+          Mini session from <a [routerLink]="['/lesson', slug]" class="hover:underline" style="color: var(--primary-ink);">{{ slug }}</a>
+          — {{ miniLimit() }} cards, not counted in the daily limit.
+        } @else {
+          Only lesson <a [routerLink]="['/lesson', slug]" class="hover:underline" style="color: var(--primary-ink);">{{ slug }}</a> ·
+          <a routerLink="/flashcards" class="hover:underline" style="color: var(--muted);">show all</a>
+        }
+      </p>
+    }
+  </header>
+
+  <!-- Mode + direction toggles -->
+  <div class="flex flex-wrap items-center gap-1 text-xs">
+    <button type="button" (click)="mode.set('type')" class="il-chip" [class.active]="mode() === 'type'">
+      Type
+    </button>
+    <button type="button" (click)="mode.set('pairs')" class="il-chip" [class.active]="mode() === 'pairs'">
+      Pairs
+    </button>
+
+    @if (mode() === 'type') {
+      <span class="w-px h-4 mx-1.5" style="background: var(--line);" aria-hidden="true"></span>
+      <button type="button" (click)="direction.set('target-learner')" class="il-chip" [class.active]="direction() === 'target-learner'">
+        {{ pairFwd }}
+      </button>
+      <button type="button" (click)="direction.set('learner-target')" class="il-chip" [class.active]="direction() === 'learner-target'">
+        {{ pairRev }}
+      </button>
+
+      <span class="w-px h-4 mx-1.5" style="background: var(--line);" aria-hidden="true"></span>
+
+      @for (lvl of levels; track lvl) {
+        <button type="button" (click)="level.set(lvl)" class="il-chip" [class.active]="level() === lvl"
+                [title]="lvl === 'all' ? 'All CEFR levels' : 'Only level ' + lvl">
+          {{ lvl === 'all' ? 'All' : lvl }}
+        </button>
+      }
+    }
+  </div>
+
+  @if (cardsLoading() && cardsValue().length === 0) {
+    <div class="rounded-3xl p-12 text-center border border-dashed" style="border-color: var(--line); color: var(--muted);">
+      Loading cards…
+    </div>
+  } @else if (cardsError()) {
+    <div class="rounded-3xl p-12 text-center border border-dashed" style="border-color: var(--line); color: var(--muted);">
+      <p>Could not load cards.</p>
+      <button type="button" (click)="reloadCards()" class="il-btn sm mt-3">Try again</button>
+    </div>
+  } @else {
+
+  <!-- ============ TYPE MODE ============ -->
+  @if (mode() === 'type') {
+    @if (current(); as card) {
+      <div class="rounded-3xl p-6 sm:p-10 min-h-[260px] flex flex-col gap-5"
+           style="background: var(--paper-2); border: 2px solid var(--line);"
+           [style.borderColor]="revealed()
+             ? (typedResult() === 'exact' ? '#6b8e4e' : typedResult() === 'close' ? '#b4884a' : '#c0653f')
+             : 'var(--line)'">
+        <div class="flex items-start gap-3">
+          <div class="flex-1 font-display text-3xl sm:text-4xl leading-tight whitespace-pre-wrap text-center" style="color: var(--ink);">
+            {{ card.front }}
+          </div>
+          @if (card.direction === 'target-learner') {
+            <button type="button" (click)="speakFront()"
+                    aria-label="Listen"
+                    class="text-xl shrink-0 mt-1 transition-colors hover:text-[var(--primary)]"
+                    style="color: var(--muted); background: none; border: none; cursor: pointer;">
+              🔊
+            </button>
+          }
+        </div>
+
+        @if (!revealed()) {
+          <input #typeInput
+                 type="text"
+                 [ngModel]="typed()"
+                 (ngModelChange)="typed.set($event)"
+                 placeholder="your answer…"
+                 autocomplete="off"
+                 autocapitalize="off"
+                 autocorrect="off"
+                 spellcheck="false"
+                 class="w-full px-4 py-3 rounded-xl text-lg outline-none transition-colors"
+                 style="border: 2px solid var(--line); background: var(--paper); color: var(--ink); font-family: var(--font-body);" />
+          <button type="button" (click)="submitTyped()" class="il-btn" style="width: 100%; border-radius: 16px;">
+            Check <kbd class="ml-1.5 px-1.5 py-0.5 rounded font-mono text-xs" style="background: rgba(255,255,255,0.2);">Enter</kbd>
+          </button>
+        } @else {
+          <div class="pt-2 space-y-2" style="border-top: 1px solid var(--line);">
+            <div class="text-center">
+              @if (typedResult() === 'exact') {
+                <p class="text-sm" style="color: var(--success);">✓ Exact</p>
+              } @else if (typedResult() === 'close') {
+                <p class="text-sm" style="color: var(--accent);">~ Close (ignoring accents/case)</p>
+              } @else {
+                <p class="text-sm" style="color: var(--primary);">✘ Wrong</p>
+              }
+            </div>
+            @if (typed()) {
+              <div class="text-center">
+                <span class="text-xs" style="color: var(--muted);">You: </span>
+                <span class="font-mono" style="color: var(--ink-2);">{{ typed() }}</span>
+              </div>
+            }
+            <div class="text-center">
+              <span class="text-xs" style="color: var(--muted);">Correct: </span>
+              <span class="font-mono" style="color: var(--primary-ink);">{{ card.expected ?? card.back }}</span>
+            </div>
+            @if (card.back !== (card.expected ?? card.back)) {
+              <p class="text-xs text-center italic whitespace-pre-wrap" style="color: var(--muted);">{{ card.back }}</p>
+            }
+          </div>
+          <div class="flex gap-2">
+            <button type="button" (click)="nextCard()" class="il-btn ghost" style="flex: 1; border-radius: 16px;">
+              Next <kbd class="ml-1.5 px-1.5 py-0.5 rounded font-mono text-xs" style="background: rgba(42,37,32,0.08);">Enter</kbd>
+            </button>
+            <button type="button" (click)="resetCurrent()"
+                    title="Reset progress for this card"
+                    class="il-chip px-3 py-3 text-xs">
+              ↺ reset
+            </button>
+          </div>
+        }
+      </div>
+
+      @if (card.lessons.length > 0) {
+        <p class="text-xs text-center" style="color: var(--muted);">
+          from lesson:
+          @for (slug of card.lessons; track slug; let last = $last) {
+            <a [routerLink]="['/lesson', slug]" class="hover:underline" style="color: var(--primary-ink);">{{ slug }}</a>@if (!last) {<span>, </span>}
+          }
+        </p>
+      }
+    } @else {
+      <div class="rounded-3xl p-12 text-center space-y-4 border border-dashed" style="border-color: var(--line);">
+        @if (isMini() && miniDone() >= (miniLimit() ?? 0)) {
+          <p class="text-2xl font-display" style="color: var(--ink);">🎉 Mini session done</p>
+          <p class="text-sm" style="color: var(--ink-2);">{{ miniDone() }}/{{ miniLimit() }} cards reviewed.</p>
+          @if (lessonFilter(); as slug) {
+            <a [routerLink]="['/lesson', slug]" class="il-btn sm inline-block mt-2">← Back to lesson</a>
+          }
+        } @else if (dailyRemaining() === 0) {
+          <p class="text-2xl font-display" style="color: var(--ink);">🎉 Done for today</p>
+          <p class="text-sm" style="color: var(--ink-2);">
+            {{ DAILY_LIMIT }}/{{ DAILY_LIMIT }} cards in
+            @if (direction() === 'target-learner') { {{ pairFwd }} } @else { {{ pairRev }} }
+            done. Switch direction, try pairs, or come back tomorrow.
+          </p>
+        } @else if (poolSize() === 0) {
+          <p style="color: var(--muted);">
+            @if (lessonFilter()) {
+              This lesson has no cards in this direction{{ level() !== 'all' ? ' at level ' + level() : '' }}.
+            } @else if (level() !== 'all') {
+              No {{ level() }} cards in this direction.
+            } @else {
+              No cards in this direction yet — add a lesson.
+            }
+          </p>
+        } @else {
+          <p class="text-2xl font-display" style="color: var(--ink);">🎉 All cards reviewed</p>
+          <p class="text-sm" style="color: var(--ink-2);">The daily limit is not used up, but every card in this direction is waiting until tomorrow.</p>
+        }
+      </div>
+    }
+  }
+
+  <!-- ============ PAIRS MODE ============ -->
+  @if (mode() === 'pairs') {
+    @if (pairsRemaining() === 0 && !pairsRoundActive()) {
+      <div class="rounded-3xl p-12 text-center space-y-3 border border-dashed" style="border-color: var(--line);">
+        <p class="text-2xl font-display" style="color: var(--ink);">🎉 Done for today</p>
+        <p class="text-sm" style="color: var(--ink-2);">{{ PAIRS_LIMIT }}/{{ PAIRS_LIMIT }} rounds done. Come back tomorrow.</p>
+      </div>
+    } @else if (!pairsPossible()) {
+      <div class="rounded-3xl p-12 text-center space-y-4 border border-dashed" style="border-color: var(--line);">
+        <p class="text-lg font-display" style="color: var(--ink);">Not enough words for pairs</p>
+        <p class="text-sm" style="color: var(--ink-2);">
+          A round needs {{ PAIRS_PER_ROUND }} glossary cards; this set has {{ pairsEligible() }}.
+          Clear the lesson filter or pick another lesson.
+        </p>
+        <a routerLink="/flashcards" class="il-btn sm mt-2 inline-block">All cards</a>
+      </div>
+    } @else if (!pairsRoundActive()) {
+      <div class="rounded-3xl p-12 text-center space-y-4 border border-dashed" style="border-color: var(--line);">
+        <p class="text-lg font-display" style="color: var(--ink);">Round {{ pairsDone() + 1 }} of {{ PAIRS_LIMIT }}</p>
+        <p class="text-sm" style="color: var(--ink-2);">{{ PAIRS_PER_ROUND }} {{ targetName }} + {{ PAIRS_PER_ROUND }} {{ learnerName }} words. Match every pair.</p>
+        <button type="button" (click)="startPairsRound()" class="il-btn sm mt-2">Start</button>
+      </div>
+    } @else {
+      <div class="grid grid-cols-2 gap-2 sm:gap-3">
+        <!-- Target-language column -->
+        <div class="space-y-2">
+          @for (c of pairsLeft(); track c.id) {
+            <button type="button"
+                    (click)="selectPairLeft(c)"
+                    [disabled]="pairsMatched().has(c.id)"
+                    class="w-full px-3 py-3 rounded-xl text-sm sm:text-base text-left transition-colors min-h-[3.5rem]"
+                    [style]="pairsMatched().has(c.id)
+                      ? 'background: rgba(107,142,78,0.12); border: 2px solid var(--success); color: var(--muted); text-decoration: line-through; cursor: default;'
+                      : pairsWrongLeft() === c.id
+                        ? 'background: rgba(192,101,63,0.08); border: 2px solid var(--primary); color: var(--ink);'
+                        : pairsSelectedLeft() === c.id
+                          ? 'background: var(--ink); border: 2px solid var(--ink); color: var(--paper);'
+                          : 'background: var(--paper-2); border: 2px solid var(--line); color: var(--ink);'">
+              {{ c.front }}
+            </button>
+          }
+        </div>
+        <!-- Learner-language column -->
+        <div class="space-y-2">
+          @for (c of pairsRight(); track c.id) {
+            <button type="button"
+                    (click)="selectPairRight(c)"
+                    [disabled]="pairsMatched().has(c.id) || !pairsSelectedLeft()"
+                    class="w-full px-3 py-3 rounded-xl text-sm sm:text-base text-left transition-colors min-h-[3.5rem]"
+                    [style]="pairsMatched().has(c.id)
+                      ? 'background: rgba(107,142,78,0.12); border: 2px solid var(--success); color: var(--muted); text-decoration: line-through; cursor: default;'
+                      : pairsWrongRight() === c.id
+                        ? 'background: rgba(192,101,63,0.08); border: 2px solid var(--primary); color: var(--ink);'
+                        : pairsSelectedLeft()
+                          ? 'background: var(--paper-2); border: 2px solid var(--line); color: var(--ink); cursor: pointer;'
+                          : 'background: var(--paper-2); border: 2px solid var(--line); color: var(--muted); cursor: not-allowed;'">
+              {{ c.expected ?? c.back }}
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (pairsRoundComplete()) {
+        <div class="rounded-2xl p-5 text-center space-y-3" style="background: rgba(107,142,78,0.1); border: 1px solid rgba(107,142,78,0.3);">
+          <p class="text-xl font-display" style="color: var(--success);">🎉 Round complete</p>
+          @if (pairsRemaining() > 0) {
+            <button type="button" (click)="startPairsRound()" class="il-btn sm">
+              Next round ({{ pairsRemaining() }} left)
+            </button>
+          } @else {
+            <p class="text-sm" style="color: var(--ink-2);">That was the last round for today.</p>
+          }
+        </div>
+      } @else {
+        <p class="text-xs text-center" style="color: var(--muted);">
+          Matched {{ pairsMatched().size }}/{{ pairsLeft().length }} ·
+          @if (pairsSelectedLeft()) {
+            now pick the match on the right
+          } @else {
+            tap a {{ targetName }} word on the left
+          }
+        </p>
+      }
+    }
+  }
+
+  }
+</section>

@@ -1,0 +1,124 @@
+<!-- Fixed photo backdrop -->
+<div class="il-backdrop" aria-hidden="true"></div>
+
+<!-- Page wrapper (above backdrop) -->
+<div class="il-page">
+
+  <!-- Navigation -->
+  <nav class="il-nav" aria-label="Main">
+
+    <!-- Main row: brand + desktop links + mobile controls -->
+    <div class="il-nav-row">
+      <a routerLink="/" class="il-brand" [attr.aria-label]="brandName + ' — home'">
+        <span class="il-brand-mark" aria-hidden="true">lj</span>
+        <span>
+          <div class="il-brand-name">{{ brandName }}</div>
+          <div class="il-brand-sub">{{ tagline }}</div>
+        </span>
+      </a>
+
+      <!-- Desktop links (hidden on mobile) -->
+      <div class="il-nav-links">
+        <a routerLink="/"
+           routerLinkActive="active"
+           [routerLinkActiveOptions]="{ exact: true }"
+           class="il-nav-link">
+          Lessons
+        </a>
+        <a routerLink="/vocab" routerLinkActive="active" class="il-nav-link">Glossary</a>
+        <a routerLink="/flashcards" routerLinkActive="active" class="il-nav-link">Cards</a>
+        <a routerLink="/cheatsheet" routerLinkActive="active" class="il-nav-link">Sheet</a>
+        <a routerLink="/search" routerLinkActive="active" class="il-nav-link">Search</a>
+        <a routerLink="/compose" routerLinkActive="active" class="il-nav-link">Add</a>
+        <a routerLink="/setup" routerLinkActive="active" class="il-nav-link">Pair</a>
+        <button type="button" (click)="toggleTheme()"
+                class="il-theme-btn"
+                [attr.aria-label]="theme() === 'night' ? 'Switch to day mode' : 'Switch to night mode'">
+          @if (theme() === 'night') {
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          } @else {
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          }
+        </button>
+      </div>
+
+      <!-- Mobile controls: theme toggle + hamburger (hidden on desktop) -->
+      <div class="il-nav-mobile-controls">
+        <button type="button" (click)="toggleTheme()"
+                class="il-theme-btn"
+                [attr.aria-label]="theme() === 'night' ? 'Switch to day mode' : 'Switch to night mode'">
+          @if (theme() === 'night') {
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          } @else {
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          }
+        </button>
+        <button type="button" class="il-hamburger"
+                (click)="toggleMenu()"
+                [attr.aria-expanded]="menuOpen()"
+                [attr.aria-label]="menuOpen() ? 'Close menu' : 'Open menu'">
+          @if (!menuOpen()) {
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          } @else {
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          }
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile dropdown menu (rendered only when open) -->
+    @if (menuOpen()) {
+      <div class="il-mobile-menu" role="navigation" aria-label="Mobile menu">
+        <a routerLink="/"
+           routerLinkActive="active"
+           [routerLinkActiveOptions]="{ exact: true }"
+           class="il-mobile-link">Lessons</a>
+        <a routerLink="/vocab" routerLinkActive="active" class="il-mobile-link">Glossary</a>
+        <a routerLink="/flashcards" routerLinkActive="active" class="il-mobile-link">Cards</a>
+        <a routerLink="/cheatsheet" routerLinkActive="active" class="il-mobile-link">Sheet</a>
+        <a routerLink="/search" routerLinkActive="active" class="il-mobile-link">Search</a>
+        <a routerLink="/compose" routerLinkActive="active" class="il-mobile-link">Add</a>
+        <a routerLink="/setup" routerLinkActive="active" class="il-mobile-link">Pair</a>
+      </div>
+    }
+
+  </nav>
+
+  <!-- Page content -->
+  <main>
+    <router-outlet />
+  </main>
+
+  <!-- Footer -->
+  <footer class="il-footer">
+    <span>Conspects from your lessons · JSON is free, recordings are optional</span>
+    @if (repoUrl) {
+      <a [href]="repoUrl" target="_blank" rel="noopener noreferrer">source ↗</a>
+    }
+  </footer>
+
+</div>
+
+<!-- Floating cheatsheet button (hidden on cheatsheet page) -->
+@if (!isCheatsheet) {
+  <a routerLink="/cheatsheet" class="il-fab" aria-label="Cheatsheet">
+    <span class="il-fab-icon" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 3v4a1 1 0 0 0 1 1h4"/>
+        <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/>
+        <path d="M9 13h6M9 17h4"/>
+      </svg>
+    </span>
+    <span>
+      <span class="il-fab-sub">SOS</span>
+      <span>Sheet</span>
+    </span>
+  </a>
+}

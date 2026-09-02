@@ -1,0 +1,76 @@
+<section class="max-w-3xl mx-auto px-6 py-10 space-y-8" style="background: var(--paper); min-height: 100vh;">
+  <header class="space-y-3">
+    <a routerLink="/" class="inline-flex items-center gap-1.5 text-sm transition-colors hover:text-[var(--primary)]" style="color: var(--muted);">
+      ← all lessons
+    </a>
+    <h1 class="font-display text-4xl font-semibold" style="color: var(--ink);">
+      Search
+    </h1>
+    <p class="text-sm" style="color: var(--ink-2);">
+      Across articles, glossary, grammar, quotes, and slides.
+    </p>
+  </header>
+
+  <input
+    type="search"
+    autofocus
+    [ngModel]="query()"
+    (ngModelChange)="setQuery($event)"
+    placeholder="Word, topic, or phrase…"
+    class="w-full px-5 py-3 rounded-full outline-none text-lg transition-colors"
+    style="background: var(--paper-2); border: 1px solid var(--line); color: var(--ink); font-family: var(--font-body);"
+  />
+
+  @if (!query()) {
+    <div class="space-y-2 text-sm" style="color: var(--muted);">
+      <p>Try:</p>
+      <div class="flex flex-wrap gap-2">
+        @for (e of examples; track e) {
+          <button type="button" (click)="setQuery(e)" class="il-chip">
+            {{ e }}
+          </button>
+        }
+      </div>
+    </div>
+  } @else if (loading()) {
+    <div class="rounded-2xl border border-dashed p-12 text-center" style="border-color: var(--line); color: var(--muted);">
+      Searching…
+    </div>
+  } @else if (error()) {
+    <div class="rounded-2xl border border-dashed p-12 text-center" style="border-color: var(--line); color: var(--muted);">
+      <p>Could not load the search index.</p>
+      <button type="button" (click)="reload()" class="il-btn sm mt-3">Try again</button>
+    </div>
+  } @else if (hits().length === 0) {
+    <div class="rounded-2xl border border-dashed p-12 text-center" style="border-color: var(--line); color: var(--muted);">
+      Nothing for “{{ debounced() }}”.
+    </div>
+  } @else {
+    <p class="text-xs" style="color: var(--muted);">{{ hits().length }} results</p>
+    <ul class="space-y-3">
+      @for (h of hits(); track $index) {
+        <li>
+          <a [routerLink]="['/lesson', h.doc.lesson_slug]"
+             class="il-result-card block rounded-2xl p-4 transition-colors">
+            <div class="flex items-baseline justify-between gap-3 flex-wrap mb-1">
+              <div class="flex items-center gap-2">
+                <span class="font-display text-base font-medium" style="color: var(--ink);">
+                  {{ h.doc.lesson_title }}
+                </span>
+                <span class="text-xs px-1.5 py-0.5 rounded-full font-mono"
+                      style="background: rgba(192,101,63,0.1); color: var(--primary-ink);">
+                  {{ sectionLabel(h.doc.section) }}
+                </span>
+                @if (h.doc.ts) {
+                  <span class="text-xs font-mono" style="color: var(--muted);">{{ h.doc.ts }}</span>
+                }
+              </div>
+              <time class="text-xs font-mono" style="color: var(--muted);">{{ h.doc.lesson_date }}</time>
+            </div>
+            <p class="text-sm line-clamp-2" style="color: var(--ink-2);">{{ h.snippet }}</p>
+          </a>
+        </li>
+      }
+    </ul>
+  }
+</section>

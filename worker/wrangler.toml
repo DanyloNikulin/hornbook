@@ -1,0 +1,30 @@
+name = "lesson-journal-dispatcher"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+
+[vars]
+GITHUB_OWNER = "YOUR_GITHUB_USER"
+GITHUB_REPO = "lesson-journal"
+# Only events from this bucket are dispatched; see index.ts.
+R2_BUCKET = "your-journal-audio"
+
+[[queues.consumers]]
+queue = "your-journal-uploads"
+max_batch_size = 5
+max_batch_timeout = 5
+max_retries = 3
+dead_letter_queue = "your-journal-uploads-dlq"
+
+# One Durable Object per upload identity deduplicates R2's at-least-once
+# event delivery, so a duplicate or redelivered event can never start a
+# second process-lesson.yml run (issue #54).
+[[durable_objects.bindings]]
+name = "UPLOAD_DEDUP"
+class_name = "UploadDedup"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["UploadDedup"]
+
+[observability]
+enabled = true

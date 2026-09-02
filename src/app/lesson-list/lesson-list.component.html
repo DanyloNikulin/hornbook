@@ -1,0 +1,209 @@
+<div class="il-hero">
+  <h1>{{ brandName }}</h1>
+  <p class="il-section-sub" style="color: inherit; opacity: 0.85;">{{ tagline }}</p>
+  <label class="il-searchbar" for="lesson-search" aria-label="Search lessons">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+    </svg>
+    <input #searchInput id="lesson-search" placeholder="Find a lesson, word, or topic…" aria-label="Search"
+           (keydown.enter)="goSearch(searchInput.value)"/>
+    <button type="button" (click)="goSearch(searchInput.value)" class="il-btn sm">Search</button>
+  </label>
+</div>
+
+<!-- Content panel: cream background, rounded top -->
+<div class="il-panel">
+  <div class="il-panel-inner">
+
+    @if (lessons().length === 0 && !activeTopic()) {
+      <div style="text-align:center; padding: 80px 0; color: var(--muted);">
+        <p style="font-family: var(--font-display); font-size: 22px; margin-bottom: 12px;">No lessons yet</p>
+        <p style="font-size: 14px;">Add a conspect on <a routerLink="/compose">/compose</a> or run <code style="font-family: var(--font-mono); background: var(--paper-2); padding: 2px 8px; border-radius: 6px;">npm run lesson:new</code>.</p>
+      </div>
+    } @else {
+
+      <!-- Active-filter bar -->
+      @if (activeTopic(); as topic) {
+        <div class="il-filter-bar" role="region" aria-label="Active filter">
+          <span class="il-filter-label">Topic:</span>
+          <span class="il-filter-value">#{{ topic }}</span>
+          <button type="button" class="il-filter-clear" (click)="clearTopic()" aria-label="Clear filter">
+            ×
+          </button>
+        </div>
+      }
+
+      <!-- Section heading -->
+      <div class="il-section-head">
+        <div>
+          <h2 class="il-section-title">
+            @if (activeTopic()) { Lessons tagged } @else { All lessons }
+          </h2>
+          <p class="il-section-sub">
+            {{ lessons().length }} {{ lessons().length === 1 ? 'lesson' : 'lessons' }}
+            @if (!activeTopic()) { · newest first }
+          </p>
+        </div>
+        @if (lessons().length > 1) {
+          <button type="button" (click)="goRandom()" class="il-btn ghost sm" aria-label="Open a random lesson">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
+            </svg>
+            Random
+          </button>
+        }
+      </div>
+
+      @if (lessons().length === 0 && activeTopic()) {
+        <div style="text-align:center; padding: 60px 0; color: var(--muted);">
+          <p style="font-family: var(--font-display); font-size: 20px; margin-bottom: 12px;">No lessons with this topic</p>
+          <button type="button" class="il-btn ghost sm" (click)="clearTopic()">Show all lessons</button>
+        </div>
+      }
+
+      <!-- Dashboard: streak · word of day · heatmap -->
+      <div class="il-dashboard">
+
+        <!-- Streak -->
+        <div class="il-stat-cell">
+          <div class="il-stat-label">Streak</div>
+          @if (streak() > 0) {
+            <div class="il-stat-value">
+              <span aria-hidden="true">🔥</span> {{ streak() }}
+              <span style="font-size: 16px; font-family: var(--font-body); color: var(--muted);">{{ streak() === 1 ? 'day' : 'days' }}</span>
+            </div>
+          } @else {
+            <div class="il-stat-sub">Review cards today to start a streak 🔥</div>
+          }
+        </div>
+
+        <!-- Word of day -->
+        @if (wordOfDay(); as w) {
+          <div class="il-stat-cell">
+            <div class="il-stat-label">Word of the day</div>
+            <div class="il-stat-value it">{{ w.target }}</div>
+            <div class="il-stat-sub">→ {{ w.learner }}</div>
+          </div>
+        }
+
+        <!-- Activity heatmap -->
+        <div class="il-stat-cell">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px;">
+            <div class="il-stat-label">8-week activity</div>
+            <div style="font-family: var(--font-mono); font-size: 11px; color: var(--muted);">{{ totalActive() }}</div>
+          </div>
+          <div class="il-heatmap">
+            @for (week of heatmap(); track $index) {
+              @for (day of week; track day.date) {
+                <div [class]="cellClass(day.count)" [title]="day.date + ': ' + day.count + ' actions'"></div>
+              }
+            }
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Lesson cards (responsive grid + page-based pagination) -->
+      @if (lessons().length > 0) {
+        <div class="il-grid">
+          @for (lesson of paginated(); track lesson.slug; let i = $index) {
+            <a [routerLink]="['/lesson', lesson.slug]" class="il-card">
+              <div class="il-card-body">
+
+                <!-- Meta row -->
+                <div class="il-card-meta">
+                  <span class="il-card-num">{{ lessonNum(absIndex(i)) }}</span>
+                  <span class="sep">·</span>
+                  <span>{{ lesson.date }}</span>
+                  @if (lesson.duration_min) {
+                    <span class="sep">·</span>
+                    <span>{{ lesson.duration_min }} min</span>
+                  }
+                  <span class="sep">·</span>
+                  <span>{{ lesson.vocabCount }} words</span>
+                </div>
+
+                <!-- Title -->
+                <h3 class="il-card-title">{{ lesson.title }}</h3>
+
+                <!-- Description -->
+                <p class="il-card-desc">{{ lesson.summary }}</p>
+
+                <!-- Content pills -->
+                <div class="il-pills">
+                  <span class="il-pill">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    {{ lesson.vocabCount }} words
+                  </span>
+                  @if (lesson.grammarCount > 0) {
+                    <span class="il-pill">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                      {{ lesson.grammarCount }} rules
+                    </span>
+                  }
+                  @if (lesson.quizCount > 0) {
+                    @if (quizResult(lesson.slug); as r) {
+                      <span [class]="'il-pill ' + (isPassed(r) ? 'passed' : 'retry')">
+                        {{ isPassed(r) ? '✓' : '↻' }} Quiz {{ r.best_score }}/{{ r.total }}
+                      </span>
+                    } @else {
+                      <span class="il-pill">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                        {{ lesson.quizCount }} questions
+                      </span>
+                    }
+                  }
+                </div>
+
+                <!-- Open link -->
+                <div class="il-card-foot">
+                  <span class="il-btn sm" aria-hidden="true">
+                    Open
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                  </span>
+                </div>
+
+              </div>
+            </a>
+          }
+        </div>
+
+        <!-- Pagination -->
+        @if (totalPages() > 1) {
+          <div class="il-pagination">
+            <span class="il-pagination-status">
+              {{ pageStart() }}–{{ pageEnd() }} of {{ lessons().length }}
+            </span>
+            <div class="il-pagination-controls">
+              <button type="button"
+                      (click)="page.set(page() - 1)"
+                      [disabled]="page() === 0"
+                      class="il-btn ghost sm">
+                ← Back
+              </button>
+              @for (p of pageNumbers(); track $index) {
+                @if (p === null) {
+                  <span class="il-pagination-ellipsis">…</span>
+                } @else {
+                  <button type="button"
+                          (click)="page.set(p)"
+                          class="il-chip"
+                          [class.active]="page() === p">
+                    {{ p + 1 }}
+                  </button>
+                }
+              }
+              <button type="button"
+                      (click)="page.set(page() + 1)"
+                      [disabled]="page() === totalPages() - 1"
+                      class="il-btn ghost sm">
+                Next →
+              </button>
+            </div>
+          </div>
+        }
+      }
+
+    }
+  </div>
+</div>

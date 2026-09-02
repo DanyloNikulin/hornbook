@@ -1,0 +1,17 @@
+# Derived assets are regenerated on every deploy under the same file names,
+# so a fixed max-age let a cached _vocab.json / _cards.json lag the freshly
+# bundled manifest for up to an hour after a new lesson landed (issue #73).
+# Revalidate instead — Pages answers unchanged files with a cheap ETag 304.
+/lessons/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/cheatsheet.json
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), microphone=(), camera=()

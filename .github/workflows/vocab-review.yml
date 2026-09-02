@@ -1,0 +1,105 @@
+name: Vocab review
+
+on:
+  # Run after lessons land on main, then gate the real Claude call on
+  # MIN_NEW_LESSONS (default 3) so only every Nth lesson does a review.
+  # Lessons arrive two ways, so we need two triggers:
+  #   • push — a human committing/merging a lesson directly fires this.
+  #   • workflow_run — the Process lesson pipeline commits with GITHUB_TOKEN,
+  #     and GITHUB_TOKEN pushes don't re-trigger workflows by design, so we
+  #     chain off its completion explicitly (the same trick deploy.yml uses).
+  push:
+    branches: [main]
+    paths:
+      - 'lessons/*.json'
+      - '!lessons/_*.json'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Skip MIN_NEW_LESSONS threshold (force a review)'
+        type: boolean
+        required: false
+        default: false
+  workflow_run:
+    workflows: ['Process lesson']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  review:
+    # Skip workflow_run firings where the upstream Process lesson failed.
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Compute stats + ask Claude for proposal
+        id: review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Skip the Claude call unless 3+ lessons committed since last review.
+          # workflow_dispatch with force=true bypasses this gate.
+          MIN_NEW_LESSONS: ${{ github.event.inputs.force == 'true' && '0' || '3' }}
+        run: npx tsx scripts/review-vocab.ts
+
+      - name: Commit review directly to main
+        if: steps.review.outputs.report_path != ''
+        env:
+          REPORT_PATH: ${{ steps.review.outputs.report_path }}
+        run: |
+          set -e
+          DATE=$(date -u +%Y-%m-%d)
+
+          git config user.name "lesson-journal-bot"
+          git config user.email "bot@lesson-journal.pages.dev"
+
+          # Report + any source edits review-vocab.ts auto-applied
+          # (TOPIC_VOCAB / PATTERNS / TOPIC_TO_CATEGORIES additions).
+          git add docs/vocab-reviews/ src/lib/schema.ts scripts/lib/topics.ts scripts/lib/topic-to-category.ts
+          if git diff --staged --quiet; then
+            echo "No diff — nothing to commit."
+            exit 0
+          fi
+
+          git commit -F - <<EOF
+          vocab review: ${DATE} (auto-merged)
+
+          Auto-generated and committed straight to main by
+          .github/workflows/vocab-review.yml — no PR. Includes the markdown
+          report (docs/vocab-reviews/${DATE}.md) and any additions/removals
+          applied to schema.ts + topics.ts + topic-to-category.ts. Splits/merges (if any) remain
+          markdown-only. Revert this commit to undo a review you disagree with.
+
+          Co-Authored-By: Claude (vocab-review) <noreply@anthropic.com>
+          EOF
+
+          # Build steps could in theory touch other tracked files. Our changes
+          # are already committed, so drop everything else to give rebase a
+          # clean working tree — the same guard process-lesson.yml uses.
+          git restore .
+
+          # main may have advanced (a lesson landing) between checkout and now;
+          # rebase our single commit on top before pushing. This commit only
+          # touches docs/schema/topics, never lessons/*, so it stays
+          # conflict-free. Pushing straight to main IS the auto-merge — no
+          # branch, no PR, so the disabled "Actions can create PRs" repo setting
+          # no longer applies.
+          git pull --rebase origin main
+          git push origin HEAD:main

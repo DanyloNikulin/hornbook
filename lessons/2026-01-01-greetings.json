@@ -1,0 +1,78 @@
+{
+  "id": "2026-01-01-greetings",
+  "date": "2026-01-01",
+  "slug": "greetings",
+  "title": "Saludos y presentaciones",
+  "summary": "A fictional first lesson: greetings, saying your name, and asking how someone is. Demo content only — not a real class.",
+  "article_md": "## Takeaway\n\nUse **hola** any time of day. **Buenos días / buenas tardes / buenas noches** follow the clock.\n\n## Rules\n\n**Tú vs usted.** Friends and classmates take *tú*. Formal situations take *usted*.\n\n- Hola, ¿cómo estás? (informal)\n- Buenos días, ¿cómo está usted? (formal)\n\n## Useful chunks\n\n- Me llamo Alex.\n- Mucho gusto.\n- Igualmente.\n",
+  "duration_min": 45,
+  "vocabulary": [
+    {
+      "target": "hola",
+      "learner": "hello",
+      "level": "A1",
+      "example_target": "Hola, me llamo Alex.",
+      "example_learner": "Hello, my name is Alex."
+    },
+    {
+      "target": "buenos días",
+      "learner": "good morning",
+      "level": "A1",
+      "example_target": "Buenos días, ¿cómo estás?",
+      "example_learner": "Good morning, how are you?"
+    },
+    {
+      "target": "mucho gusto",
+      "learner": "nice to meet you",
+      "level": "A1",
+      "example_target": "Mucho gusto, soy Alex.",
+      "example_learner": "Nice to meet you, I am Alex."
+    }
+  ],
+  "grammar": [
+    {
+      "rule": "Tú is informal; usted is formal.",
+      "examples": ["¿Cómo estás?", "¿Cómo está usted?"]
+    }
+  ],
+  "quotes": [
+    {
+      "speaker": "teacher",
+      "text": "Hola is never wrong.",
+      "gloss": "You can always start with hola.",
+      "ts": "04:12"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "mc",
+      "q": "Which greeting is informal?",
+      "options": ["¿Cómo está usted?", "¿Cómo estás?", "Buenos días, señor"],
+      "answer": 1
+    },
+    {
+      "type": "fill",
+      "q": "Complete: _____ gusto.",
+      "answer": "Mucho",
+      "alternatives": ["mucho"]
+    },
+    {
+      "type": "translate",
+      "q": "Nice to meet you",
+      "answer_target": "Mucho gusto",
+      "alternatives": ["Encantado", "Encantada"],
+      "auto_check": false
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "hola",
+      "back": "hello",
+      "type": "word",
+      "tags": ["A1"]
+    }
+  ],
+  "slides": [],
+  "related": [],
+  "topics": ["vocabulary", "conversation"]
+}

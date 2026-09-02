@@ -1,0 +1,43 @@
+<section class="il-panel" style="padding-top: 2rem;">
+  <div class="il-panel-inner" style="max-width: 720px; margin: 0 auto;">
+    <p><a routerLink="/" class="il-lesson-bc-link">← Lessons</a></p>
+    <h1 class="il-section-title">Add a conspect</h1>
+    <p class="il-section-sub">JSON is free. A recording needs <code>npm run ingest</code> on this computer.</p>
+
+    <p class="il-stat-sub" style="margin: 1rem 0;">
+      Ingest server: {{ ingestUp() ? 'connected' : 'not running (download JSON still works)' }}
+    </p>
+
+    <label class="il-searchbar" style="display:block; margin-bottom: 12px;">
+      Date
+      <input type="date" [(ngModel)]="date" />
+    </label>
+    <label class="il-searchbar" style="display:block; margin-bottom: 12px;">
+      Title
+      <input type="text" [(ngModel)]="title" placeholder="Greetings" />
+    </label>
+    <label style="display:block; margin-bottom: 12px; color: var(--ink-2);">
+      Summary
+      <textarea [(ngModel)]="summary" rows="3" style="width:100%; margin-top:6px;"></textarea>
+    </label>
+    <label style="display:block; margin-bottom: 12px; color: var(--ink-2);">
+      Article (markdown)
+      <textarea [(ngModel)]="article" rows="8" style="width:100%; margin-top:6px;"></textarea>
+    </label>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 16px;">
+      <button type="button" class="il-btn" (click)="downloadJson()">Download JSON</button>
+      <button type="button" class="il-btn ghost" (click)="saveLocal()">Save via ingest</button>
+    </div>
+
+    <p class="il-section-sub">Or drop a transcript / audio / video (requires ingest + API or local LLM):</p>
+    <input type="file" (change)="onFile($event)" accept=".mp4,.m4a,.mp3,.wav,.txt,.vtt,.json" />
+
+    @if (error()) {
+      <p style="color: #a33; margin-top: 1rem;">{{ error() }}</p>
+    }
+    @if (ok()) {
+      <p style="color: var(--success); margin-top: 1rem;">{{ ok() }}</p>
+    }
+  </div>
+</section>

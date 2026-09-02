@@ -1,0 +1,25 @@
+/* Type-checks the Node pipeline under scripts/ (and the src/lib modules it
+   imports). Angular's tsconfig graph never included scripts/, so until this
+   file existed the Record<TopicT, …> exhaustiveness check in
+   scripts/lib/topic-to-category.ts was never actually run (issue #63).
+   `npm run typecheck:scripts` — wired into deploy.yml. */
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "strict": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["scripts/**/*.ts"]
+}

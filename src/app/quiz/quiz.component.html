@@ -1,0 +1,148 @@
+<section class="space-y-6">
+  <header class="flex items-center justify-between flex-wrap gap-2">
+    <h2 class="font-display text-2xl font-semibold" style="color: var(--ink);">Quiz</h2>
+    @if (previousBest(); as prev) {
+      <span class="text-xs font-mono" style="color: var(--muted);">
+        Best: {{ prev.best_score }}/{{ prev.total }} · attempts: {{ prev.attempts }}
+      </span>
+    }
+  </header>
+
+  <ol class="space-y-5">
+    @for (q of questions(); track $index; let i = $index) {
+      <li class="rounded-2xl p-5 space-y-3 transition-colors"
+          [style]="submitted()
+            ? (isCorrect(q, i)
+                ? 'background: var(--paper-2); border: 2px solid var(--success);'
+                : 'background: var(--paper-2); border: 2px solid var(--primary);')
+            : 'background: var(--paper-2); border: 2px solid var(--line);'">
+
+        <div class="flex items-baseline gap-2">
+          <span class="text-xs font-mono" style="color: var(--muted);">{{ i + 1 }}.</span>
+          <p class="flex-1" style="color: var(--ink);">{{ q.q }}</p>
+          <span class="text-xs uppercase tracking-wider font-mono" style="color: var(--muted);">{{ q.type }}</span>
+        </div>
+
+        @if (q.type === 'mc') {
+          <div class="space-y-1.5 pl-6">
+            @for (opt of q.options; track opt; let oi = $index) {
+              <label class="flex items-center gap-2 cursor-pointer p-2 rounded-xl transition-colors"
+                     [style]="mcCorrect(i, oi, q)
+                       ? 'background: rgba(107,142,78,0.12);'
+                       : mcChosenWrong(i, oi, q)
+                         ? 'background: rgba(192,101,63,0.08);'
+                         : ''">
+                <input type="radio" [name]="'q' + i" [checked]="answers()[i] === oi"
+                       [disabled]="submitted()" (change)="setAnswer(i, oi)" />
+                <span class="text-sm" style="color: var(--ink-2);">{{ opt }}</span>
+              </label>
+            }
+          </div>
+          @if (submitted() && q.explanation) {
+            <p class="text-xs pl-6 italic" style="color: var(--muted);">💡 {{ q.explanation }}</p>
+          }
+        }
+
+        @if (q.type === 'fill') {
+          <div class="pl-6 space-y-2">
+            <input type="text"
+                   [ngModel]="answers()[i] ?? ''"
+                   (ngModelChange)="setAnswer(i, $event)"
+                   [disabled]="submitted()"
+                   placeholder="your answer…"
+                   class="w-full px-3 py-2 rounded-xl outline-none transition-colors"
+                   [style]="submitted()
+                     ? (isCorrect(q, i)
+                         ? 'border: 2px solid var(--success); background: var(--paper); color: var(--ink);'
+                         : 'border: 2px solid var(--primary); background: var(--paper); color: var(--ink);')
+                     : 'border: 1px solid var(--line); background: var(--paper); color: var(--ink);'" />
+            @if (submitted() && !isCorrect(q, i)) {
+              <p class="text-xs" style="color: var(--muted);">
+                Answer: <code class="font-mono" style="color: var(--primary-ink);">{{ q.answer }}</code>
+                @if (q.alternatives && q.alternatives.length > 0) {
+                  <span> (or {{ q.alternatives.join(', ') }})</span>
+                }
+              </p>
+            }
+          </div>
+        }
+
+        @if (q.type === 'translate') {
+          <div class="pl-6 space-y-2">
+            <textarea [ngModel]="answers()[i] ?? ''"
+                      (ngModelChange)="setAnswer(i, $event)"
+                      [disabled]="submitted()"
+                      rows="2"
+                      placeholder="your translation…"
+                      class="w-full px-3 py-2 rounded-xl outline-none transition-colors"
+                      style="border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-family: var(--font-body); resize: vertical;"></textarea>
+
+            @if (!revealed()[i] && !submitted()) {
+              <button type="button" (click)="reveal(i)"
+                      class="text-xs hover:underline" style="color: var(--primary);">
+                Show model answer
+              </button>
+            } @else {
+              <div class="space-y-2">
+                <p class="text-sm italic" style="color: var(--ink-2);">
+                  → <span class="font-medium" style="color: var(--ink);">{{ q.answer_target }}</span>
+                  @if (q.alternatives && q.alternatives.length > 0) {
+                    <span class="text-xs" style="color: var(--muted);"> (or: {{ q.alternatives.join(' · ') }})</span>
+                  }
+                </p>
+                @if (!submitted()) {
+                  @if (q.auto_check && translateAutoCorrect(q, i)) {
+                    <p class="text-xs font-medium" style="color: var(--success);">
+                      ✓ Matches the model answer — counted automatically
+                    </p>
+                  } @else {
+                    <div class="flex gap-2 text-xs">
+                      <button type="button" (click)="selfGrade(i, 'right')"
+                              class="px-3 py-1.5 rounded-full transition-colors"
+                              [style]="selfGrades()[i] === 'right'
+                                ? 'background: var(--success); color: var(--paper); outline: 2px solid var(--success); outline-offset: 2px;'
+                                : 'background: rgba(107,142,78,0.12); color: var(--success);'">
+                        ✓ Close enough
+                      </button>
+                      <button type="button" (click)="selfGrade(i, 'wrong')"
+                              class="px-3 py-1.5 rounded-full transition-colors"
+                              [style]="selfGrades()[i] === 'wrong'
+                                ? 'background: var(--primary); color: var(--paper); outline: 2px solid var(--primary); outline-offset: 2px;'
+                                : 'background: rgba(192,101,63,0.08); color: var(--primary);'">
+                        ✘ Not this time
+                      </button>
+                    </div>
+                  }
+                }
+              </div>
+            }
+          </div>
+        }
+      </li>
+    }
+  </ol>
+
+  @if (!submitted()) {
+    <button type="button" (click)="submit()" class="il-btn"
+            [disabled]="!canSubmit()"
+            [title]="canSubmit() ? '' : 'Grade your translations first'"
+            style="width: 100%; border-radius: 16px;">
+      Check
+    </button>
+  } @else {
+    <div class="rounded-2xl p-5 flex items-center justify-between flex-wrap gap-3"
+         style="background: var(--paper-2); border: 1px solid var(--line);">
+      <div>
+        <p class="font-display text-2xl" style="color: var(--ink);">
+          {{ score() }} / {{ questions().length }}
+        </p>
+        <p class="text-sm" style="color: var(--ink-2);">
+          @if (score() === questions().length) { 🎉 perfect }
+          @else if (score() >= questions().length * 0.8) { 👍 solid }
+          @else { ↻ worth another pass }
+        </p>
+      </div>
+      <button type="button" (click)="retry()" class="il-btn ghost sm">Again</button>
+    </div>
+  }
+</section>
