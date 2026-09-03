@@ -85,7 +85,7 @@ pair; a pair can override them.
 | Step | Drivers |
 |---|---|
 | transcribe | `whisper-cli` (whisper.cpp binary + model file) or `openai` |
-| extract | `ollama` (local), `anthropic`, or `openai` |
+| extract | `claude-cli` / `codex-cli` / `grok-cli` / `kimi-cli` (this computer), `ollama` (LAN), `anthropic`, or `openai` |
 
 **Free setup that we ran end to end** (no API keys) on a 10 minute German A1 video and a 15 minute Norwegian A2 video, `whisper-cli` + Ollama on an 8 GB GPU:
 
@@ -98,6 +98,8 @@ pair; a pair can override them.
 `ollama pull gemma3:4b` reads slides on the **24 s** harness fixture. We did **not** use it on the 10–15 minute videos (qwen2.5:7b has no vision, so those frames were skipped).
 
 In Application settings: hearing = this computer (`WHISPER_BIN` / `WHISPER_MODEL` → `whisper-cli` and `ggml-small.bin`); writing = home network, pick `qwen2.5:7b`.
+
+**Writing through a coding CLI.** If Claude Code, Codex, Grok or Kimi is installed and signed in on this computer, set writing = this computer and pick it. Hornbook runs the CLI headless with the prompt and stores no key; the model `-` means whatever that CLI is set to. Slides are skipped on this path. `npm run harness:cli` runs the fixture through every CLI it finds.
 
 Keys and endpoints entered in Settings are stored in `journal/secrets.json`, which git ignores.
 Values from the environment or a local `.env` are used when the journal has none. Never commit

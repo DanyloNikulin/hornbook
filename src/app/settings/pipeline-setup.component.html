@@ -12,7 +12,20 @@
       </button>
     }
   </div>
-  <p class="il-settings-help">{{ ('pipeline.place.' + place() + 'Note') | t }}</p>
+  <p class="il-settings-help">{{ placeNote() | t }}</p>
+
+  @if (extractCli()) {
+    <p class="il-pipe-step">{{ 'pipeline.whichCli' | t }}</p>
+    <div class="il-locale-picks" role="radiogroup" [attr.aria-label]="'pipeline.whichCli' | t">
+      @for (p of cliPaths(); track p.driver) {
+        <button type="button" class="il-chip" [class.active]="config().driver === p.driver"
+                role="radio" [attr.aria-checked]="config().driver === p.driver"
+                (click)="setCliDriver(p.driver)">
+          {{ ('pipeline.service.' + p.driver) | t }}
+        </button>
+      }
+    </div>
+  }
 
   @if (path(); as path) {
     @if (path.driver !== 'skip') {

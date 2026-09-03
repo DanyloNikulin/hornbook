@@ -339,6 +339,13 @@ export const EN = {
   'pipeline.place.skipNote': 'No hearing. On Add, paste a transcript or a description of the lesson.',
   'pipeline.place.cli': 'This computer',
   'pipeline.place.cliNote': 'A program installed here. Hornbook calls whisper.cpp.',
+  'pipeline.place.cliExtractNote':
+    'A coding CLI already signed in on this computer. Hornbook stores no key. Slides are skipped.',
+  'pipeline.whichCli': 'Which CLI?',
+  'pipeline.service.claude-cli': 'Claude Code',
+  'pipeline.service.codex-cli': 'Codex',
+  'pipeline.service.grok-cli': 'Grok',
+  'pipeline.service.kimi-cli': 'Kimi',
   'pipeline.place.lan': 'Home network',
   'pipeline.place.lanNote': 'Ollama here or on another computer, e.g. http://192.168.1.12:11434.',
   'pipeline.place.cloud': 'Internet API',
@@ -366,6 +373,8 @@ export const EN = {
   'pipeline.modelFile': 'Model file',
   'pipeline.modelFileHelp': 'Full path to the ggml or gguf file whisper.cpp should load. Type it; Hornbook does not guess the filename.',
   'pipeline.modelName': 'Model',
+  'pipeline.modelCliHelp':
+    'Model name for that CLI, e.g. sonnet. Keep - to use the model the CLI itself is set to.',
   'pipeline.modelLanHelp': 'Find models lists what is already pulled on that host. Click one, or type a name. Nothing is chosen until you pick it.',
   'pipeline.modelApiHelp': 'Paste the key, then pick from what that key can use. Or type a name. Nothing is chosen until you pick it.',
   'pipeline.onHost': 'Pulled on this host',

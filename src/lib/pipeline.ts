@@ -6,7 +6,16 @@ import type { ConnectionKey } from './api-types';
 
 export type PipelineJob = 'transcribe' | 'extract';
 export type PlaceId = 'skip' | 'cli' | 'lan' | 'cloud';
-export type DriverId = 'skip' | 'whisper-cli' | 'openai' | 'ollama' | 'anthropic';
+export type DriverId =
+  | 'skip'
+  | 'whisper-cli'
+  | 'openai'
+  | 'ollama'
+  | 'anthropic'
+  | 'claude-cli'
+  | 'codex-cli'
+  | 'grok-cli'
+  | 'kimi-cli';
 
 export interface PipelinePath {
   job: PipelineJob;
@@ -45,6 +54,38 @@ export const PIPELINE_PATHS: readonly PipelinePath[] = [
   },
   {
     job: 'extract',
+    place: 'cli',
+    driver: 'claude-cli',
+    defaultModel: '-',
+    connections: [],
+    modelKind: 'name',
+  },
+  {
+    job: 'extract',
+    place: 'cli',
+    driver: 'codex-cli',
+    defaultModel: '-',
+    connections: [],
+    modelKind: 'name',
+  },
+  {
+    job: 'extract',
+    place: 'cli',
+    driver: 'grok-cli',
+    defaultModel: '-',
+    connections: [],
+    modelKind: 'name',
+  },
+  {
+    job: 'extract',
+    place: 'cli',
+    driver: 'kimi-cli',
+    defaultModel: '-',
+    connections: [],
+    modelKind: 'name',
+  },
+  {
+    job: 'extract',
     place: 'lan',
     driver: 'ollama',
     defaultModel: 'llama3.1',
@@ -71,7 +112,7 @@ export const PIPELINE_PATHS: readonly PipelinePath[] = [
 
 export const PLACES_FOR: Record<PipelineJob, readonly PlaceId[]> = {
   transcribe: ['skip', 'cli', 'cloud'],
-  extract: ['lan', 'cloud'],
+  extract: ['cli', 'lan', 'cloud'],
 };
 
 export function canHear(driver: string): boolean {
@@ -106,6 +147,8 @@ export function cloudDriverFromKey(value: string): 'anthropic' | 'openai' | unde
 /**
  * Switch place without inventing a model name. Keep whatever the user already
  * typed, unless it is empty, the skip sentinel, or the previous path's default.
+ * A name never crosses the coding-CLI boundary: an Ollama or API model means
+ * nothing to Claude Code, and its "-" (the CLI's own model) nothing to them.
  */
 export function adoptPlace(
   job: PipelineJob,
@@ -114,17 +157,28 @@ export function adoptPlace(
 ): void {
   const previous = pathFor(job, cfg.driver);
   const next = defaultPath(job, place);
+  const crossesCli = (place === 'cli') !== (previous?.place === 'cli');
   const keep =
     cfg.model &&
     cfg.model !== '-' &&
     cfg.model !== previous?.defaultModel &&
-    place !== 'skip';
+    place !== 'skip' &&
+    !crossesCli;
   if (place === 'cloud' && (cfg.driver === 'openai' || cfg.driver === 'anthropic')) {
     // already on a cloud API — don't bounce Anthropic ↔ OpenAI
+  } else if (
+    place === 'cli' &&
+    (cfg.driver === 'claude-cli' ||
+      cfg.driver === 'codex-cli' ||
+      cfg.driver === 'grok-cli' ||
+      cfg.driver === 'kimi-cli')
+  ) {
+    // already on a local coding CLI — don't bounce between them
   } else {
     cfg.driver = next.driver;
   }
-  cfg.model = place === 'skip' ? '-' : keep ? cfg.model : '';
+  // "-" is a complete answer for a coding CLI; elsewhere an empty field asks for a pick.
+  cfg.model = place === 'skip' ? '-' : keep ? cfg.model : next.defaultModel === '-' ? '-' : '';
 }
 
 /** Hosts that do not need a stored value — a built-in default is enough to try. */

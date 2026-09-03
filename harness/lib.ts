@@ -8,6 +8,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { chromium, type Browser } from 'playwright-core';
 import type { JobView } from '../src/lib/api-types.ts';
 
 export const repoRoot = fileURLToPath(new URL('..', import.meta.url));
@@ -217,6 +218,23 @@ export async function startServer(opts: ServerOptions): Promise<ServerHandle> {
 }
 
 // ── Small helpers ───────────────────────────────────────────────────────────
+
+// ── Browser ─────────────────────────────────────────────────────────────────
+
+/** The Chrome or Edge already installed, headless (playwright-core: no download). */
+export async function launchBrowser(): Promise<Browser> {
+  const wanted = process.env['HORNBOOK_BROWSER'];
+  const channels = wanted ? [wanted] : ['chrome', 'msedge', 'chromium'];
+  let last: unknown;
+  for (const channel of channels) {
+    try {
+      return await chromium.launch({ headless: true, channel });
+    } catch (err) {
+      last = err;
+    }
+  }
+  throw new Error(`No browser could be launched (tried ${channels.join(', ')}). ${String(last).split('\n')[0]}`);
+}
 
 export function b64(file: string): string {
   return readFileSync(file).toString('base64');

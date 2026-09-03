@@ -7,6 +7,7 @@ import {
   adoptPlace,
   cloudDriverFromKey,
   pathFor,
+  pathsFor,
   placeFor,
   type PlaceId,
   type PipelineJob,
@@ -52,6 +53,11 @@ export class PipelineSetupComponent {
   protected readonly unifiedCloud = computed(
     () => this.job() === 'extract' && this.place() === 'cloud' && this.showConnections(),
   );
+  protected readonly extractCli = computed(() => this.job() === 'extract' && this.place() === 'cli');
+  protected readonly cliPaths = computed(() => pathsFor(this.job(), 'cli'));
+  protected readonly placeNote = computed(() =>
+    this.extractCli() ? 'pipeline.place.cliExtractNote' : `pipeline.place.${this.place()}Note`,
+  );
   protected readonly listsFromConnection = computed(() => {
     const p = this.place();
     return p === 'lan' || p === 'cloud';
@@ -66,6 +72,7 @@ export class PipelineSetupComponent {
   protected readonly modelHelp = computed(() => {
     const path = this.path();
     if (path?.modelKind === 'file') return 'pipeline.modelFileHelp';
+    if (this.place() === 'cli') return 'pipeline.modelCliHelp';
     return this.place() === 'lan' ? 'pipeline.modelLanHelp' : 'pipeline.modelApiHelp';
   });
   protected readonly cloudKeySet = computed(() => {
@@ -79,6 +86,13 @@ export class PipelineSetupComponent {
 
   protected setPlace(place: PlaceId): void {
     adoptPlace(this.job(), place, this.config());
+    this.probe.set(null);
+    this.listedModels.set([]);
+    this.rev.update((n) => n + 1);
+  }
+
+  protected setCliDriver(driver: string): void {
+    this.config().driver = driver;
     this.probe.set(null);
     this.listedModels.set([]);
     this.rev.update((n) => n + 1);

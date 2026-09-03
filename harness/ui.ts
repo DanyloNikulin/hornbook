@@ -19,27 +19,14 @@
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { chromium, type Browser } from 'playwright-core';
+import type { Browser } from 'playwright-core';
 import type { JournalConfigT } from '../src/lib/journal-config.ts';
-import { Report, client, obj, ollamaHostFromEnv, outDir, reachable, readJson, repoRoot, startServer, throwawayJournal, type ServerHandle } from './lib.ts';
+import { resolveCli } from '../scripts/lib/cli-path.ts';
+import { Report, client, launchBrowser, obj, ollamaHostFromEnv, outDir, reachable, readJson, repoRoot, startServer, throwawayJournal, type ServerHandle } from './lib.ts';
 
 const PORT = Number(process.env['HORNBOOK_HARNESS_PORT'] ?? 8796);
 const SCREENS = join(outDir, 'screens');
 const TEST = 'ja-en';
-
-async function launch(): Promise<Browser> {
-  const wanted = process.env['HORNBOOK_BROWSER'];
-  const channels = wanted ? [wanted] : ['chrome', 'msedge', 'chromium'];
-  let last: unknown;
-  for (const channel of channels) {
-    try {
-      return await chromium.launch({ headless: true, channel });
-    } catch (err) {
-      last = err;
-    }
-  }
-  throw new Error(`No browser could be launched (tried ${channels.join(', ')}). ${String(last).split('\n')[0]}`);
-}
 
 async function main(): Promise<void> {
   const r = new Report('ui');
@@ -72,7 +59,7 @@ async function main(): Promise<void> {
 
   let browser: Browser;
   try {
-    browser = await launch();
+    browser = await launchBrowser();
   } catch (err) {
     r.rec('browser available', false, String(err));
     server?.stop();
@@ -167,6 +154,28 @@ async function main(): Promise<void> {
       r.skip('Find models lists pulled models', 'no Ollama reachable');
       await shot('05-settings-probe');
     }
+
+    // Writing on this computer: the coding CLIs. The probe only knows whether
+    // the CLI is installed, so an installed one reads green with the file it
+    // resolved to and a missing one is a red "Not yet.".
+    await write.locator('[role=radiogroup] .il-chip').filter({ hasText: /This computer/i }).first().click();
+    const cliGroup = write.getByRole('radiogroup', { name: /Which CLI/i });
+    await cliGroup.getByRole('radio').first().waitFor({ timeout: 5_000 });
+    const cliNames = (await cliGroup.getByRole('radio').allInnerTexts()).map((s) => s.trim());
+    r.rec('writing on this computer offers the four coding CLIs', cliNames.join('|') === 'Claude Code|Codex|Grok|Kimi', cliNames.join(' | '));
+    r.rec('the model field starts as the CLI default "-"', (await write.locator('label input[type=text]').last().inputValue()) === '-');
+    await cliGroup.getByRole('radio', { name: /^Codex$/ }).click();
+    await write.getByRole('button', { name: /Check this step/i }).click();
+    await writeResult.waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => undefined);
+    await writeResult.waitFor({ state: 'visible', timeout: 30_000 });
+    const cliClass = (await writeResult.getAttribute('class')) ?? '';
+    const cliText = await writeResult.innerText().catch(() => '');
+    if (resolveCli(process.env['CODEX_BIN']?.trim() || 'codex', process.env)) {
+      r.rec('Codex on PATH checks green with the file it resolved to', cliClass.includes('il-pipe-result--ok') && /codex/i.test(cliText), cliText);
+    } else {
+      r.rec('Codex missing from PATH is a red "Not yet."', cliClass.includes('il-pipe-result--bad') && /not on PATH/.test(cliText), cliText);
+    }
+    await shot('05b-settings-cli');
 
     r.section('Spanish pair');
     await goto('/es-en');

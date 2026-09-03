@@ -107,4 +107,29 @@ describe('PipelineSetupComponent', () => {
     expect(root.querySelector('.il-pipe-models')).toBeNull();
     expect(root.textContent).not.toContain('This key can use');
   });
+
+  it('lets the user pick Claude Code, Codex, Grok or Kimi on this computer for writing', () => {
+    const config = { driver: 'ollama', model: 'qwen2.5:7b' };
+    const fixture = mount('extract', config);
+    const root = fixture.nativeElement as HTMLElement;
+    const here = [...root.querySelectorAll('button')].find((b) => b.textContent?.includes('This computer'));
+    expect(here).toBeTruthy();
+    here?.click();
+    fixture.detectChanges();
+    expect(config.driver).toBe('claude-cli');
+    expect(config.model).toBe('-');
+    expect(root.textContent).toContain('Claude Code');
+    expect(root.textContent).toContain('Codex');
+    expect(root.textContent).toContain('Grok');
+    expect(root.textContent).toContain('Kimi');
+    expect(root.textContent).toContain('stores no key');
+    const grok = [...root.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Grok');
+    grok?.click();
+    fixture.detectChanges();
+    expect(config.driver).toBe('grok-cli');
+    const kimi = [...root.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Kimi');
+    kimi?.click();
+    fixture.detectChanges();
+    expect(config.driver).toBe('kimi-cli');
+  });
 });

@@ -22,6 +22,47 @@ describe('parseProbeInput', () => {
 });
 
 describe('probePipeline', () => {
+  it('accepts a coding CLI found on PATH and names the file it resolved to', async () => {
+    const onPath: ProbeDeps = { fetch: vi.fn(), exists: () => true, env: { PATH: '/usr/local/bin' } };
+    const claude = await probePipeline(
+      { job: 'extract', driver: 'claude-cli', model: 'sonnet' },
+      tmpdir(),
+      onPath,
+    );
+    expect(claude.ok).toBe(true);
+    expect(claude.detail).toMatch(/Claude Code CLI · \S*claude\S* · sonnet/);
+    const grok = await probePipeline(
+      { job: 'extract', driver: 'grok-cli', model: 'grok-4.6' },
+      tmpdir(),
+      onPath,
+    );
+    expect(grok.ok).toBe(true);
+    expect(grok.detail).toMatch(/Grok CLI · \S*grok\S* · grok-4\.6/);
+    const kimi = await probePipeline({ job: 'extract', driver: 'kimi-cli', model: '-' }, tmpdir(), onPath);
+    expect(kimi.ok).toBe(true);
+    expect(kimi.detail).toMatch(/Kimi CLI · \S*kimi\S* · CLI default/);
+  });
+
+  it('fails a coding CLI that is not on PATH', async () => {
+    const result = await probePipeline(
+      { job: 'extract', driver: 'codex-cli', model: '-' },
+      tmpdir(),
+      { fetch: vi.fn(), exists: () => false, env: { PATH: '/usr/local/bin' } },
+    );
+    expect(result.ok).toBe(false);
+    expect(result.detail).toMatch(/codex CLI is not on PATH.*CODEX_BIN/);
+  });
+
+  it('fails a coding CLI when the configured path is missing', async () => {
+    const result = await probePipeline(
+      { job: 'extract', driver: 'claude-cli', model: 'sonnet' },
+      tmpdir(),
+      { fetch: vi.fn(), exists: () => false, env: { CLAUDE_BIN: 'C:\\missing\\claude.exe' } },
+    );
+    expect(result.ok).toBe(false);
+    expect(result.detail).toMatch(/No claude CLI/);
+  });
+
   it('fails whisper when the binary path is missing', async () => {
     const result = await probePipeline(
       { job: 'transcribe', driver: 'whisper-cli', model: 'ggml-base.bin' },

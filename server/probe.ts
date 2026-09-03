@@ -7,6 +7,8 @@ import type { ConnectionKey } from '../src/lib/api-types.ts';
 import { pathFor, type PipelineJob } from '../src/lib/pipeline.ts';
 import { pipelineEnv } from './secrets.ts';
 import { ollamaCapabilities, ollamaHost } from '../scripts/providers/ollama.ts';
+import { CLI_BIN_ENV, missingCliMessage, type CodingCliKind } from '../scripts/providers/cli-extract.ts';
+import { resolveCli } from '../scripts/lib/cli-path.ts';
 
 export interface ProbeInput {
   job: PipelineJob;
@@ -66,10 +68,30 @@ export async function probePipeline(
     return { ok: true, detail: 'Hearing is skipped. Paste a transcript on Add.' };
   }
   if (path.driver === 'whisper-cli') return probeWhisper(input.model, env, deps);
+  if (path.driver === 'claude-cli') return probeCodingCli('claude', 'Claude Code', input.model, env, deps);
+  if (path.driver === 'codex-cli') return probeCodingCli('codex', 'Codex', input.model, env, deps);
+  if (path.driver === 'grok-cli') return probeCodingCli('grok', 'Grok', input.model, env, deps);
+  if (path.driver === 'kimi-cli') return probeCodingCli('kimi', 'Kimi', input.model, env, deps);
   if (path.driver === 'ollama') return probeOllama(input.model, env, deps);
   if (path.driver === 'openai') return probeOpenAi(input.job, input.model, env, deps);
   if (path.driver === 'anthropic') return probeAnthropic(input.model, env, deps);
   return { ok: false, detail: `No probe for driver "${path.driver}".` };
+}
+
+// Whether the CLI is installed is all that can be checked without running
+// it; its sign-in is its own.
+function probeCodingCli(
+  kind: CodingCliKind,
+  label: string,
+  model: string,
+  env: NodeJS.ProcessEnv,
+  deps: ProbeDeps,
+): ProbeResult {
+  const bin = env[CLI_BIN_ENV[kind]]?.trim() || kind;
+  const found = resolveCli(bin, env, { exists: deps.exists });
+  if (!found) return { ok: false, detail: missingCliMessage(kind, bin) };
+  const which = model.trim() && model !== '-' ? model : 'CLI default';
+  return { ok: true, detail: `${label} CLI · ${found} · ${which}. Uses that CLI's own sign-in; Hornbook stores no key.` };
 }
 
 function probeWhisper(model: string, env: NodeJS.ProcessEnv, deps: ProbeDeps): ProbeResult {

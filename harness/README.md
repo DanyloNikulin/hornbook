@@ -1,6 +1,6 @@
 # Local harness
 
-Three scripts that exercise the running application the way a person would,
+Four scripts that exercise the running application the way a person would,
 against throwaway data, without a paid API. They complement the unit suites
 (`npm test`, `npm run test:scripts`) and are run by hand or by a tester agent,
 not by the PR gate.
@@ -17,6 +17,7 @@ is not present on this machine, never that something is wrong.
 | API smoke | `npm run harness:api` | nothing (Ollama and whisper.cpp are optional) | ~30 s |
 | Zero-cost pipeline | `npm run harness:pipeline` | ffmpeg; whisper.cpp; Ollama with a text model and, for slides, a vision model | 5–15 min |
 | Browser walk | `npm run harness:ui` | `npm run build` first; Chrome or Edge installed | ~1 min |
+| Coding CLIs | `npm run harness:cli` | `npm run build` first; any of Claude Code, Codex, Grok, Kimi installed and signed in | 1–4 min per CLI |
 
 ## API smoke
 
@@ -55,7 +56,9 @@ lesson schema; the content itself is not judged.
 
 Playwright (`playwright-core`, no browser download) drives the installed
 Chrome or Edge through the built app: home, setup catalogue, application
-settings including the interface language and both pipeline probes, the
+settings including the interface language, both pipeline probes and the
+coding-CLI place for writing (the four chips, the `-` model, a Codex probe
+that is green when the CLI is on PATH and a red "Not yet." when not), the
 Spanish pair (lesson, quiz with every item answered and graded, glossary,
 flashcards, search, cheat sheet, Add, pair settings), the Italian pair, the
 pair switcher, both not-found pages, day/night, creating a pair and saving a
@@ -66,6 +69,21 @@ loaded, which is what keeps Windows from showing "ES" instead of a flag.
 `HORNBOOK_UI=http://localhost:4200` walks a dev server you already run
 instead (with `HORNBOOK_API` for its server, default `http://127.0.0.1:8787`);
 the throwaway pair is then deleted through that API.
+
+## Coding CLIs
+
+For each of `claude`, `codex`, `grok` and `kimi` found on PATH (or named in
+`CLAUDE_BIN` and friends): a throwaway journal with writing set to that CLI,
+the readiness probe, `harness/fixtures/transcript.txt` through the job
+runner, the lesson validated against the schema with the quote checks, then
+that lesson's quiz taken wrong and right and one flashcard typed in the
+browser. The CLI's own sign-in is used; nothing is entered. A CLI that is
+not installed is a `SKIP`; one that is installed and fails is a `FAIL`, with
+the job log in `work/harness/cli/<cli>/job-log.txt` and the lesson next to
+it.
+
+`HORNBOOK_CLI=kimi,claude` limits the run; `HORNBOOK_CLI_MODEL` names a
+model (default `-`, the model the CLI is set to).
 
 ## Brief for a tester agent
 
@@ -89,6 +107,7 @@ Copy from here when handing the harness to another agent.
 > 2. `npm run harness:api`
 > 3. `npm run harness:pipeline` (allow up to 15 minutes; it is slow, not stuck, while a job shows `running`)
 > 4. `npm run harness:ui`
+> 5. `npm run harness:cli` (only the coding CLIs installed and signed in on the machine run; a few minutes each)
 >
 > Read `harness/README.md` for what each step checks. `SKIP` lines are
 > expected when a tool is missing; say which ones you saw and why. A `FAIL`

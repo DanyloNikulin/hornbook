@@ -5,6 +5,7 @@ import { WhisperCliTranscriber } from './whisper-cli.ts';
 import { AnthropicExtractor } from './anthropic-extract.ts';
 import { OpenAiExtractor } from './openai-extract.ts';
 import { OllamaExtractor } from './ollama-extract.ts';
+import { CliExtractor } from './cli-extract.ts';
 
 export function getTranscriber(): Transcriber {
   const { driver, model } = currentProviders().transcribe;
@@ -25,8 +26,12 @@ export function getExtractor(): Extractor {
   if (driver === 'anthropic') return new AnthropicExtractor(model);
   if (driver === 'openai') return new OpenAiExtractor(model);
   if (driver === 'ollama') return new OllamaExtractor(model);
+  if (driver === 'claude-cli') return new CliExtractor('claude', model);
+  if (driver === 'codex-cli') return new CliExtractor('codex', model);
+  if (driver === 'grok-cli') return new CliExtractor('grok', model);
+  if (driver === 'kimi-cli') return new CliExtractor('kimi', model);
   throw new Error(
-    `Extract driver "${driver}" is not supported. Use anthropic, openai, or ollama.`,
+    `Extract driver "${driver}" is not supported. Use anthropic, openai, ollama, claude-cli, codex-cli, grok-cli, or kimi-cli.`,
   );
 }
 

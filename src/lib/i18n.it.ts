@@ -327,6 +327,13 @@ export const IT = {
   'pipeline.place.skipNote': 'Niente ascolto. In Aggiungi, incolla una trascrizione o una descrizione della lezione.',
   'pipeline.place.cli': 'Questo computer',
   'pipeline.place.cliNote': 'Un programma installato qui. Hornbook chiama whisper.cpp.',
+  'pipeline.place.cliExtractNote':
+    'Una CLI di coding già autenticata su questo computer. Hornbook non salva chiavi. Le diapositive si saltano.',
+  'pipeline.whichCli': 'Quale CLI?',
+  'pipeline.service.claude-cli': 'Claude Code',
+  'pipeline.service.codex-cli': 'Codex',
+  'pipeline.service.grok-cli': 'Grok',
+  'pipeline.service.kimi-cli': 'Kimi',
   'pipeline.place.lan': 'Rete di casa',
   'pipeline.place.lanNote': 'Ollama qui o su un altro computer, es. http://192.168.1.12:11434.',
   'pipeline.place.cloud': 'API in internet',
@@ -354,6 +361,8 @@ export const IT = {
   'pipeline.modelFile': 'File del modello',
   'pipeline.modelFileHelp': 'Percorso completo del file ggml o gguf che whisper.cpp deve caricare. Scrivilo; Hornbook non indovina il nome.',
   'pipeline.modelName': 'Modello',
+  'pipeline.modelCliHelp':
+    'Nome del modello per quella CLI, es. sonnet. Lascia - per usare il modello impostato nella CLI.',
   'pipeline.modelLanHelp': 'Trova i modelli elenca quelli già scaricati su quell’host. Cliccane uno, oppure scrivi un nome. Non viene scelto nulla finché non lo scegli tu.',
   'pipeline.modelApiHelp': 'Incolla la chiave, poi scegli tra quelli che quella chiave può usare. Oppure scrivi un nome. Non viene scelto nulla finché non lo scegli tu.',
   'pipeline.onHost': 'Scaricati su questo host',
