@@ -304,17 +304,15 @@ export const IT = {
   'settings.saved': 'Salvato.',
   'settings.maintenance': 'Manutenzione',
   'settings.maintenanceSub':
-    'La revisione degli argomenti legge le lezioni di questa coppia e propone nuovi tag per tutto il diario. Serve una chiave Anthropic e almeno dieci lezioni.',
+    'La revisione degli argomenti legge le lezioni di questa coppia e propone nuovi tag per tutto il diario. Usa il modello di estrazione di questa coppia e servono almeno dieci lezioni.',
   'settings.review': 'Rivedi gli argomenti',
   'settings.running': 'In corso…',
   'settings.reviewFailed': 'Revisione degli argomenti non riuscita — vedi il log.',
   'settings.conn.OPENAI_API_KEY': 'Chiave OpenAI per i driver openai di trascrizione/estrazione.',
-  'settings.conn.ANTHROPIC_API_KEY':
-    'Chiave Anthropic per il driver anthropic di estrazione, il promemoria e la revisione degli argomenti.',
+  'settings.conn.ANTHROPIC_API_KEY': 'Chiave Anthropic per il driver anthropic di estrazione.',
   'settings.conn.OLLAMA_HOST': 'Endpoint Ollama per il driver ollama di estrazione. Predefinito http://127.0.0.1:11434.',
   'settings.conn.WHISPER_BIN': 'Percorso del binario whisper.cpp (whisper-cli) per la trascrizione locale.',
   'settings.conn.WHISPER_MODEL': 'Percorso di un file modello whisper.cpp, es. ggml-medium.bin.',
-  'settings.conn.CLAUDE_MODEL': 'Modello per il promemoria e la revisione degli argomenti. Predefinito claude-sonnet-4-6.',
 
   'pipeline.lead':
     'Una registrazione diventa un sunto in due passi. Scegli dove gira ciascuno — questo computer, la rete di casa o un’API in internet — e compila solo quel percorso.',
@@ -346,7 +344,7 @@ export const IT = {
   'pipeline.field.OLLAMA_HOST': 'Indirizzo Ollama',
   'pipeline.help.WHISPER_BIN': 'Percorso completo di whisper-cli (whisper-cli.exe su Windows).',
   'pipeline.help.OPENAI_API_KEY': 'Da platform.openai.com. Resta in secrets.json, non viene mai restituita.',
-  'pipeline.help.ANTHROPIC_API_KEY': 'Da console.anthropic.com. Serve anche per il promemoria e la revisione degli argomenti.',
+  'pipeline.help.ANTHROPIC_API_KEY': 'Da console.anthropic.com. Resta in secrets.json, non viene mai restituita.',
   'pipeline.help.OLLAMA_HOST': 'Questa macchina o un’altra della LAN. Vuoto = http://127.0.0.1:11434.',
   'pipeline.ph.WHISPER_BIN': 'C:\\tools\\whisper-cli.exe',
   'pipeline.ph.OPENAI_API_KEY': 'sk-…',

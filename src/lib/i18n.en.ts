@@ -316,17 +316,15 @@ export const EN = {
   'settings.saved': 'Saved.',
   'settings.maintenance': 'Maintenance',
   'settings.maintenanceSub':
-    "Topic review reads this pair's lessons and proposes new topic tags for the whole journal. It needs an Anthropic key and at least ten lessons.",
+    "Topic review reads this pair's lessons and proposes new topic tags for the whole journal. It uses this pair's extract model and needs at least ten lessons.",
   'settings.review': 'Review topics',
   'settings.running': 'Running…',
   'settings.reviewFailed': 'Topic review failed — see the log.',
   'settings.conn.OPENAI_API_KEY': 'OpenAI key for the openai transcribe/extract drivers.',
-  'settings.conn.ANTHROPIC_API_KEY':
-    'Anthropic key for the anthropic extract driver, the cheat sheet builder and topic review.',
+  'settings.conn.ANTHROPIC_API_KEY': 'Anthropic key for the anthropic extract driver.',
   'settings.conn.OLLAMA_HOST': 'Ollama endpoint for the ollama extract driver. Default http://127.0.0.1:11434.',
   'settings.conn.WHISPER_BIN': 'Path to the whisper.cpp binary (whisper-cli) for local transcription.',
   'settings.conn.WHISPER_MODEL': 'Path to a whisper.cpp model file, e.g. ggml-medium.bin.',
-  'settings.conn.CLAUDE_MODEL': 'Model for the cheat sheet builder and topic review. Default claude-sonnet-4-6.',
 
   'pipeline.lead':
     'A recording becomes a conspect in two steps. Pick where each step runs — this computer, your home network, or an internet API — and fill only that path.',
@@ -358,7 +356,7 @@ export const EN = {
   'pipeline.field.OLLAMA_HOST': 'Ollama address',
   'pipeline.help.WHISPER_BIN': 'Full path to whisper-cli (whisper-cli.exe on Windows).',
   'pipeline.help.OPENAI_API_KEY': 'From platform.openai.com. Stored in secrets.json, never sent back.',
-  'pipeline.help.ANTHROPIC_API_KEY': 'From console.anthropic.com. Also used for the cheat sheet and topic review.',
+  'pipeline.help.ANTHROPIC_API_KEY': 'From console.anthropic.com. Stored in secrets.json, never sent back.',
   'pipeline.help.OLLAMA_HOST': 'This machine or another on the LAN. Empty means http://127.0.0.1:11434.',
   'pipeline.ph.WHISPER_BIN': 'C:\\tools\\whisper-cli.exe',
   'pipeline.ph.OPENAI_API_KEY': 'sk-…',

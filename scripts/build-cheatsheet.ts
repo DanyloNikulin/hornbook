@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Reads all lessons/*.json, finds ones not yet in cheatsheet.json, computes
 // which cheat sheet categories each new lesson's topics can affect, sends
-// Claude only those affected categories + the new grammar, and asks for a
-// list of patches (add/update/remove sections per category) — not a full
+// the pair's extract model only those affected categories + the new grammar,
+// and asks for a list of patches (add/update/remove sections per category) — not a full
 // rewrite. Patches are applied locally by applyPatches() and the result is
 // written to cheatsheet.json (repo root). The Angular SPA ships that root
 // file directly via the assets glob (see angular.json); no _data copy.
@@ -12,9 +12,10 @@
 //   tsx scripts/build-cheatsheet.ts --force    # ignore processed_lessons,
 //                                              # rebuild everything from scratch
 //   tsx scripts/build-cheatsheet.ts --dry-run  # build the payload, log its
-//                                              # size, do NOT call Claude
+//                                              # size, do NOT call the model
 //
-// Requires: ANTHROPIC_API_KEY env var (unless --dry-run).
+// Runs on the section's extract driver (Ollama, Anthropic or OpenAI), the
+// same one process.ts uses, so a whisper.cpp + Ollama journal needs no key.
 //
 // Why patches instead of full rewrite: previous flow asked Claude to return
 // the COMPLETE categories[] in max_tokens: 8000. Output scaled with cheat
@@ -24,8 +25,6 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import Anthropic from '@anthropic-ai/sdk';
-import type { Message, Tool, ToolUseBlock } from '@anthropic-ai/sdk/resources/messages';
 import {
   Lesson,
   Cheatsheet,
@@ -47,14 +46,14 @@ import {
 } from './lib/cheatsheet-patch.ts';
 import { learnerLanguageName, targetLanguageName } from './lib/config.ts';
 import { cheatsheetPath, currentSection, readSectionLessons, resolveSectionArg } from './lib/journal.ts';
+import { getExtractor } from './providers/index.ts';
 
 // The section is selected once in main() (--section); every path below
 // derives from it.
 const CHEATSHEET_PATH = (): string => cheatsheetPath(currentSection().id);
 
-const MODEL = process.env['CLAUDE_MODEL'] || 'claude-sonnet-4-6';
-
-// ── Tool definition (Anthropic tool_use format) ────────────────────────────
+// ── Tool definition (JSON schema: a forced tool call on Anthropic, a
+// structured-output schema on OpenAI and Ollama) ─────────────────────────
 //
 // apply_cheatsheet_patches: model returns deltas per affected category,
 // NOT a full categories[] array. Local applyPatches() merges them into the
@@ -212,7 +211,7 @@ function loadNewLessons(processedSlugs: Set<string>): NewLessonInput[] {
     const affected = computeAffectedCategories(lesson.topics);
     // Skip lessons that can't affect the cheat sheet at all. A lesson with
     // no topical hooks AND no grammar rules wouldn't change anything even
-    // if we asked Claude.
+    // if we asked the model.
     if (affected.length === 0 && lesson.grammar.length === 0) return [];
     return [
       {
@@ -229,7 +228,7 @@ function loadNewLessons(processedSlugs: Set<string>): NewLessonInput[] {
 
 // Compute the union of categories the whole batch affects. Lessons with no
 // affected categories but non-empty grammar fall back to "grammar" so
-// Claude still has somewhere to put them.
+// the model still has somewhere to put them.
 function computeBatchScope(lessons: readonly NewLessonInput[]): readonly CheatsheetCategoryId[] {
   const set = new Set<CheatsheetCategoryId>();
   for (const l of lessons) {
@@ -242,7 +241,7 @@ function computeBatchScope(lessons: readonly NewLessonInput[]): readonly Cheatsh
 
 // Build the in-scope slice of the current cheat sheet — only the categories
 // the batch will touch. Categories that don't yet exist on the cheat sheet
-// are emitted as empty placeholders so Claude can add_sections into them.
+// are emitted as empty placeholders so the model can add_sections into them.
 function pickInScopeCategories(
   current: CheatsheetT,
   scope: readonly CheatsheetCategoryId[],
@@ -354,10 +353,6 @@ async function main(): Promise<void> {
   const force = process.argv.includes('--force');
   const dryRun = process.argv.includes('--dry-run');
 
-  if (!dryRun && !process.env['ANTHROPIC_API_KEY']) {
-    throw new Error('ANTHROPIC_API_KEY env var is required (or pass --dry-run)');
-  }
-
   const current = force ? { processed_lessons: [], categories: [] } : loadCheatsheet();
   if (force) console.log('--force: rebuilding cheatsheet from scratch');
 
@@ -386,38 +381,21 @@ async function main(): Promise<void> {
   console.log(`User message size: ${userMessage.length} chars (~${Math.ceil(userMessage.length / 4)} tokens est.)`);
 
   if (dryRun) {
-    console.log('--dry-run: skipping Claude call.');
+    console.log('--dry-run: not calling the model.');
     return;
   }
 
-  const client = new Anthropic({ apiKey: process.env['ANTHROPIC_API_KEY'] });
-
-  console.log(`Calling ${MODEL}...`);
-  const tools: Tool[] = [PATCHES_TOOL as Tool];
-  const resp: Message = await client.messages.create({
-    model: MODEL,
-    // 8000 still covers the bounded per-build output: a few sections per
-    // affected category, not the whole cheat sheet. With patches, this no
-    // longer scales with cheat sheet size, so the previous concern is gone.
-    max_tokens: 8000,
+  const extractor = getExtractor();
+  console.log(`Writing patches via ${extractor.driver}...`);
+  const toolInput = await extractor.extract({
     system: systemPrompt(),
-    tools,
-    tool_choice: { type: 'tool', name: PATCHES_TOOL.name },
-    messages: [{ role: 'user', content: userMessage }],
+    userParts: [{ type: 'text', text: userMessage }],
+    jsonSchema: PATCHES_TOOL.input_schema,
+    toolName: PATCHES_TOOL.name,
+    toolDescription: PATCHES_TOOL.description,
   });
 
-  console.log(
-    `Tokens: in=${resp.usage.input_tokens} out=${resp.usage.output_tokens} stop=${resp.stop_reason}`,
-  );
-
-  const toolUse = resp.content.find(
-    (c): c is ToolUseBlock => c.type === 'tool_use' && c.name === PATCHES_TOOL.name,
-  );
-  if (!toolUse) {
-    throw new Error(`Claude did not call ${PATCHES_TOOL.name}. Stop reason: ${resp.stop_reason}`);
-  }
-
-  const patches = parsePatchesFromToolInput(toolUse.input);
+  const patches = parsePatchesFromToolInput(toolInput);
   console.log(`Patches received: ${summarisePatches(patches)}`);
 
   const merged = applyPatches(current, patches);

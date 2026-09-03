@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Monthly vocab review: ask Claude to propose vocab changes based on local
-// statistics + accumulated per-lesson suggestions. NEVER sends lesson content
+// Monthly vocab review: ask the pair's extract model to propose vocab changes
+// based on local statistics + accumulated per-lesson suggestions. NEVER sends lesson content
 // to the AI — the payload is bounded by vocab size, not lesson count.
 //
 // Output: docs/vocab-reviews/YYYY-MM-DD.md — a markdown report. Additions
@@ -8,18 +8,17 @@
 // a suggestion. Started from the Settings page (a job) or from the CLI.
 //
 // Usage:
-//   tsx scripts/review-vocab.ts --section es-en          # call Claude, write report
+//   tsx scripts/review-vocab.ts --section es-en          # call the model, write report
 //   tsx scripts/review-vocab.ts --section es-en --dry    # compute stats only, no API call
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import Anthropic from '@anthropic-ai/sdk';
-import type { Message, Tool, ToolUseBlock } from '@anthropic-ai/sdk/resources/messages';
 import { computeVocabStats, renderStatsForAI } from './lib/vocab-stats.ts';
 import { addToVocabSource, addToPatternsSource, addToCategoryMapSource } from './lib/vocab-apply.ts';
 import { learnerLanguageName, targetLanguageName } from './lib/config.ts';
 import { currentSection, resolveSectionArg, sectionDir } from './lib/journal.ts';
+import { getExtractor } from './providers/index.ts';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const reviewsDir = join(repoRoot, 'docs', 'vocab-reviews');
@@ -27,11 +26,9 @@ const SCHEMA_PATH = join(repoRoot, 'src/lib/schema.ts');
 const TOPICS_PATH = join(repoRoot, 'scripts/lib/topics.ts');
 const CATEGORY_MAP_PATH = join(repoRoot, 'scripts/lib/topic-to-category.ts');
 
-const MODEL = process.env['CLAUDE_MODEL'] || 'claude-sonnet-4-6';
-
 const dry = process.argv.includes('--dry');
 
-// ── Claude tool ─────────────────────────────────────────────────────────────
+// ── Proposal tool ─────────────────────────────────────────────────────────────
 
 const REVIEW_TOOL = {
   name: 'propose_vocab_changes',
@@ -195,16 +192,12 @@ async function main(): Promise<void> {
   if (dry) {
     console.log('\n=== Stats payload (dry-run) ===\n');
     console.log(renderStatsForAI(stats));
-    console.log('\nDry-run: not calling Claude.');
+    console.log('\nDry-run: not calling the model.');
     return;
   }
 
-  if (!process.env['ANTHROPIC_API_KEY']) {
-    throw new Error('ANTHROPIC_API_KEY env var is required');
-  }
-
-  // Refuse to call Claude with implausibly thin data — saves money and avoids
-  // garbage proposals.
+  // Refuse to call the model with implausibly thin data — saves time (and
+  // money on a cloud API) and avoids garbage proposals.
   if (stats.total_lessons < 10) {
     console.log(
       `Only ${stats.total_lessons} lessons — too few for a meaningful vocab review. Skipping.`,
@@ -212,32 +205,19 @@ async function main(): Promise<void> {
     return;
   }
 
-  const client = new Anthropic({ apiKey: process.env['ANTHROPIC_API_KEY'] });
+  const extractor = getExtractor();
   const userPayload = renderStatsForAI(stats);
-  console.log(`Calling ${MODEL} with ${userPayload.length} chars of stats...`);
+  console.log(`Asking ${extractor.driver} with ${userPayload.length} chars of stats...`);
 
-  const tools: Tool[] = [REVIEW_TOOL as Tool];
-  const resp: Message = await client.messages.create({
-    model: MODEL,
-    max_tokens: 4000,
-    system: systemPrompt(),
-    tools,
-    tool_choice: { type: 'tool', name: REVIEW_TOOL.name },
-    messages: [{ role: 'user', content: userPayload }],
-  });
-
-  console.log(
-    `Tokens: in=${resp.usage.input_tokens} out=${resp.usage.output_tokens} stop=${resp.stop_reason}`,
+  const proposal = normalizeProposal(
+    await extractor.extract({
+      system: systemPrompt(),
+      userParts: [{ type: 'text', text: userPayload }],
+      jsonSchema: REVIEW_TOOL.input_schema,
+      toolName: REVIEW_TOOL.name,
+      toolDescription: REVIEW_TOOL.description,
+    }),
   );
-
-  const toolUse = resp.content.find(
-    (c): c is ToolUseBlock => c.type === 'tool_use' && c.name === REVIEW_TOOL.name,
-  );
-  if (!toolUse) {
-    throw new Error(`Claude did not call ${REVIEW_TOOL.name}. Stop reason: ${resp.stop_reason}`);
-  }
-
-  const proposal = toolUse.input as VocabProposal;
   const reportPath = writeReport(proposal, stats);
   console.log(`✓ Report written: ${reportPath}`);
 
@@ -317,6 +297,24 @@ function applyProposal(p: VocabProposal): ApplyResult {
   }
 
   return result;
+}
+
+// A cloud API enforces the schema; a small local model may leave an array
+// out. Missing lists become empty so the report and apply steps never crash.
+function normalizeProposal(raw: unknown): VocabProposal {
+  const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const list = <T>(key: string): T[] =>
+    Array.isArray(o[key]) ? (o[key] as unknown[]).filter((x): x is T => !!x && typeof x === 'object') : [];
+  return {
+    summary: typeof o['summary'] === 'string' ? o['summary'] : '(no summary)',
+    additions: list<VocabProposal['additions'][number]>('additions').filter(
+      (a) => typeof a.id === 'string' && Array.isArray(a.regex_patterns),
+    ),
+    removals: list('removals'),
+    splits: list('splits'),
+    merges: list('merges'),
+    concerns: list('concerns'),
+  };
 }
 
 interface VocabProposal {

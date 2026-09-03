@@ -44,6 +44,7 @@ export class OpenAiCompatibleExtractor implements Extractor {
         type: 'json_schema',
         json_schema: {
           name: req.toolName,
+          ...(req.toolDescription ? { description: req.toolDescription } : {}),
           strict: false,
           schema: req.jsonSchema,
         },

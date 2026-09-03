@@ -70,7 +70,6 @@ export const CONNECTION_KEYS = [
   'OLLAMA_HOST',
   'WHISPER_BIN',
   'WHISPER_MODEL',
-  'CLAUDE_MODEL',
 ] as const;
 export type ConnectionKey = (typeof CONNECTION_KEYS)[number];
 

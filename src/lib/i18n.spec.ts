@@ -73,7 +73,6 @@ describe('i18n engine', () => {
       'OLLAMA_HOST',
       'WHISPER_BIN',
       'WHISPER_MODEL',
-      'CLAUDE_MODEL',
     ]) {
       expect(EN[`settings.conn.${key}` as keyof typeof EN]).toBeTruthy();
     }

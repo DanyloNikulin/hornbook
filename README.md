@@ -61,7 +61,8 @@ Everything happens on the **Add** page of a pair:
   video are read when the extract model has vision. A live log shows progress.
 
 The cheat sheet page updates itself with "Update from new lessons", and Settings has
-"Review topics" for proposing new topic tags. Both need an Anthropic key.
+"Review topics" for proposing new topic tags. Both use the pair's extract model, so
+they run on Ollama as well as on a cloud API.
 
 The same things work from the command line:
 

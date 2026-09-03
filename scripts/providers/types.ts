@@ -19,6 +19,8 @@ export interface ExtractRequest {
   userParts: ExtractMessagePart[];
   jsonSchema: Record<string, unknown>;
   toolName: string;
+  /** What the tool does. Anthropic sees it on the tool, OpenAI-style APIs on the schema. */
+  toolDescription?: string;
 }
 
 export interface Extractor {

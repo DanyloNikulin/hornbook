@@ -32,7 +32,7 @@ export class AnthropicExtractor implements Extractor {
     const tools: Tool[] = [
       {
         name: req.toolName,
-        description: 'Save the structured lesson. Call exactly once.',
+        description: req.toolDescription ?? 'Save the structured lesson. Call exactly once.',
         input_schema: req.jsonSchema as Tool['input_schema'],
       },
     ];
