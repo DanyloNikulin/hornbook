@@ -1,5 +1,9 @@
+import type { ChunkFormat } from '../lib/audio-chunk.ts';
+
 export interface Transcriber {
   readonly driver: string;
+  /** Container ffmpeg writes for each chunk this transcriber reads (lib/audio-chunk.ts). */
+  readonly chunkFormat: ChunkFormat;
   transcribe(audioPath: string, hint: string): Promise<string>;
 }
 

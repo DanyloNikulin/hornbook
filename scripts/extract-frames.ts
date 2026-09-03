@@ -15,6 +15,7 @@ import { mkdirSync, readdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { ffmpeg } from './lib/ffmpeg.ts';
 import { aHash, hamming } from './lib/phash.ts';
+import { isMain } from './lib/is-main.ts';
 
 const SAMPLE_EVERY_SEC = 5;
 const HAMMING_THRESHOLD = 8;
@@ -99,7 +100,7 @@ async function cli(): Promise<void> {
   console.log(`\n✓ ${frames.length} unique frames -> ${outDir}/frames/`);
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replaceAll('\\', '/')}`) {
+if (isMain(import.meta.url)) {
   cli().catch((err: unknown) => {
     console.error(err);
     process.exit(1);

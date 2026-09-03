@@ -5,12 +5,12 @@
   },
   "providers": {
     "transcribe": {
-      "driver": "openai",
-      "model": "gpt-4o-transcribe"
+      "driver": "skip",
+      "model": "-"
     },
     "extract": {
-      "driver": "anthropic",
-      "model": "claude-sonnet-4-6"
+      "driver": "ollama",
+      "model": "llama3.1"
     }
   },
   "sections": [

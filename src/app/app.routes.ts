@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { sectionGuard } from './section.guard';
+import { sectionGuard, sectionMatch } from './section.guard';
 
 export const routes: Routes = [
   {
@@ -17,9 +17,11 @@ export const routes: Routes = [
       import('./settings/app-settings.component').then((m) => m.AppSettingsComponent),
   },
   {
-    // Everything inside a language pair. The guard resolves the section and
-    // preloads its manifest and progress before any child activates.
+    // Everything inside a language pair. canMatch rejects ids that are not
+    // pairs (they fall through to the wildcard below); the guard resolves the
+    // section and preloads its manifest and progress before any child activates.
     path: ':section',
+    canMatch: [sectionMatch],
     canActivate: [sectionGuard],
     children: [
       {

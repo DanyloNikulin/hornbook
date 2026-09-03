@@ -2,7 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { filterApiModels, modelIdsFromList, parseProbeInput, probePipeline, type ProbeDeps } from './probe.ts';
+import {
+  canComplete,
+  filterApiModels,
+  modelIdsFromList,
+  parseProbeInput,
+  probePipeline,
+  type ProbeDeps,
+} from './probe.ts';
 
 function deps(fetchImpl: ProbeDeps['fetch'], exists: ProbeDeps['exists'] = () => false): ProbeDeps {
   return { fetch: fetchImpl, exists, env: {} };
@@ -181,5 +188,79 @@ describe('filterApiModels', () => {
       'gpt-4o-transcribe',
     ]);
     expect(modelIdsFromList({ data: [{ id: 'a' }, { id: 'a' }, { name: 'nope' }] })).toEqual(['a']);
+  });
+});
+
+describe('Ollama capabilities', () => {
+  const tags = { models: [{ name: 'qwen2.5:7b' }, { name: 'bge-m3:latest' }] };
+  const show: Record<string, unknown> = {
+    'qwen2.5:7b': { capabilities: ['completion', 'tools'] },
+    'bge-m3:latest': { capabilities: ['embedding'] },
+  };
+  const ollamaFetch = (): ProbeDeps['fetch'] =>
+    vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const u = String(url);
+      if (u.endsWith('/api/tags')) return { ok: true, json: async () => tags };
+      if (u.endsWith('/api/show')) {
+        const { model } = JSON.parse(String(init?.body)) as { model: string };
+        return { ok: true, json: async () => show[model] };
+      }
+      throw new Error(`unexpected ${u}`);
+    }) as unknown as ProbeDeps['fetch'];
+
+  it('hides embedding-only models from the pick list', async () => {
+    const result = await probePipeline(
+      { job: 'extract', driver: 'ollama', model: '' },
+      tmpdir(),
+      deps(ollamaFetch()),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.models).toEqual(['qwen2.5:7b']);
+  });
+
+  it('refuses an embedding model as the writer', async () => {
+    const result = await probePipeline(
+      { job: 'extract', driver: 'ollama', model: 'bge-m3' },
+      tmpdir(),
+      deps(ollamaFetch()),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.detail).toMatch(/embedding model/i);
+    expect(result.models).toEqual(['qwen2.5:7b']);
+  });
+
+  it('accepts a chat model', async () => {
+    const result = await probePipeline(
+      { job: 'extract', driver: 'ollama', model: 'qwen2.5:7b' },
+      tmpdir(),
+      deps(ollamaFetch()),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.models).toEqual(['qwen2.5:7b']);
+  });
+
+  it('reads capabilities straight from /api/tags when the server lists them', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        models: [
+          { name: 'qwen2.5:7b', capabilities: ['completion', 'tools'] },
+          { name: 'bge-m3:latest', capabilities: ['embedding'] },
+        ],
+      }),
+    });
+    const result = await probePipeline(
+      { job: 'extract', driver: 'ollama', model: '' },
+      tmpdir(),
+      deps(fetchImpl),
+    );
+    expect(result.models).toEqual(['qwen2.5:7b']);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps every model when an older Ollama reports no capabilities', () => {
+    expect(canComplete({})).toBe(true);
+    expect(canComplete({ capabilities: ['completion'] })).toBe(true);
+    expect(canComplete({ capabilities: ['embedding'] })).toBe(false);
   });
 });

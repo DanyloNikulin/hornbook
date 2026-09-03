@@ -6,6 +6,8 @@ import type { Transcriber } from './types.ts';
 
 export class WhisperCliTranscriber implements Transcriber {
   readonly driver = 'whisper-cli';
+  /** whisper.cpp reads PCM WAV; it cannot open the opus chunks OpenAI gets. */
+  readonly chunkFormat = 'wav';
 
   constructor(private readonly model: string) {}
 

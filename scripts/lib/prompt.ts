@@ -147,9 +147,54 @@ export function buildLessonTool(): {
             },
           },
         },
-        quiz: { type: 'array', items: { type: 'object' } },
-        flashcards: { type: 'array', items: { type: 'object' } },
-        slides: { type: 'array', items: { type: 'object' } },
+        // Spelled out so a schema-enforcing endpoint (Ollama's structured
+        // output) holds a small model to the field names Zod expects.
+        quiz: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['type', 'q'],
+            properties: {
+              type: { type: 'string', enum: ['mc', 'fill', 'translate'] },
+              q: { type: 'string', description: 'The question or prompt.' },
+              options: { type: 'array', items: { type: 'string' }, description: 'mc only: 2-6 choices.' },
+              answer: {
+                type: ['integer', 'string'],
+                description: 'mc: zero-based index into options. fill: the expected text.',
+              },
+              answer_target: { type: 'string', description: `translate only: the expected ${target}.` },
+              alternatives: { type: 'array', items: { type: 'string' } },
+              explanation: { type: 'string' },
+              case_sensitive: { type: 'boolean' },
+              auto_check: { type: 'boolean' },
+            },
+          },
+        },
+        flashcards: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['front', 'back', 'type'],
+            properties: {
+              front: { type: 'string', description: `${target} side.` },
+              back: { type: 'string', description: `${learner} side.` },
+              type: { type: 'string', enum: ['word', 'phrase', 'grammar'] },
+              tags: { type: 'array', items: { type: 'string' } },
+            },
+          },
+        },
+        slides: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['ts', 'text_md'],
+            properties: {
+              ts: { type: 'string', description: 'HH:MM:SS of the frame.' },
+              text_md: { type: 'string' },
+              extracted_table: { type: 'array', items: { type: 'array', items: { type: 'string' } } },
+            },
+          },
+        },
         related: { type: 'array', items: { type: 'string' } },
         topics: {
           type: 'array',

@@ -88,10 +88,19 @@ async function probeOllama(model: string, env: NodeJS.ProcessEnv, deps: ProbeDep
   try {
     const res = await deps.fetch(`${host}/api/tags`, { signal: AbortSignal.timeout(TIMEOUT_MS) });
     if (!res.ok) return { ok: false, detail: `Ollama at ${host} answered HTTP ${res.status}.` };
-    const json = (await res.json()) as { models?: { name?: string }[] };
-    const names = (json.models ?? []).map((m) => m.name ?? '').filter(Boolean);
-    if (names.length === 0) {
+    const json = (await res.json()) as { models?: OllamaModel[] };
+    const listed = (json.models ?? []).filter((m) => typeof m.name === 'string' && m.name);
+    const pulled = listed.map((m) => m.name);
+    if (pulled.length === 0) {
       return { ok: false, detail: `Ollama is up at ${host}, but no models are pulled.`, models: [] };
+    }
+    const names = await completionModels(host, listed, deps);
+    if (names.length === 0) {
+      return {
+        ok: false,
+        detail: `Ollama at ${host} has ${pulled.length} model(s), but only embedding models. Pull a chat model to write conspects.`,
+        models: [],
+      };
     }
     if (!model) {
       return {
@@ -100,10 +109,18 @@ async function probeOllama(model: string, env: NodeJS.ProcessEnv, deps: ProbeDep
         models: names,
       };
     }
-    if (!names.some((n) => n === model || n.startsWith(`${model}:`))) {
+    const has = (list: readonly string[]): boolean => list.some((n) => n === model || n.startsWith(`${model}:`));
+    if (!has(pulled)) {
       return {
         ok: false,
         detail: `"${model}" is not pulled on ${host}. Pick one from the list.`,
+        models: names,
+      };
+    }
+    if (!has(names)) {
+      return {
+        ok: false,
+        detail: `"${model}" is an embedding model; it cannot write text. Pick a chat model from the list.`,
         models: names,
       };
     }
@@ -111,6 +128,49 @@ async function probeOllama(model: string, env: NodeJS.ProcessEnv, deps: ProbeDep
   } catch (err) {
     return { ok: false, detail: `Cannot reach Ollama at ${host}. ${explain(err)}` };
   }
+}
+
+interface OllamaModel {
+  name: string;
+  capabilities?: unknown;
+}
+
+/**
+ * Drop models that cannot write text. Ollama reports `capabilities` —
+ * "completion" for chat models, "embedding" alone for bge-m3 and friends —
+ * in /api/tags on recent servers and from POST /api/show since 0.6.5. An
+ * older server (no field anywhere) or a failed lookup keeps the model: the
+ * point is to hide embedders, not to second-guess Ollama.
+ */
+async function completionModels(
+  host: string,
+  models: readonly OllamaModel[],
+  deps: ProbeDeps,
+): Promise<string[]> {
+  const keep = await Promise.all(
+    models.map(async (m) => {
+      if (Array.isArray(m.capabilities)) return canComplete(m);
+      try {
+        const res = await deps.fetch(`${host}/api/show`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: m.name }),
+          signal: AbortSignal.timeout(TIMEOUT_MS),
+        });
+        if (!res.ok) return true;
+        return canComplete((await readJson(res)) as { capabilities?: unknown });
+      } catch {
+        return true;
+      }
+    }),
+  );
+  return models.filter((_, i) => keep[i]).map((m) => m.name);
+}
+
+/** True unless /api/show lists capabilities without "completion". */
+export function canComplete(show: { capabilities?: unknown }): boolean {
+  const caps = show.capabilities;
+  return !Array.isArray(caps) || caps.includes('completion');
 }
 
 async function probeOpenAi(job: PipelineJob, model: string, env: NodeJS.ProcessEnv, deps: ProbeDeps): Promise<ProbeResult> {

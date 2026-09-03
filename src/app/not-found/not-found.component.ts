@@ -4,9 +4,11 @@ import { Router, RouterLink } from '@angular/router';
 import { TPipe } from '../i18n.pipe';
 
 /**
- * Wildcard (`**`) route target. Without it an unknown URL made the router
- * throw NG04002 and render the nav over an empty <main> with no way home
- *. Mirrors the "Lesson not found" panel in lesson-detail.
+ * Wildcard (`**`) route target, at the top level and inside a pair. Without
+ * it an unknown URL made the router throw NG04002 and render the nav over an
+ * empty <main> with no way home. Mirrors the "Lesson not found" panel in
+ * lesson-detail. Search only exists inside a pair, so the link is offered
+ * there and points at that pair's search.
  */
 @Component({
   selector: 'app-not-found',
@@ -23,7 +25,9 @@ import { TPipe } from '../i18n.pipe';
       </p>
       <div class="flex gap-3 justify-center flex-wrap">
         <a routerLink="/" class="il-btn sm inline-block">{{ 'common.home' | t }}</a>
-        <a routerLink="/search" class="il-btn ghost sm inline-block">{{ 'nav.search' | t }}</a>
+        @if (sec.id()) {
+          <a [routerLink]="sec.link('search')" class="il-btn ghost sm inline-block">{{ 'nav.search' | t }}</a>
+        }
       </div>
     </section>
   `,

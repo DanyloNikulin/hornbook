@@ -4,6 +4,8 @@ import type { Transcriber } from './types.ts';
 
 export class OpenAiTranscriber implements Transcriber {
   readonly driver = 'openai';
+  /** Uploads: keep chunks small. */
+  readonly chunkFormat = 'ogg';
 
   constructor(private readonly model: string) {}
 

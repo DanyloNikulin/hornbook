@@ -17,6 +17,7 @@ import {
 } from './lib/prompt.ts';
 import { detectTopics, formatTopics } from './lib/topics.ts';
 import { coerceStringifiedFields } from './lib/tool-input-repair.ts';
+import { aliasLessonFields } from './lib/lesson-input-aliases.ts';
 import { getExtractor } from './providers/index.ts';
 import type { ExtractMessagePart } from './providers/types.ts';
 import { currentSection, existingSlugs, readSectionLessons, resolveSectionArg, sectionDir } from './lib/journal.ts';
@@ -191,6 +192,14 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
   // anything unrepairable still fails the Zod parse below as before.
   for (const msg of coerceStringifiedFields(toolInput)) {
     console.warn(`⚠ Tool input coercion: ${msg}`);
+  }
+
+  // Small local models (qwen2.5:7b via Ollama) keep the content but drift
+  // from the field names: `question` for `q`, the option text as a
+  // multiple-choice answer, flashcards without a type. Map those onto the
+  // schema before validation — loudly, like the coercions above.
+  for (const msg of aliasLessonFields(toolInput)) {
+    console.warn(`⚠ Tool input alias: ${msg}`);
   }
 
   const rawSuggestions = toolInput['suggested_new_topics'];

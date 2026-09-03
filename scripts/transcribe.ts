@@ -1,17 +1,18 @@
 #!/usr/bin/env node
-// Audio → transcript. ffmpeg extracts opus chunks; the configured transcriber
-// (openai or whisper-cli) turns each chunk into text.
+// Audio → transcript. ffmpeg cuts the recording into mono 16 kHz chunks in
+// the container the configured transcriber reads (opus for OpenAI, WAV for
+// whisper.cpp — see lib/audio-chunk.ts); the transcriber turns each into text.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ffmpeg, durationSeconds } from './lib/ffmpeg.ts';
+import { chunkEncodeArgs, chunkFileName, type ChunkFormat } from './lib/audio-chunk.ts';
 import { learnerLanguageName, targetLanguageName } from './lib/config.ts';
 import { getTranscriber } from './providers/index.ts';
 import { isMain } from './lib/is-main.ts';
 
 const CHUNK_SEC = 15 * 60;
 const OVERLAP_SEC = 30;
-const BITRATE_KBPS = 24;
 
 function fmt(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -27,7 +28,13 @@ function lessonHint(): string {
   );
 }
 
-async function extractChunk(input: string, outPath: string, start: number, duration: number): Promise<void> {
+async function extractChunk(
+  input: string,
+  outPath: string,
+  start: number,
+  duration: number,
+  format: ChunkFormat,
+): Promise<void> {
   await ffmpeg([
     '-ss',
     String(start),
@@ -40,10 +47,7 @@ async function extractChunk(input: string, outPath: string, start: number, durat
     '1',
     '-ar',
     '16000',
-    '-c:a',
-    'libopus',
-    '-b:a',
-    `${BITRATE_KBPS}k`,
+    ...chunkEncodeArgs(format),
     outPath,
   ]);
 }
@@ -54,13 +58,15 @@ export async function transcribe(inputPath: string, outDir: string): Promise<str
   const hint = lessonHint();
 
   const total = await durationSeconds(inputPath);
-  console.log(`Duration: ${fmt(total)} (${total.toFixed(1)}s) via ${transcriber.driver}`);
+  console.log(
+    `Duration: ${fmt(total)} (${total.toFixed(1)}s) via ${transcriber.driver}, ${transcriber.chunkFormat} chunks`,
+  );
 
   const chunks: { start: number; dur: number; path: string }[] = [];
   let start = 0;
   while (start < total) {
     const dur = Math.min(CHUNK_SEC + OVERLAP_SEC, total - start);
-    const path = join(outDir, `chunk-${String(chunks.length).padStart(3, '0')}.ogg`);
+    const path = join(outDir, chunkFileName(chunks.length, transcriber.chunkFormat));
     chunks.push({ start, dur, path });
     start += CHUNK_SEC;
   }
@@ -69,7 +75,7 @@ export async function transcribe(inputPath: string, outDir: string): Promise<str
   const transcripts: { start: number; end: number; text: string }[] = [];
   for (const [i, c] of chunks.entries()) {
     console.log(`Chunk ${i + 1}/${chunks.length}: ${fmt(c.start)}–${fmt(c.start + c.dur)}`);
-    await extractChunk(inputPath, c.path, c.start, c.dur);
+    await extractChunk(inputPath, c.path, c.start, c.dur, transcriber.chunkFormat);
     const text = await transcriber.transcribe(c.path, hint);
     transcripts.push({ start: c.start, end: c.start + c.dur, text: text.trim() });
   }
