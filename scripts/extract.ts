@@ -159,7 +159,7 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
 
   const extractor = getExtractor();
   const userParts: ExtractMessagePart[] = [{ type: 'text', text: userText }];
-  if (extractor.supportsVision) {
+  if (await extractor.hasVision()) {
     for (const f of framesManifest) {
       const imgPath = join(framesDir, f.file);
       if (!existsSync(imgPath)) {
@@ -169,7 +169,7 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
       userParts.push({ type: 'image', imageJpeg: readFileSync(imgPath) });
     }
   } else if (framesManifest.length > 0) {
-    console.warn(`Extract driver ${extractor.driver} has no vision — skipping ${framesManifest.length} slide(s).`);
+    console.warn(`Extract model (${extractor.driver}) has no vision — skipping ${framesManifest.length} slide(s).`);
   }
 
   const lessonTool = buildLessonTool();

@@ -58,7 +58,8 @@ Everything happens on the **Add** page of a pair:
 - **From a transcript** — paste it; the extract model writes the article, vocabulary, grammar,
   quotes, quiz and flashcards.
 - **From a recording** — drop audio or video; it is transcribed, then extracted. Slides in a
-  video are read when the extract model has vision. A live log shows progress.
+  video are read when the extract model has vision: any Anthropic or OpenAI model, or an Ollama
+  model that lists the vision capability (gemma3, qwen2.5vl). A live log shows progress.
 
 The cheat sheet page updates itself with "Update from new lessons", and Settings has
 "Review topics" for proposing new topic tags. Both use the pair's extract model, so

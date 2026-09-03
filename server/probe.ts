@@ -6,6 +6,7 @@ import { isAbsolute } from 'node:path';
 import type { ConnectionKey } from '../src/lib/api-types.ts';
 import { pathFor, type PipelineJob } from '../src/lib/pipeline.ts';
 import { pipelineEnv } from './secrets.ts';
+import { ollamaCapabilities, ollamaHost } from '../scripts/providers/ollama.ts';
 
 export interface ProbeInput {
   job: PipelineJob;
@@ -84,7 +85,7 @@ function probeWhisper(model: string, env: NodeJS.ProcessEnv, deps: ProbeDeps): P
 }
 
 async function probeOllama(model: string, env: NodeJS.ProcessEnv, deps: ProbeDeps): Promise<ProbeResult> {
-  const host = (env['OLLAMA_HOST']?.trim() || 'http://127.0.0.1:11434').replace(/\/$/, '');
+  const host = ollamaHost(env);
   try {
     const res = await deps.fetch(`${host}/api/tags`, { signal: AbortSignal.timeout(TIMEOUT_MS) });
     if (!res.ok) return { ok: false, detail: `Ollama at ${host} answered HTTP ${res.status}.` };
@@ -94,7 +95,8 @@ async function probeOllama(model: string, env: NodeJS.ProcessEnv, deps: ProbeDep
     if (pulled.length === 0) {
       return { ok: false, detail: `Ollama is up at ${host}, but no models are pulled.`, models: [] };
     }
-    const names = await completionModels(host, listed, deps);
+    const caps = await modelCapabilities(host, listed, deps);
+    const names = pulled.filter((n) => canComplete({ capabilities: caps.get(n) }));
     if (names.length === 0) {
       return {
         ok: false,
@@ -124,7 +126,16 @@ async function probeOllama(model: string, env: NodeJS.ProcessEnv, deps: ProbeDep
         models: names,
       };
     }
-    return { ok: true, detail: `Ollama at ${host} · ${model}`, models: names };
+    const chosen = pulled.find((n) => n === model || n.startsWith(`${model}:`)) ?? model;
+    // /api/tags lists "completion"/"embedding" but leaves "vision" out (seen
+    // on 0.33 with gemma3); /api/show has the full set, so ask it for the
+    // one model that matters.
+    const shown = await ollamaCapabilities(host, chosen, deps.fetch, TIMEOUT_MS);
+    return {
+      ok: true,
+      detail: `Ollama at ${host} · ${model}${visionNote(shown ?? caps.get(chosen))}`,
+      models: names,
+    };
   } catch (err) {
     return { ok: false, detail: `Cannot reach Ollama at ${host}. ${explain(err)}` };
   }
@@ -136,35 +147,32 @@ interface OllamaModel {
 }
 
 /**
- * Drop models that cannot write text. Ollama reports `capabilities` —
- * "completion" for chat models, "embedding" alone for bge-m3 and friends —
- * in /api/tags on recent servers and from POST /api/show since 0.6.5. An
- * older server (no field anywhere) or a failed lookup keeps the model: the
- * point is to hide embedders, not to second-guess Ollama.
+ * Capabilities per pulled model, enough to tell embedders from writers:
+ * from /api/tags where the server lists them (recent Ollama), else POST
+ * /api/show (0.6.5+). Undefined on an older server or a failed lookup,
+ * which keeps the model: the point is to hide embedders, not to
+ * second-guess Ollama.
  */
-async function completionModels(
+async function modelCapabilities(
   host: string,
   models: readonly OllamaModel[],
   deps: ProbeDeps,
-): Promise<string[]> {
-  const keep = await Promise.all(
-    models.map(async (m) => {
-      if (Array.isArray(m.capabilities)) return canComplete(m);
-      try {
-        const res = await deps.fetch(`${host}/api/show`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: m.name }),
-          signal: AbortSignal.timeout(TIMEOUT_MS),
-        });
-        if (!res.ok) return true;
-        return canComplete((await readJson(res)) as { capabilities?: unknown });
-      } catch {
-        return true;
-      }
-    }),
+): Promise<Map<string, string[] | undefined>> {
+  const entries = await Promise.all(
+    models.map(async (m): Promise<[string, string[] | undefined]> => [
+      m.name,
+      Array.isArray(m.capabilities)
+        ? m.capabilities.filter((c): c is string => typeof c === 'string')
+        : await ollamaCapabilities(host, m.name, deps.fetch, TIMEOUT_MS),
+    ]),
   );
-  return models.filter((_, i) => keep[i]).map((m) => m.name);
+  return new Map(entries);
+}
+
+/** "completion" and "vision" are what the extract step cares about. */
+function visionNote(caps: readonly string[] | undefined): string {
+  if (!caps) return '';
+  return caps.includes('vision') ? ' · reads slides' : ' · text only, slides skipped';
 }
 
 /** True unless /api/show lists capabilities without "completion". */

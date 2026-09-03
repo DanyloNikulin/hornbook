@@ -229,7 +229,7 @@ describe('Ollama capabilities', () => {
     expect(result.models).toEqual(['qwen2.5:7b']);
   });
 
-  it('accepts a chat model', async () => {
+  it('accepts a chat model and says slides are skipped without vision', async () => {
     const result = await probePipeline(
       { job: 'extract', driver: 'ollama', model: 'qwen2.5:7b' },
       tmpdir(),
@@ -237,6 +237,38 @@ describe('Ollama capabilities', () => {
     );
     expect(result.ok).toBe(true);
     expect(result.models).toEqual(['qwen2.5:7b']);
+    expect(result.detail).toMatch(/slides skipped/);
+  });
+
+  it('asks /api/show for the chosen model because /api/tags leaves vision out', async () => {
+    const fetchImpl = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url).endsWith('/api/tags')) {
+        return { ok: true, json: async () => ({ models: [{ name: 'gemma3:4b', capabilities: ['completion'] }] }) };
+      }
+      const { model } = JSON.parse(String(init?.body)) as { model: string };
+      return { ok: true, json: async () => ({ capabilities: model === 'gemma3:4b' ? ['completion', 'vision'] : [] }) };
+    }) as unknown as ProbeDeps['fetch'];
+    const result = await probePipeline(
+      { job: 'extract', driver: 'ollama', model: 'gemma3:4b' },
+      tmpdir(),
+      deps(fetchImpl),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.detail).toMatch(/reads slides/);
+  });
+
+  it('says when the chosen model reads slides', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ models: [{ name: 'gemma3:4b', capabilities: ['completion', 'vision'] }] }),
+    });
+    const result = await probePipeline(
+      { job: 'extract', driver: 'ollama', model: 'gemma3:4b' },
+      tmpdir(),
+      deps(fetchImpl),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.detail).toMatch(/reads slides/);
   });
 
   it('reads capabilities straight from /api/tags when the server lists them', async () => {

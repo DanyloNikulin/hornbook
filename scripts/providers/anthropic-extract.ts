@@ -4,7 +4,10 @@ import type { ExtractRequest, Extractor } from './types.ts';
 
 export class AnthropicExtractor implements Extractor {
   readonly driver = 'anthropic';
-  readonly supportsVision = true;
+
+  hasVision(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
 
   constructor(private readonly model: string) {}
 

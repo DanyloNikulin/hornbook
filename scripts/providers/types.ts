@@ -25,6 +25,7 @@ export interface ExtractRequest {
 
 export interface Extractor {
   readonly driver: string;
-  readonly supportsVision: boolean;
+  /** Whether images can go in the request. Ollama answers per pulled model, hence async. */
+  hasVision(): Promise<boolean>;
   extract(req: ExtractRequest): Promise<unknown>;
 }

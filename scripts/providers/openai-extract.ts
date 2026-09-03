@@ -1,29 +1,39 @@
 import type { ExtractRequest, Extractor } from './types.ts';
+import { ollamaCapabilities, ollamaHost } from './ollama.ts';
 
 /**
  * OpenAI Chat Completions and Ollama's OpenAI-compatible /v1/chat/completions.
- * Images are sent only when the driver is openai (Ollama vision is optional and
- * often missing — callers already skip frames when supportsVision is false).
+ * Images go to OpenAI always, and to Ollama when the pulled model lists the
+ * vision capability (gemma3, qwen2.5vl, llama3.2-vision…). A text-only model
+ * gets the text parts only, so a stray image never turns into a 400.
  */
 export class OpenAiCompatibleExtractor implements Extractor {
   readonly driver: 'openai' | 'ollama';
-  readonly supportsVision: boolean;
+  private vision?: Promise<boolean>;
 
   constructor(
     driver: 'openai' | 'ollama',
     private readonly model: string,
   ) {
     this.driver = driver;
-    this.supportsVision = driver === 'openai';
+  }
+
+  hasVision(): Promise<boolean> {
+    this.vision ??=
+      this.driver === 'openai'
+        ? Promise.resolve(true)
+        : ollamaCapabilities(ollamaHost(), this.model).then((caps) => caps?.includes('vision') ?? false);
+    return this.vision;
   }
 
   async extract(req: ExtractRequest): Promise<unknown> {
     const { url, headers } = this.endpoint();
+    const vision = await this.hasVision();
     const userContent: unknown[] = [];
     for (const part of req.userParts) {
       if (part.type === 'text' && part.text) {
         userContent.push({ type: 'text', text: part.text });
-      } else if (part.type === 'image' && part.imageJpeg && this.supportsVision) {
+      } else if (part.type === 'image' && part.imageJpeg && vision) {
         userContent.push({
           type: 'image_url',
           image_url: {
@@ -70,9 +80,8 @@ export class OpenAiCompatibleExtractor implements Extractor {
 
   private endpoint(): { url: string; headers: Record<string, string> } {
     if (this.driver === 'ollama') {
-      const host = (process.env['OLLAMA_HOST'] ?? 'http://127.0.0.1:11434').replace(/\/$/, '');
       return {
-        url: `${host}/v1/chat/completions`,
+        url: `${ollamaHost()}/v1/chat/completions`,
         headers: { 'Content-Type': 'application/json' },
       };
     }
