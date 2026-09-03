@@ -2,17 +2,18 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { extractValidated, formatIssues, repairMessage } from './extract-validate';
+import { extractValidated, formatIssues, hollowIssues, repairMessage } from './extract-validate';
 import { Lesson } from '../../src/lib/schema';
 import type { ExtractRequest, Extractor } from '../providers/types';
 
-const VALID = {
+/** Schema-valid but with nothing to study from: only the article is filled. */
+const HOLLOW = {
   id: '2026-09-03-saludos',
   date: '2026-09-03',
   slug: 'saludos',
   title: 'Saludos',
   summary: 'Greetings.',
-  article_md: '## Takeaway\nSay hello.',
+  article_md: '## Takeaway\nSay hello.\n\n| hola | hello |',
   vocabulary: [],
   grammar: [],
   quotes: [],
@@ -21,6 +22,13 @@ const VALID = {
   slides: [],
   related: [],
   topics: ['vocabulary'],
+};
+
+const VALID = {
+  ...HOLLOW,
+  vocabulary: [{ target: 'hola', learner: 'hello', level: 'A1', example_target: 'Hola, Ana.', example_learner: 'Hello, Ana.' }],
+  quiz: [{ type: 'fill', q: 'Say hello in Spanish.', answer: 'hola' }],
+  flashcards: [{ front: 'hola', back: 'hello', type: 'word', tags: ['A1'] }],
 };
 
 const REQUEST: ExtractRequest = {
@@ -101,10 +109,42 @@ describe('extractValidated', () => {
     expect(existsSync(join(logs, 'validation-errors-2.json'))).toBe(true);
   });
 
+  it('asks once for the structured fields when a valid answer is hollow, and accepts the filled one', async () => {
+    const extractor = fakeExtractor([HOLLOW, VALID]);
+    const out = await extractValidated(extractor, REQUEST, logs, quiet);
+    expect(out.attempts).toBe(2);
+    expect(out.lesson.vocabulary).toHaveLength(1);
+    const repair = extractor.requests[1]!.userParts[1]!.text ?? '';
+    expect(repair).toContain('vocabulary: empty');
+    expect(repair).toContain('quiz: empty');
+    expect(repair).toContain('| hola | hello |');
+    expect(JSON.parse(readFileSync(join(logs, 'validation-errors.json'), 'utf8')).hollow).toHaveLength(4);
+  });
+
+  it('keeps a hollow lesson that stays hollow after the repair round, with a warning', async () => {
+    const warnings: string[] = [];
+    const out = await extractValidated(fakeExtractor([HOLLOW, HOLLOW]), REQUEST, logs, {
+      warn: (m: string) => warnings.push(m),
+      log: () => undefined,
+    });
+    expect(out.attempts).toBe(2);
+    expect(out.lesson.vocabulary).toHaveLength(0);
+    expect(warnings.join('\n')).toMatch(/still has no vocabulary or quiz/);
+  });
+
   it('treats a non-object answer as an empty lesson rather than crashing', async () => {
     await expect(extractValidated(fakeExtractor(['nope', null]), REQUEST, logs, quiet)).rejects.toThrow(
       /repair round/,
     );
+  });
+});
+
+describe('hollowIssues', () => {
+  it('is quiet when either vocabulary or quiz has content', () => {
+    const parsed = Lesson.parse(VALID);
+    expect(hollowIssues(parsed)).toEqual([]);
+    expect(hollowIssues(Lesson.parse({ ...HOLLOW, quiz: VALID.quiz }))).toEqual([]);
+    expect(hollowIssues(Lesson.parse(HOLLOW)).map((i) => i.split(':')[0])).toEqual(['vocabulary', 'quiz', 'flashcards', 'grammar']);
   });
 });
 

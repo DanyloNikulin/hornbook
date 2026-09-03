@@ -37,6 +37,7 @@ describe('PipelineSetupComponent', () => {
   it('shows models returned by the live connection and does not auto-pick', async () => {
     post.mockResolvedValue({
       ok: false,
+      pick: true,
       detail: 'Pick one',
       models: ['llama3.2:latest', 'qwen2.5:7b'],
     });
@@ -52,6 +53,12 @@ describe('PipelineSetupComponent', () => {
     expect(root.textContent).toContain('Pulled on this host');
     expect(root.textContent).toContain('llama3.2:latest');
     expect(root.querySelector('.il-pipe-models .il-chip.active')).toBeNull();
+    // A found list waits for a pick; it is neither "Ready." nor "Not yet.".
+    const result = root.querySelector('.il-pipe-result') as HTMLElement;
+    expect(result.classList.contains('il-pipe-result--pick')).toBe(true);
+    expect(result.classList.contains('il-pipe-result--bad')).toBe(false);
+    expect(result.textContent).toContain('Connected.');
+    expect(result.textContent).not.toContain('Not yet.');
     const chip = [...root.querySelectorAll('.il-pipe-models .il-chip')].find((b) =>
       b.textContent?.includes('qwen2.5:7b'),
     ) as HTMLButtonElement | undefined;
@@ -76,6 +83,22 @@ describe('PipelineSetupComponent', () => {
     expect(root.textContent).toContain('This key can use');
     expect(root.textContent).toContain('claude-sonnet-4-6');
     expect(root.querySelector('.il-pipe-models .il-chip.active')).toBeNull();
+  });
+
+  it('paints a real failure red', async () => {
+    post.mockResolvedValue({ ok: false, detail: 'Cannot reach Ollama at http://127.0.0.1:11434. Timed out.' });
+    const fixture = mount('extract', { driver: 'ollama', model: 'qwen2.5:7b' });
+    const root = fixture.nativeElement as HTMLElement;
+    // Before any list arrives the button reads "Find models" even with a model typed.
+    const check = [...root.querySelectorAll('button')].find((b) => /Find models|Check this step/.test(b.textContent ?? ''));
+    expect(check).toBeTruthy();
+    check?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const result = root.querySelector('.il-pipe-result') as HTMLElement;
+    expect(result.classList.contains('il-pipe-result--bad')).toBe(true);
+    expect(result.classList.contains('il-pipe-result--pick')).toBe(false);
+    expect(result.textContent).toContain('Not yet.');
   });
 
   it('hides model chips when hearing is skipped', () => {

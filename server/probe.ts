@@ -19,6 +19,8 @@ export interface ProbeResult {
   ok: boolean;
   detail: string;
   models?: string[];
+  /** The connection answered with `models`; a pick is still needed. Not a failure. */
+  pick?: boolean;
 }
 
 export interface ProbeDeps {
@@ -107,6 +109,7 @@ async function probeOllama(model: string, env: NodeJS.ProcessEnv, deps: ProbeDep
     if (!model) {
       return {
         ok: false,
+        pick: true,
         detail: `Ollama is up at ${host}. Pick one of ${names.length} pulled model(s).`,
         models: names,
       };
@@ -219,6 +222,7 @@ function listedResult(who: string, job: PipelineJob, model: string, names: strin
   if (!model) {
     return {
       ok: false,
+      pick: true,
       detail: names.length
         ? `${who} accepted the key. Pick one of ${names.length} model(s).`
         : `${who} accepted the key. Type a model name.`,

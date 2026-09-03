@@ -362,6 +362,7 @@ export const IT = {
   'pipeline.findModels': 'Trova i modelli',
   'pipeline.checking': 'Controllo…',
   'pipeline.ok': 'Pronto.',
+  'pipeline.pick': 'Collegato.',
   'pipeline.bad': 'Non ancora.',
 
   'theme.paper.name': 'Carta',

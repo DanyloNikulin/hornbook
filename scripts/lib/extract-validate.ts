@@ -47,7 +47,21 @@ export async function extractValidated(
     for (const msg of aliasLessonFields(toolInput)) log.warn(`⚠ Tool input alias: ${msg}`);
 
     const result = Lesson.safeParse(toolInput);
-    if (result.success) return { lesson: result.data, toolInput, attempts: attempt };
+    if (result.success) {
+      const hollow = hollowIssues(result.data);
+      if (hollow.length === 0) return { lesson: result.data, toolInput, attempts: attempt };
+      if (attempt >= MAX_ATTEMPTS) {
+        log.warn('⚠ Lesson still has no vocabulary or quiz after a repair round; saving it as it is. A larger model may do better on this recording.');
+        return { lesson: result.data, toolInput, attempts: attempt };
+      }
+      writeFileSync(join(logsDir, `validation-errors${suffix}.json`), JSON.stringify({ hollow }, null, 2), 'utf8');
+      log.warn(`⚠ Lesson has no vocabulary or quiz (everything went into the article?); asking ${extractor.driver} to fill them once.`);
+      raw = await extractor.extract({
+        ...req,
+        userParts: [...req.userParts, { type: 'text', text: repairMessage(toolInput, hollow) }],
+      });
+      continue;
+    }
 
     const errorsPath = join(logsDir, `validation-errors${suffix}.json`);
     writeFileSync(errorsPath, JSON.stringify(result.error.format(), null, 2), 'utf8');
@@ -62,6 +76,24 @@ export async function extractValidated(
       userParts: [...req.userParts, { type: 'text', text: repairMessage(toolInput, issues) }],
     });
   }
+}
+
+/**
+ * A schema-valid lesson with neither vocabulary nor quiz is hollow: seen
+ * from gemma3:4b with slide images attached, which wrote the whole lesson,
+ * vocabulary table included, into article_md and left the fields the app
+ * studies from empty. Phrased like Zod issues so the same repair round
+ * asks for them.
+ */
+export function hollowIssues(lesson: LessonT): string[] {
+  if (lesson.vocabulary.length > 0 || lesson.quiz.length > 0) return [];
+  const issues = [
+    'vocabulary: empty — list every word and phrase the lesson taught, each with target, learner, level, example_target and example_learner',
+    'quiz: empty — write 3 to 6 questions (mc, fill, translate) about this lesson',
+  ];
+  if (lesson.flashcards.length === 0) issues.push('flashcards: empty — at least one card per vocabulary item');
+  if (lesson.grammar.length === 0) issues.push('grammar: empty — one rule per pattern the teacher explained, if any');
+  return issues;
 }
 
 /** "quiz.0.options: Invalid input: expected array, received undefined" */
@@ -79,6 +111,7 @@ export function repairMessage(previous: Record<string, unknown>, issues: readonl
     ...issues.map((i) => `- ${i}`),
     '',
     'Reminder of the shapes: a quiz item of type "mc" needs "options" (2-6 strings) and "answer" (zero-based index into options); type "fill" needs "answer" (the expected text); type "translate" needs "answer_target". A flashcard needs "type": "word", "phrase" or "grammar".',
+    'An empty array is a problem when the transcript or the slides have the material: put it in the structured field (and keep the article).',
     '',
     'Your previous output:',
     JSON.stringify(previous),

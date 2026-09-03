@@ -91,6 +91,10 @@ Keys and endpoints entered in Settings are stored in `journal/secrets.json`, whi
 Values from the environment or a local `.env` are used when the journal has none. Never commit
 keys. If the extract model has no vision, slides are skipped.
 
+Ollama is called through its native API with a 16k-token context (`OLLAMA_NUM_CTX` changes it).
+Ollama's own default of 4k is too small for a lesson: a long transcript would lose its start,
+and a small vision model given several slides returned JSON cut off mid-string.
+
 ## Look
 
 Each pair can have its own atmosphere, chosen in Settings: one of six bundled presets (each
@@ -140,3 +144,11 @@ proxy (Cloudflare Access, Tailscale, a VPN) in front instead.
 npm test               # app
 npm run test:scripts   # pipeline scripts + server
 ```
+
+Three slower checks live in `harness/` and run against throwaway journals, never against yours
+or a paid API: `npm run harness:api` (every endpoint, no model needed), `npm run harness:pipeline`
+(ffmpeg + whisper.cpp + Ollama on a bundled video with real slides) and `npm run harness:ui`
+(Playwright through the installed Chrome or Edge). See [harness/README.md](harness/README.md).
+
+Country flags in the catalogue are drawn with a bundled Twemoji subset (CC-BY 4.0), because
+Windows has no flag glyphs of its own.

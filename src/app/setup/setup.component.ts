@@ -52,7 +52,7 @@ import { SectionService } from '../section.service';
         </div>
 
         <div class="il-pair-preview">
-          <span aria-hidden="true">{{ targetInfo()?.flag }} → {{ learnerInfo()?.flag }}</span>
+          <span class="il-flag" aria-hidden="true">{{ targetInfo()?.flag }} → {{ learnerInfo()?.flag }}</span>
           <strong>{{ targetInfo()?.name }} → {{ learnerInfo()?.name }}</strong>
           <span class="il-stat-sub">{{ 'setup.folder' | t }} <code>{{ id() }}</code></span>
         </div>

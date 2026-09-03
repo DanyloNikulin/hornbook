@@ -1,0 +1,7 @@
+[00:00] teacher: Hola. Today we study Spanish greetings.
+[00:05] teacher: Hola means hello. You can use it any time of day.
+[00:09] teacher: Buenos días is good morning. Buenas tardes is good afternoon. Buenas noches is good night.
+[00:14] teacher: With friends use tú: ¿Cómo estás? In a shop or with someone older use usted: ¿Cómo está usted?
+[00:19] teacher: When you meet someone, say mucho gusto. It means nice to meet you. The answer is igualmente.
+[00:23] student: Hola, me llamo Alex. Mucho gusto.
+[00:25] teacher: Perfecto. Igualmente.

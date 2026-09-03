@@ -66,6 +66,7 @@ describe('probePipeline', () => {
       deps(fetchImpl),
     );
     expect(result.ok).toBe(false);
+    expect(result.pick).toBeUndefined();
     expect(result.detail).toMatch(/not pulled|Pick one/);
     expect(result.models).toEqual(['llama3.2:latest']);
   });
@@ -81,6 +82,8 @@ describe('probePipeline', () => {
       deps(fetchImpl),
     );
     expect(result.ok).toBe(false);
+    // A found list is not a failure: the UI must not paint it red.
+    expect(result.pick).toBe(true);
     expect(result.models).toEqual(['llama3.1:latest', 'qwen2.5:7b']);
   });
 
@@ -125,6 +128,7 @@ describe('probePipeline', () => {
       deps(fetchImpl),
     );
     expect(result.ok).toBe(false);
+    expect(result.pick).toBe(true);
     expect(result.models).toEqual(['gpt-4o']);
     expect(result.detail).toMatch(/Pick one/i);
   });

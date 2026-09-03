@@ -148,17 +148,25 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
     `Extract: ${transcript.length} chars transcript, ${framesManifest.length} slide(s), ${existingLessons.length} candidate lesson(s) in context.`,
   );
 
+  const extractor = getExtractor();
+  const vision = await extractor.hasVision();
+  if (!vision && framesManifest.length > 0) {
+    console.warn(`Extract model (${extractor.driver}) has no vision — skipping ${framesManifest.length} slide(s).`);
+  }
+
+  // A text-only model is not told about frames it cannot see: listed by
+  // name and timestamp, they were enough for a small model to invent a
+  // "slide" out of the transcript.
   const userText = userMessageForLesson({
     transcript,
     dateHint,
-    framesManifest,
+    framesManifest: vision ? framesManifest : [],
     existingLessons,
     preliminaryTopics,
   });
 
-  const extractor = getExtractor();
   const userParts: ExtractMessagePart[] = [{ type: 'text', text: userText }];
-  if (await extractor.hasVision()) {
+  if (vision) {
     for (const f of framesManifest) {
       const imgPath = join(framesDir, f.file);
       if (!existsSync(imgPath)) {
@@ -167,8 +175,6 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
       }
       userParts.push({ type: 'image', imageJpeg: readFileSync(imgPath) });
     }
-  } else if (framesManifest.length > 0) {
-    console.warn(`Extract model (${extractor.driver}) has no vision — skipping ${framesManifest.length} slide(s).`);
   }
 
   const lessonTool = buildLessonTool();

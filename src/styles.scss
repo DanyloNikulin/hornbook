@@ -14,6 +14,19 @@
 
 /* Fonts are bundled from fontsource via angular.json → styles, so the app works with no network. */
 
+/* Country flags are pairs of regional-indicator code points, and Windows has
+   no glyphs for them: the catalogue would read "ES" instead of a flag. A
+   Twemoji subset holding only those code points is bundled (angular.json
+   copies it to /fonts) and listed first on the flag elements; the
+   unicode-range keeps every other character on the normal fonts and stops
+   the download until a flag is actually drawn. */
+@font-face {
+  font-family: 'Twemoji Country Flags';
+  src: url('/fonts/TwemojiCountryFlags.woff2') format('woff2');
+  unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;
+  font-display: swap;
+}
+
 /* ---------- Design tokens ---------- */
 :root {
   --paper: #f4ecdf;
@@ -34,6 +47,7 @@
   --font-display: "Cormorant Garamond", "Cormorant", Georgia, serif;
   --font-body: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace;
+  --font-flags: "Twemoji Country Flags", var(--font-body);
 
   --r-sm: 8px;
   --r-md: 14px;
@@ -1526,6 +1540,7 @@ h1, h2, h3, h4 {
   color: var(--ink);
 }
 .il-section-card--new { border-style: dashed; opacity: 0.85; }
+.il-flag, .il-lang-flag, .il-section-flags { font-family: var(--font-flags); }
 .il-section-flags { font-size: 28px; line-height: 1; margin-bottom: 10px; }
 .il-section-arrow { font-size: 18px; color: var(--muted); margin: 0 4px; }
 .il-section-label { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 4px; }
@@ -1704,6 +1719,8 @@ h1, h2, h3, h4 {
 .il-pipe-check { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .il-pipe-result { font-size: 13px; margin: 0; }
 .il-pipe-result--ok { color: var(--success); }
+/* The connection answered and listed models; nothing is wrong, nothing is chosen. */
+.il-pipe-result--pick { color: var(--ink-2); }
 .il-pipe-result--bad { color: #a33; }
 
 /* ---------- Theme presets (settings) ---------- */

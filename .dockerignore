@@ -4,6 +4,7 @@ dist
 .git
 .github
 docs
+harness
 work
 journal/*/_derived
 journal/*/_progress.json

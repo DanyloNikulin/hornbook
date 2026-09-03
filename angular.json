@@ -27,6 +27,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "TwemojiCountryFlags.woff2",
+                "input": "node_modules/country-flag-emoji-polyfill/dist",
+                "output": "/fonts"
               }
             ],
             "styles": [

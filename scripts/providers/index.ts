@@ -3,7 +3,8 @@ import type { Extractor, Transcriber } from './types.ts';
 import { OpenAiTranscriber } from './openai-transcribe.ts';
 import { WhisperCliTranscriber } from './whisper-cli.ts';
 import { AnthropicExtractor } from './anthropic-extract.ts';
-import { OpenAiCompatibleExtractor } from './openai-extract.ts';
+import { OpenAiExtractor } from './openai-extract.ts';
+import { OllamaExtractor } from './ollama-extract.ts';
 
 export function getTranscriber(): Transcriber {
   const { driver, model } = currentProviders().transcribe;
@@ -22,9 +23,8 @@ export function getTranscriber(): Transcriber {
 export function getExtractor(): Extractor {
   const { driver, model } = currentProviders().extract;
   if (driver === 'anthropic') return new AnthropicExtractor(model);
-  if (driver === 'openai' || driver === 'ollama') {
-    return new OpenAiCompatibleExtractor(driver, model);
-  }
+  if (driver === 'openai') return new OpenAiExtractor(model);
+  if (driver === 'ollama') return new OllamaExtractor(model);
   throw new Error(
     `Extract driver "${driver}" is not supported. Use anthropic, openai, or ollama.`,
   );

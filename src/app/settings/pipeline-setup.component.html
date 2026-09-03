@@ -80,8 +80,9 @@
       {{ checking() ? ('pipeline.checking' | t) : ((listsFromConnection() && listedModels().length === 0) ? ('pipeline.findModels' | t) : ('pipeline.check' | t)) }}
     </button>
     @if (probe(); as r) {
-      <p class="il-pipe-result" [class.il-pipe-result--ok]="r.ok" [class.il-pipe-result--bad]="!r.ok" role="status">
-        {{ r.ok ? ('pipeline.ok' | t) : ('pipeline.bad' | t) }}
+      <p class="il-pipe-result" [class.il-pipe-result--ok]="r.ok" [class.il-pipe-result--pick]="!r.ok && r.pick"
+         [class.il-pipe-result--bad]="!r.ok && !r.pick" role="status">
+        {{ r.ok ? ('pipeline.ok' | t) : r.pick ? ('pipeline.pick' | t) : ('pipeline.bad' | t) }}
         {{ r.detail }}
       </p>
     }

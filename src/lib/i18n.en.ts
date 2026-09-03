@@ -374,6 +374,7 @@ export const EN = {
   'pipeline.findModels': 'Find models',
   'pipeline.checking': 'Checking…',
   'pipeline.ok': 'Ready.',
+  'pipeline.pick': 'Connected.',
   'pipeline.bad': 'Not yet.',
 
   // ── theme presets ─────────────────────────────────────────────────────────

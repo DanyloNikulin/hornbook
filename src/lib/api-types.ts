@@ -109,4 +109,9 @@ export interface ProbeResult {
   detail: string;
   /** Live inventory from this connection (Ollama tags, or the API's model list). Never a Hornbook catalog. */
   models?: string[];
+  /**
+   * The connection answered and `models` is what it offers, but no model is
+   * chosen yet. Not a failure: the UI shows it as "pick one", not "not yet".
+   */
+  pick?: boolean;
 }
