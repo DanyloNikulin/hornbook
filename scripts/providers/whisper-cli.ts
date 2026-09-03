@@ -4,6 +4,21 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Transcriber } from './types.ts';
 
+/**
+ * Arguments for whisper-cli. The language is auto-detected per chunk: a
+ * lesson mixes the target language with the learner's, and whisper.cpp's
+ * default is English, which mangles anything else.
+ *
+ * The lesson hint is deliberately NOT passed as `--prompt`. Whisper mimics
+ * the prompt's style rather than following it, and on a test recording with
+ * the tiny model the instruction text made the transcript worse; a
+ * target-language word list fixed one spelling and broke another. Nothing
+ * beat no prompt at all.
+ */
+export function whisperArgs(modelPath: string, audioPath: string, outBase: string): string[] {
+  return ['-m', modelPath, '-f', audioPath, '-l', 'auto', '-otxt', '-of', outBase];
+}
+
 export class WhisperCliTranscriber implements Transcriber {
   readonly driver = 'whisper-cli';
   /** whisper.cpp reads PCM WAV; it cannot open the opus chunks OpenAI gets. */
@@ -15,7 +30,7 @@ export class WhisperCliTranscriber implements Transcriber {
     const bin = process.env['WHISPER_BIN'] ?? 'whisper-cli';
     const modelPath = process.env['WHISPER_MODEL'] ?? this.model;
     const outDir = mkdtempSync(join(tmpdir(), 'hornbook-whisper-'));
-    const args = ['-m', modelPath, '-f', audioPath, '-otxt', '-of', join(outDir, 'out')];
+    const args = whisperArgs(modelPath, audioPath, join(outDir, 'out'));
 
     await new Promise<void>((resolve, reject) => {
       const child = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
