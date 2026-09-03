@@ -78,6 +78,7 @@ function recordSuggestions(
       entry.lessons.push(lessonSlug);
     }
   }
+  mkdirSync(sectionDir(currentSection().id), { recursive: true });
   writeFileSync(suggestionsPath(), JSON.stringify(file, null, 2) + '\n', 'utf8');
 }
 

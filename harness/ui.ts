@@ -155,6 +155,7 @@ async function main(): Promise<void> {
     if (ollamaUp) {
       r.rec('Find models lists pulled models and is not painted red', writeClass.includes('il-pipe-result--pick') && !writeClass.includes('il-pipe-result--bad') && models.length > 0 && /Connected\./.test(writeText), `${writeText} | ${models.join(', ')}`);
       r.rec('no model is chosen for the user', (await write.locator('.il-pipe-models .il-chip.active').count()) === 0);
+      await shot('05-settings-probe');
       await write.locator('.il-pipe-models .il-chip').first().click();
       await write.getByRole('button', { name: /Check this step/i }).click();
       await writeResult.waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => undefined);
@@ -164,8 +165,8 @@ async function main(): Promise<void> {
     } else {
       r.rec('Find models without Ollama is a red "Not yet."', writeClass.includes('il-pipe-result--bad') && /Not yet\./.test(writeText), writeText);
       r.skip('Find models lists pulled models', 'no Ollama reachable');
+      await shot('05-settings-probe');
     }
-    await shot('05-settings-probe');
 
     r.section('Spanish pair');
     await goto('/es-en');
@@ -191,9 +192,16 @@ async function main(): Promise<void> {
       } else {
         await li.locator('textarea').fill('hola');
         const reveal = li.getByRole('button', { name: /Show model answer/i });
-        if (await reveal.count()) await reveal.click();
-        const close = li.getByRole('button', { name: /Close enough/i });
-        if (await close.count()) await close.click();
+        if (await reveal.count()) {
+          await reveal.click();
+          const close = li.getByRole('button', { name: /Close enough/i });
+          try {
+            await close.waitFor({ state: 'visible', timeout: 5_000 });
+            await close.click();
+          } catch {
+            // Check-enabled rec below records the miss instead of aborting the walk.
+          }
+        }
       }
     }
     const check = quiz.getByRole('button', { name: 'Check', exact: true });

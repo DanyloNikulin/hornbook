@@ -1,9 +1,10 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import type { ConfigView, SectionSummary } from '../lib/api-types';
+import { STOCK_TAGLINE } from '../lib/i18n';
 import { ApiService } from './api.service';
 
 const PLACEHOLDER: ConfigView = {
-  brand: { name: 'Hornbook', tagline: 'conspects from your lessons' },
+  brand: { name: 'Hornbook', tagline: STOCK_TAGLINE },
   providers: {
     transcribe: { driver: 'whisper-cli', model: 'base' },
     extract: { driver: 'ollama', model: 'llama3.1' },

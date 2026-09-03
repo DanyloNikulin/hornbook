@@ -9,6 +9,7 @@ import { VocabService } from '../vocab.service';
 import { ProgressService } from '../progress.service';
 import { today } from '../../lib/sm2';
 import { TOPIC_VOCAB, type DerivedVocabT, type LessonMetaT, type TopicT } from '../../lib/schema';
+import { isStockTagline } from '../../lib/i18n';
 import { TPipe } from '../i18n.pipe';
 import { JournalService } from '../journal.service';
 
@@ -24,7 +25,8 @@ export class LessonListComponent {
   protected readonly sec = inject(SectionService);
   private readonly journal = inject(JournalService);
   protected readonly brandName = this.journal.brandName();
-  protected readonly tagline = this.journal.tagline();
+  protected readonly tagline = computed(() => this.journal.tagline());
+  protected readonly stockTagline = computed(() => isStockTagline(this.tagline()));
   private readonly lessonsSvc = inject(LessonsService);
   private readonly results = inject(QuizResultsService);
   private readonly vocab = inject(VocabService);

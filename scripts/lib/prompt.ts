@@ -51,11 +51,12 @@ CONTENT GUIDELINES
 - summary: 2-3 sentences in ${learner}, what was covered.
 - vocabulary: ${target} words/phrases from this lesson.
   - DEDUPLICATE: each ${target} lemma appears AT MOST ONCE.
-  - SKIP filler greetings unless genuinely worth learning.
+  - SKIP filler greetings (hola, ciao, hi) when the lesson is about something else.
+    If greetings ARE the lesson, keep the words that were taught, including the basic ones.
   - \`level\` is the CEFR rating ("A1".."C2") or null.
   - REQUIRED: every entry MUST include \`example_target\` and \`example_learner\`.
 - grammar: one-sentence rule, 3-6 ${target} examples. Slide tables go in \`table\` as a 2D string array (first row = header).
-- quotes: 2-5 memorable teacher lines in ${target}. \`text\` is the original, \`gloss\` is optional ${learner}. \`ts\` is a SINGLE timestamp like "12:43".
+- quotes: 2-5 memorable teacher lines in ${target} that appear in the transcript. \`text\` is the original sentence, never empty, never just a speaker label. Omit quotes rather than inventing them. \`gloss\` is optional ${learner}. \`ts\` is a SINGLE timestamp like "12:43".
 - quiz: 5-10 questions. Types: "mc", "fill", "translate" (${learner} → ${target}, auto_check=false).
 - flashcards: 5-15 cards covering vocab AND grammar patterns.
 - slides: unique slides that contributed information.

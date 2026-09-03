@@ -2,7 +2,8 @@
 //
 // Claude and GPT follow the tool schema; a small local model mostly does, and
 // where it does not (a quiz item without its options, a flashcard without a
-// type) the aliases below fix the common shapes. What they cannot fix is
+// type, empty vocab next to filled cards, a speaker-label quote) the aliases
+// and salvage below fix the common shapes. What they cannot fix is
 // sent back to the model once, as a list of Zod issues next to its previous
 // output, with the instruction to return the complete lesson corrected.
 // One round: a second failure is reported like a first one used to be.
@@ -17,6 +18,7 @@ import type { ZodError } from 'zod';
 import { Lesson, type LessonT } from '../../src/lib/schema.ts';
 import { coerceStringifiedFields } from './tool-input-repair.ts';
 import { aliasLessonFields } from './lesson-input-aliases.ts';
+import { salvageLessonFields, transcriptFromUserMessage } from './lesson-quality.ts';
 import type { ExtractRequest, Extractor } from '../providers/types.ts';
 
 export interface ValidatedExtract {
@@ -45,6 +47,14 @@ export async function extractValidated(
     const toolInput = (raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
     for (const msg of coerceStringifiedFields(toolInput)) log.warn(`⚠ Tool input coercion: ${msg}`);
     for (const msg of aliasLessonFields(toolInput)) log.warn(`⚠ Tool input alias: ${msg}`);
+    // Original user text only — a repair round appends the previous JSON, which
+    // would otherwise "prove" an invented quote by echoing it back.
+    const userText = req.userParts
+      .filter((p) => p.type === 'text' && p.text)
+      .map((p) => p.text)
+      .join('\n\n');
+    const transcript = transcriptFromUserMessage(userText);
+    for (const msg of salvageLessonFields(toolInput, transcript)) log.warn(`⚠ Lesson salvage: ${msg}`);
 
     const result = Lesson.safeParse(toolInput);
     if (result.success) {

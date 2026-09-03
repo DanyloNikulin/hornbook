@@ -13,7 +13,7 @@
         <span class="il-brand-mark" aria-hidden="true">hb</span>
         <span>
           <div class="il-brand-name">{{ brandName() }}</div>
-          <div class="il-brand-sub">{{ inSection() ? section.label() : tagline() }}</div>
+          <div class="il-brand-sub">{{ inSection() ? section.label() : (stockTagline() ? ('brand.defaultTagline' | t) : tagline()) }}</div>
         </span>
       </a>
 

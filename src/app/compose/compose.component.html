@@ -44,7 +44,7 @@
         <span class="il-file-name">{{ pickedName() || ('file.none' | t) }}</span>
       </label>
     } @else {
-      <p class="il-section-sub">{{ 'compose.fromRecordingLocked' | t }} <a [routerLink]="sec.link('application')">{{ 'nav.appSettings' | t }}</a></p>
+      <p class="il-section-sub">{{ 'compose.fromRecordingLocked' | t }} <a [routerLink]="sec.link('application')">{{ 'nav.appSettings' | t }}</a>. {{ 'compose.fromRecordingLockedHint' | t }}</p>
     }
 
     @if (job(); as j) {

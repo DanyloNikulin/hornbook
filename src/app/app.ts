@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs/operators';
+import { isStockTagline } from '../lib/i18n';
 import { REPO_URL } from './constants';
 import { TPipe } from './i18n.pipe';
 import { JournalService } from './journal.service';
@@ -20,6 +21,7 @@ export class AppComponent {
   protected readonly repoUrl = REPO_URL;
   protected readonly brandName = computed(() => this.journal.brandName());
   protected readonly tagline = computed(() => this.journal.tagline());
+  protected readonly stockTagline = computed(() => isStockTagline(this.tagline()));
   protected readonly sections = computed(() => this.journal.sections());
   protected readonly serverError = computed(() => this.journal.loadError());
 

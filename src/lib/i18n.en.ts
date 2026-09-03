@@ -25,6 +25,7 @@ export const EN = {
   'nav.cheatsheetAria': 'Cheatsheet',
   'nav.sos': 'SOS',
   'footer.line': 'Conspects from your lessons · your folder is the database',
+  'brand.defaultTagline': 'conspects from your lessons',
   'footer.source': 'source ↗',
   'app.serverError': 'Cannot reach the Hornbook server ({detail}). Start it with {cmd} and reload.',
 
@@ -212,7 +213,7 @@ export const EN = {
   'sheet.updating': 'Updating…',
   'sheet.rebuild': 'Rebuild all',
   'sheet.subLead':
-    'Grammar from every lesson, condensed. Updating asks the model to merge lessons that are not in the sheet yet; it needs an Anthropic key in',
+    'Grammar from every lesson, condensed. Updating asks the model to merge lessons that are not in the sheet yet; it uses the extract model set in',
   'sheet.loading': 'Loading cheatsheet…',
   'sheet.loadFailed': 'Could not load the cheatsheet.',
   'sheet.empty':
@@ -249,7 +250,7 @@ export const EN = {
   'compose.download': 'Download JSON',
   'compose.fromTranscript': 'From a transcript',
   'compose.fromTranscriptSub':
-    'The extract model turns it into a structured conspect: article, vocabulary, grammar, quiz, cards.',
+    'The extract model writes a conspect in this pair’s languages: article, vocabulary, grammar, quiz, cards.',
   'compose.transcriptPlaceholder': 'Paste the lesson transcript…',
   'compose.extract': 'Extract lesson',
   'compose.fromRecording': 'From a recording',
@@ -257,8 +258,8 @@ export const EN = {
     'Audio or video is transcribed first, then extracted. Slides in a video are read when the extract model has vision. Drivers and keys live in',
   'compose.noEars':
     'Hearing is not set up, so a recording cannot be transcribed. Paste a transcript or a description of the lesson — that is enough.',
-  'compose.fromRecordingLocked':
-    'To drop audio or video, set up hearing in Application settings. Until then, paste a transcript above.',
+  'compose.fromRecordingLocked': 'To drop audio or video, set up hearing in',
+  'compose.fromRecordingLockedHint': 'Until then, paste a transcript above.',
   'compose.invalid': 'Lesson is not valid yet. Add a title, a date and a summary.',
   'compose.downloaded': 'Downloaded {name}.',
   'compose.pasteFirst': 'Paste a transcript first.',

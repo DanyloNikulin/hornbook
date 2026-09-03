@@ -74,3 +74,10 @@ export function translate(catalog: Catalog, locale: LocaleId, key: string, vars?
 export function t(key: string, vars?: Vars, locale: LocaleId = DEFAULT_LOCALE): string {
   return translate(catalogFor(locale), locale, key, vars);
 }
+
+/** Demo journal tagline. Chrome localizes this; a custom brand tagline is shown as-is. */
+export const STOCK_TAGLINE = 'conspects from your lessons';
+
+export function isStockTagline(value: string): boolean {
+  return value.trim().toLowerCase() === STOCK_TAGLINE;
+}

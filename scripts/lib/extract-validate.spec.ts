@@ -137,6 +137,39 @@ describe('extractValidated', () => {
       /repair round/,
     );
   });
+
+  it('salvages a qwen2.5:7b German-shaped answer in one pass, no repair round', async () => {
+    const qwen = {
+      ...VALID,
+      title: 'Grüße und Begrüßungen',
+      summary: 'German greetings.',
+      vocabulary: [],
+      quotes: [
+        { speaker: 'teacher', text: 'Teacher', ts: '00:01' },
+        {
+          speaker: 'teacher',
+          text: "Don't be afraid, don't be confused and don't get into the details.",
+          ts: '08:30',
+        },
+        { speaker: 'teacher', text: 'Guten Tag', ts: '00:00' },
+      ],
+      flashcards: [
+        { front: 'Guten Tag', back: 'Good day', type: 'word', tags: [] },
+        { front: 'Hallo', back: 'Hello', type: 'word', tags: [] },
+      ],
+    };
+    const request = {
+      ...REQUEST,
+      userParts: [{ type: 'text' as const, text: 'Guten Tag. Hallo. Today we study German greetings.' }],
+    };
+    const extractor = fakeExtractor([qwen]);
+    const out = await extractValidated(extractor, request, logs, quiet);
+
+    expect(out.attempts).toBe(1);
+    expect(extractor.requests).toHaveLength(1);
+    expect(out.lesson.vocabulary.map((v) => v.target)).toEqual(['Guten Tag', 'Hallo']);
+    expect(out.lesson.quotes).toEqual([{ speaker: 'teacher', text: 'Guten Tag', ts: '00:00' }]);
+  });
 });
 
 describe('hollowIssues', () => {

@@ -7,6 +7,7 @@ import {
   formatMessage,
   interpolate,
   isLocale,
+  isStockTagline,
   nextLocale,
   pluralCategory,
   t,
@@ -60,6 +61,13 @@ describe('i18n engine', () => {
 
   it('keeps the Italian catalog in lockstep with English keys', () => {
     expect(Object.keys(IT).sort()).toEqual(Object.keys(EN).sort());
+  });
+
+  it('localizes the stock demo tagline and leaves a custom one alone', () => {
+    expect(isStockTagline('conspects from your lessons')).toBe(true);
+    expect(isStockTagline('  Conspects from your lessons  ')).toBe(true);
+    expect(isStockTagline('Italian with Marta')).toBe(false);
+    expect(t('brand.defaultTagline', undefined, 'it')).toBe('sunti dalle tue lezioni');
   });
 
   it('covers every theme preset name and every connection-help key', () => {

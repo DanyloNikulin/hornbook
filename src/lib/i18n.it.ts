@@ -24,6 +24,7 @@ export const IT = {
   'nav.cheatsheetAria': 'Promemoria',
   'nav.sos': 'SOS',
   'footer.line': 'Sunti dalle tue lezioni · la cartella è il database',
+  'brand.defaultTagline': 'sunti dalle tue lezioni',
   'footer.source': 'sorgente ↗',
   'app.serverError': 'Impossibile raggiungere il server Hornbook ({detail}). Avvialo con {cmd} e ricarica.',
 
@@ -203,7 +204,7 @@ export const IT = {
   'sheet.updating': 'Aggiornamento…',
   'sheet.rebuild': 'Ricostruisci tutto',
   'sheet.subLead':
-    'Grammatica di ogni lezione, condensata. L’aggiornamento chiede al modello di unire le lezioni non ancora in scheda; serve una chiave Anthropic in',
+    'Grammatica di ogni lezione, condensata. L’aggiornamento chiede al modello di unire le lezioni non ancora in scheda; usa il modello di estrazione impostato in',
   'sheet.loading': 'Caricamento del promemoria…',
   'sheet.loadFailed': 'Impossibile caricare il promemoria.',
   'sheet.empty':
@@ -238,7 +239,7 @@ export const IT = {
   'compose.download': 'Scarica JSON',
   'compose.fromTranscript': 'Da una trascrizione',
   'compose.fromTranscriptSub':
-    'Il modello di estrazione la trasforma in un sunto strutturato: articolo, vocabolario, grammatica, quiz, carte.',
+    'Il modello di estrazione scrive un sunto nelle lingue di questa coppia: articolo, vocabolario, grammatica, quiz, carte.',
   'compose.transcriptPlaceholder': 'Incolla la trascrizione della lezione…',
   'compose.extract': 'Estrai lezione',
   'compose.fromRecording': 'Da una registrazione',
@@ -246,8 +247,8 @@ export const IT = {
     'Audio o video viene prima trascritto, poi estratto. Le diapositive di un video si leggono se il modello ha la visione. Driver e chiavi stanno in',
   'compose.noEars':
     'L’ascolto non è impostato, quindi una registrazione non può essere trascritta. Incolla una trascrizione o una descrizione della lezione — basta quello.',
-  'compose.fromRecordingLocked':
-    'Per caricare audio o video, imposta l’ascolto in Applicazione. Fino ad allora, incolla una trascrizione sopra.',
+  'compose.fromRecordingLocked': 'Per caricare audio o video, imposta l’ascolto in',
+  'compose.fromRecordingLockedHint': 'Fino ad allora, incolla una trascrizione sopra.',
   'compose.invalid': 'La lezione non è ancora valida. Aggiungi un titolo, una data e un riassunto.',
   'compose.downloaded': 'Scaricato {name}.',
   'compose.pasteFirst': 'Incolla prima una trascrizione.',

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   adoptPlace,
+  canHear,
   cloudDriverFromKey,
   defaultPath,
+  OPTIONAL_CONNECTIONS,
   pathFor,
   pathsFor,
   placeFor,
@@ -51,5 +53,16 @@ describe('pipeline paths', () => {
     adoptPlace('extract', 'cloud', cfg);
     expect(cfg.driver).toBe('openai');
     expect(cfg.model).toBe('my-finetune');
+  });
+
+  it('the free combination is whisper-cli on this computer plus Ollama on the LAN', () => {
+    const hear = pathFor('transcribe', 'whisper-cli');
+    const write = pathFor('extract', 'ollama');
+    expect(hear).toMatchObject({ place: 'cli', modelKind: 'file', connections: ['WHISPER_BIN'] });
+    expect(write).toMatchObject({ place: 'lan', modelKind: 'name', connections: ['OLLAMA_HOST'] });
+    expect(canHear('whisper-cli')).toBe(true);
+    expect(canHear('ollama')).toBe(false);
+    expect(OPTIONAL_CONNECTIONS.has('OLLAMA_HOST')).toBe(true);
+    expect(cloudDriverFromKey('')).toBeUndefined();
   });
 });

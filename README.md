@@ -87,13 +87,23 @@ pair; a pair can override them.
 | transcribe | `whisper-cli` (whisper.cpp binary + model file) or `openai` |
 | extract | `ollama` (local), `anthropic`, or `openai` |
 
+**Free setup that we ran end to end** (no API keys) on a 10 minute German A1 video and a 15 minute Norwegian A2 video, `whisper-cli` + Ollama on an 8 GB GPU:
+
+| Step | What to install | What we actually ran |
+|---|---|---|
+| Hear | [whisper.cpp](https://github.com/ggml-org/whisper.cpp) `whisper-cli` + [`ggml-small.bin`](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin) (~466 MB) | Full video jobs with `small`. `tiny` is only for the 24 s harness fixture: on the Norwegian clip it heard Swedish-ish noise; `small` detected `no` and wrote `leilighet` / `husleie`. We did not run `medium`. |
+| Write | `ollama pull qwen2.5:7b` | Same two videos, after hearing. It writes a valid lesson JSON. The note still needs a human pass (learner-language glosses, empty vocab arrays, junk quotes). |
+| Context | `OLLAMA_NUM_CTX=32768` | Required for these lengths. 16k cut the German extract mid-JSON. Ollama’s own 4k is far too small. |
+
+`ollama pull gemma3:4b` reads slides on the **24 s** harness fixture. We did **not** use it on the 10–15 minute videos (qwen2.5:7b has no vision, so those frames were skipped).
+
+In Application settings: hearing = this computer (`WHISPER_BIN` / `WHISPER_MODEL` → `whisper-cli` and `ggml-small.bin`); writing = home network, pick `qwen2.5:7b`.
+
 Keys and endpoints entered in Settings are stored in `journal/secrets.json`, which git ignores.
 Values from the environment or a local `.env` are used when the journal has none. Never commit
 keys. If the extract model has no vision, slides are skipped.
 
-Ollama is called through its native API with a 16k-token context (`OLLAMA_NUM_CTX` changes it).
-Ollama's own default of 4k is too small for a lesson: a long transcript would lose its start,
-and a small vision model given several slides returned JSON cut off mid-string.
+Ollama is called through its native API. Set `OLLAMA_NUM_CTX=32768` for real lessons; 16k is the code default and cuts off a 10-minute extract.
 
 ## Look
 

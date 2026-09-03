@@ -14,11 +14,12 @@
 // Steps that need a tool or a model that is not there are SKIPped, never
 // failed; the summary says what actually ran.
 
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ProbeResult, JobView } from '../src/lib/api-types.ts';
 import { Lesson } from '../src/lib/schema.ts';
 import { extractFrames } from '../scripts/extract-frames.ts';
+import { isJunkQuoteText, quoteAppearsInTranscript } from '../scripts/lib/lesson-quality.ts';
 import {
   Report,
   b64,
@@ -170,6 +171,13 @@ async function main(): Promise<void> {
       const lesson = await lessonOf(api, done);
       const parsed = Lesson.safeParse(lesson);
       r.rec('the lesson validates and has vocabulary, a quiz and cards', parsed.success && parsed.data.vocabulary.length > 0 && parsed.data.quiz.length > 0 && parsed.data.flashcards.length > 0, lessonShape(lesson));
+      if (parsed.success) {
+        const fixtureText = readFileSync(transcript, 'utf8');
+        const junk = parsed.data.quotes.filter((q) => isJunkQuoteText(q.text));
+        r.rec('quotes are not empty speaker labels', junk.length === 0, junk.map((q) => q.text).join(' | '));
+        const invented = parsed.data.quotes.filter((q) => !quoteAppearsInTranscript(q.text, fixtureText));
+        r.rec('quotes that remain appear in the transcript', invented.length === 0, invented.map((q) => q.text).join(' | '));
+      }
     } else {
       r.skip('transcript job finishes', `${EXTRACT_MODEL} not available`);
     }
@@ -179,7 +187,17 @@ async function main(): Promise<void> {
       const done = await processJob(api, { filename: 'lesson.mp4', base64: b64(video), date: '2026-09-03', from: 'video' });
       r.rec('video job finishes (hear, frames, write)', done?.status === 'done' && !!done.result?.slug, jobSummary(done));
       const lesson = await lessonOf(api, done);
-      r.rec('the video lesson validates', Lesson.safeParse(lesson).success, lessonShape(lesson));
+      const parsed = Lesson.safeParse(lesson);
+      r.rec('the video lesson validates', parsed.success, lessonShape(lesson));
+      r.rec(
+        'the video lesson has vocabulary or cards to study',
+        parsed.success && (parsed.data.vocabulary.length > 0 || parsed.data.flashcards.length > 0),
+        lessonShape(lesson),
+      );
+      if (parsed.success) {
+        const junk = parsed.data.quotes.filter((q) => isJunkQuoteText(q.text));
+        r.rec('video quotes are not empty speaker labels', junk.length === 0, junk.map((q) => q.text).join(' | '));
+      }
       r.rec('a text-only model skips the slides and says so', /no vision|skipping \d+ slide/i.test(done?.log ?? ''), (done?.log ?? '').match(/[^\n]*no vision[^\n]*/i)?.[0] ?? '');
       r.rec('no slide is invented without vision', Array.isArray(lesson?.['slides']) && lesson!['slides'].length === 0, lessonShape(lesson));
     } else {
