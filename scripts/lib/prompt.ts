@@ -149,25 +149,47 @@ export function buildLessonTool(): {
         },
         // Spelled out so a schema-enforcing endpoint (Ollama's structured
         // output) holds a small model to the field names Zod expects.
+        // One shape per quiz type, mirroring the Zod union: a small model
+        // given a single loose object schema fills in only the fields marked
+        // required and folds the choices into the question text.
         quiz: {
           type: 'array',
           items: {
-            type: 'object',
-            required: ['type', 'q'],
-            properties: {
-              type: { type: 'string', enum: ['mc', 'fill', 'translate'] },
-              q: { type: 'string', description: 'The question or prompt.' },
-              options: { type: 'array', items: { type: 'string' }, description: 'mc only: 2-6 choices.' },
-              answer: {
-                type: ['integer', 'string'],
-                description: 'mc: zero-based index into options. fill: the expected text.',
+            anyOf: [
+              {
+                type: 'object',
+                required: ['type', 'q', 'options', 'answer'],
+                properties: {
+                  type: { type: 'string', enum: ['mc'] },
+                  q: { type: 'string', description: 'The question, without the choices.' },
+                  options: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 6 },
+                  answer: { type: 'integer', minimum: 0, description: 'Zero-based index into options.' },
+                  explanation: { type: 'string' },
+                },
               },
-              answer_target: { type: 'string', description: `translate only: the expected ${target}.` },
-              alternatives: { type: 'array', items: { type: 'string' } },
-              explanation: { type: 'string' },
-              case_sensitive: { type: 'boolean' },
-              auto_check: { type: 'boolean' },
-            },
+              {
+                type: 'object',
+                required: ['type', 'q', 'answer'],
+                properties: {
+                  type: { type: 'string', enum: ['fill'] },
+                  q: { type: 'string', description: 'Sentence with a blank.' },
+                  answer: { type: 'string', description: 'The expected text.' },
+                  alternatives: { type: 'array', items: { type: 'string' } },
+                  case_sensitive: { type: 'boolean' },
+                },
+              },
+              {
+                type: 'object',
+                required: ['type', 'q', 'answer_target'],
+                properties: {
+                  type: { type: 'string', enum: ['translate'] },
+                  q: { type: 'string', description: `Text in ${learner} to translate.` },
+                  answer_target: { type: 'string', description: `The expected ${target}.` },
+                  alternatives: { type: 'array', items: { type: 'string' } },
+                  auto_check: { type: 'boolean' },
+                },
+              },
+            ],
           },
         },
         flashcards: {

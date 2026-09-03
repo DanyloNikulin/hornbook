@@ -8,7 +8,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { ensureUniqueSlug } from './lib/slug.ts';
 import { join } from 'node:path';
-import { Lesson, TOPIC_VOCAB, type LessonT, type TopicT } from '../src/lib/schema.ts';
+import { TOPIC_VOCAB, type LessonT, type TopicT } from '../src/lib/schema.ts';
 import {
   buildLessonTool,
   buildSystemPrompt,
@@ -16,8 +16,7 @@ import {
   type ExistingLessonRef,
 } from './lib/prompt.ts';
 import { detectTopics, formatTopics } from './lib/topics.ts';
-import { coerceStringifiedFields } from './lib/tool-input-repair.ts';
-import { aliasLessonFields } from './lib/lesson-input-aliases.ts';
+import { extractValidated } from './lib/extract-validate.ts';
 import { getExtractor } from './providers/index.ts';
 import type { ExtractMessagePart } from './providers/types.ts';
 import { currentSection, existingSlugs, readSectionLessons, resolveSectionArg, sectionDir } from './lib/journal.ts';
@@ -175,32 +174,21 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
   const lessonTool = buildLessonTool();
   console.log(`Extract via ${extractor.driver} (${userParts.filter((p) => p.type === 'image').length} image(s))...`);
 
-  const rawInput = await extractor.extract({
-    system: buildSystemPrompt(),
-    userParts,
-    jsonSchema: lessonTool.input_schema,
-    toolName: lessonTool.name,
-  });
-
-  writeFileSync(join(logsDir, 'tool-input.json'), JSON.stringify(rawInput, null, 2), 'utf8');
-
-  const toolInput = rawInput as Record<string, unknown>;
-
-  // Defensive: the model occasionally returns an array field as a JSON-encoded
-  // string (double encoding), sometimes with broken inner quote escaping
-  // (run 29360203093). Repair what's repairable before validation — loudly;
-  // anything unrepairable still fails the Zod parse below as before.
-  for (const msg of coerceStringifiedFields(toolInput)) {
-    console.warn(`⚠ Tool input coercion: ${msg}`);
-  }
-
-  // Small local models (qwen2.5:7b via Ollama) keep the content but drift
-  // from the field names: `question` for `q`, the option text as a
-  // multiple-choice answer, flashcards without a type. Map those onto the
-  // schema before validation — loudly, like the coercions above.
-  for (const msg of aliasLessonFields(toolInput)) {
-    console.warn(`⚠ Tool input alias: ${msg}`);
-  }
+  // Double-encoded fields and small-model field drift are repaired before
+  // validation; what is still wrong goes back to the model once with the
+  // Zod issues (see lib/extract-validate.ts). Every answer is logged.
+  const { lesson, toolInput, attempts } = await extractValidated(
+    extractor,
+    {
+      system: buildSystemPrompt(),
+      userParts,
+      jsonSchema: lessonTool.input_schema,
+      toolName: lessonTool.name,
+    },
+    logsDir,
+  );
+  if (attempts > 1) console.log(`✓ Lesson valid after a repair round.`);
+  const result = { data: lesson };
 
   const rawSuggestions = toolInput['suggested_new_topics'];
   const suggestedNewTopics: string[] = Array.isArray(rawSuggestions)
@@ -209,18 +197,6 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
           typeof t === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(t),
       )
     : [];
-
-  const result = Lesson.safeParse(toolInput);
-  if (!result.success) {
-    writeFileSync(
-      join(logsDir, 'validation-errors.json'),
-      JSON.stringify(result.error.format(), null, 2),
-      'utf8',
-    );
-    throw new Error(
-      `Lesson JSON failed Zod validation. See ${join(logsDir, 'validation-errors.json')}.`,
-    );
-  }
 
   // The slug is model-generated. The site routes by slug alone and
   // cheatsheet.json keys processed lessons by slug, so a collision with an
