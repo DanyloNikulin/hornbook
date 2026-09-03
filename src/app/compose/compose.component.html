@@ -2,12 +2,14 @@
   <div class="il-panel-inner" style="max-width: 720px; margin: 0 auto;">
     <p><a [routerLink]="sec.home()" class="il-lesson-bc-link">← Lessons</a></p>
     <h1 class="il-section-title">Add a conspect</h1>
-    <p class="il-section-sub">Saved straight into this pair's folder. Write it by hand, or drop a recording and let the pipeline write it.</p>
+    <p class="il-section-sub">Saved straight into this pair's folder. Write it by hand, paste a transcript, or drop a recording.</p>
 
     <label class="il-searchbar" style="display:block; margin-bottom: 12px;">
       Date
       <input type="date" [(ngModel)]="date" />
     </label>
+
+    <h2 class="il-compose-h">By hand</h2>
     <label class="il-searchbar" style="display:block; margin-bottom: 12px;">
       Title
       <input type="text" [(ngModel)]="title" placeholder="Greetings" />
@@ -20,16 +22,31 @@
       Article (markdown)
       <textarea [(ngModel)]="article" rows="8" style="width:100%; margin-top:6px;"></textarea>
     </label>
-
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 16px;">
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 24px;">
       <button type="button" class="il-btn" [disabled]="busy()" (click)="save()">{{ busy() ? 'Saving…' : 'Save lesson' }}</button>
       <button type="button" class="il-btn ghost" [disabled]="busy()" (click)="downloadJson()">Download JSON</button>
     </div>
 
-    <p class="il-section-sub">Or drop a transcript, audio or video. It is transcribed and extracted with the providers in your journal settings.</p>
-    <input type="file" [disabled]="busy()" (change)="onFile($event)" accept=".mp4,.m4a,.mp3,.wav,.ogg,.opus,.txt,.vtt,.srt,.json" />
-    @if (busy()) {
-      <p class="il-stat-sub" style="margin-top: .5rem;">Working… a recording can take several minutes.</p>
+    <h2 class="il-compose-h">From a transcript</h2>
+    <p class="il-section-sub">The extract model turns it into a structured conspect: article, vocabulary, grammar, quiz, cards.</p>
+    <textarea [(ngModel)]="transcript" rows="6" style="width:100%; margin: 6px 0 8px;" placeholder="Paste the lesson transcript…" [disabled]="busy()"></textarea>
+    <button type="button" class="il-btn" [disabled]="busy()" (click)="submitTranscript()">Extract lesson</button>
+
+    <h2 class="il-compose-h" style="margin-top: 24px;">From a recording</h2>
+    <p class="il-section-sub">Audio or video is transcribed first, then extracted. Slides in a video are read when the extract model has vision. Drivers and keys live in <a [routerLink]="sec.link('settings')">Settings</a>.</p>
+    <input type="file" [disabled]="busy()" (change)="onFile($event)" accept=".mp4,.mov,.webm,.m4a,.mp3,.wav,.ogg,.opus,.txt,.vtt,.srt,.json" />
+
+    @if (job(); as j) {
+      <div class="il-job" [class.il-job--failed]="j.status === 'failed'" [class.il-job--done]="j.status === 'done'">
+        <div class="il-job-head">
+          <span class="il-job-status">{{ j.status }}</span>
+          <span>{{ j.label }}</span>
+          @if (jobRunning()) {
+            <span class="il-stat-sub">working… a recording can take several minutes</span>
+          }
+        </div>
+        <pre class="il-log">{{ j.log || '(waiting for output)' }}</pre>
+      </div>
     }
 
     @if (error()) {
@@ -37,9 +54,6 @@
     }
     @if (ok()) {
       <p style="color: var(--success); margin-top: 1rem;">{{ ok() }}</p>
-    }
-    @if (log()) {
-      <pre class="il-log" style="margin-top: 1rem; max-height: 320px; overflow: auto; font-size: .8rem;">{{ log() }}</pre>
     }
   </div>
 </section>

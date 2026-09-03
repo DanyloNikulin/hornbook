@@ -9,10 +9,29 @@
       <h1 class="font-display text-4xl font-semibold" style="color: var(--ink);">
         Cheatsheet
       </h1>
+      <div class="flex gap-2 flex-wrap">
+        <button type="button" class="il-btn sm" [disabled]="jobRunning()" (click)="rebuild(false)">
+          {{ jobRunning() ? 'Updating…' : 'Update from new lessons' }}
+        </button>
+        <button type="button" class="il-btn ghost sm" [disabled]="jobRunning()" (click)="rebuild(true)">Rebuild all</button>
+      </div>
     </div>
     <p class="max-w-2xl" style="color: var(--ink-2);">
-      Grammar from every lesson, condensed. Updated when you run the cheatsheet builder.
+      Grammar from every lesson, condensed. Updating asks the model to merge lessons that are not in the sheet yet; it needs an Anthropic key in <a [routerLink]="sec.link('settings')" class="underline">Settings</a>.
     </p>
+    @if (jobError()) {
+      <p style="color: #a33;" role="alert">{{ jobError() }}</p>
+    }
+    @if (showLog() && job(); as j) {
+      <div class="il-job" [class.il-job--failed]="j.status === 'failed'" [class.il-job--done]="j.status === 'done'">
+        <div class="il-job-head">
+          <span class="il-job-status">{{ j.status }}</span>
+          <span>{{ j.label }}</span>
+          <button type="button" class="il-btn ghost sm" style="margin-left:auto" (click)="showLog.set(false)">hide</button>
+        </div>
+        <pre class="il-log">{{ j.log || '(waiting for output)' }}</pre>
+      </div>
+    }
   </header>
 
   <!-- Loading / error / empty / populated -->
@@ -28,9 +47,7 @@
   } @else if (cheatsheet().categories.length === 0) {
     <div class="rounded-2xl border border-dashed p-12 text-center" style="border-color: var(--line);">
       <p style="color: var(--muted);">
-        Cheatsheet is empty. Run
-        <code class="font-mono text-sm px-1.5 py-0.5 rounded" style="background: var(--paper-2);">npm run cheatsheet</code>
-        after you have lessons.
+        The cheat sheet is empty. Once this pair has lessons with grammar, press “Update from new lessons”.
       </p>
     </div>
   } @else {

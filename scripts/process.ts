@@ -107,6 +107,7 @@ async function main(): Promise<void> {
     }
     const out = writeLesson(section.id, parsed.data);
     console.log(`✓ ${out.jsonPath}`);
+    console.log(`HORNBOOK_RESULT ${JSON.stringify({ slug: parsed.data.slug, id: parsed.data.id })}`);
     return;
   }
 
@@ -138,6 +139,7 @@ async function main(): Promise<void> {
   console.log(`✓ ${out.jsonPath}`);
   console.log(`✓ ${out.mdPath}`);
   console.log(`Workdir kept at ${workdir}`);
+  console.log(`HORNBOOK_RESULT ${JSON.stringify({ slug: lesson.slug, id: lesson.id })}`);
   console.log('\nDone.');
 }
 

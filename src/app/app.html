@@ -40,6 +40,7 @@
           <a [routerLink]="section.link('cheatsheet')" routerLinkActive="active" class="il-nav-link">Sheet</a>
           <a [routerLink]="section.link('search')" routerLinkActive="active" class="il-nav-link">Search</a>
           <a [routerLink]="section.link('compose')" routerLinkActive="active" class="il-nav-link">Add</a>
+          <a [routerLink]="section.link('settings')" routerLinkActive="active" class="il-nav-link" aria-label="Settings">⚙</a>
         } @else {
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="il-nav-link">Pairs</a>
           <a routerLink="/setup" routerLinkActive="active" class="il-nav-link">New pair</a>
@@ -104,6 +105,7 @@
           <a [routerLink]="section.link('cheatsheet')" routerLinkActive="active" class="il-mobile-link">Sheet</a>
           <a [routerLink]="section.link('search')" routerLinkActive="active" class="il-mobile-link">Search</a>
           <a [routerLink]="section.link('compose')" routerLinkActive="active" class="il-mobile-link">Add</a>
+          <a [routerLink]="section.link('settings')" routerLinkActive="active" class="il-mobile-link">Settings</a>
         }
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="il-mobile-link">Pairs</a>
         <a routerLink="/setup" routerLinkActive="active" class="il-mobile-link">New pair</a>

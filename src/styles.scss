@@ -1551,3 +1551,67 @@ h1, h2, h3, h4 {
   white-space: pre-wrap;
   font-family: var(--font-mono, monospace);
 }
+
+/* ---------- Compose / settings / jobs ---------- */
+.il-compose-h {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  margin: 18px 0 6px;
+  color: var(--ink);
+}
+.il-job {
+  margin-top: 16px;
+  border: 1px solid rgba(42, 37, 32, 0.18);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.il-job--failed { border-color: rgba(163, 51, 51, 0.6); }
+.il-job--done { border-color: rgba(60, 130, 80, 0.6); }
+.il-job-head {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--paper-2);
+  font-size: 14px;
+}
+.il-job-status {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(42, 37, 32, 0.12);
+}
+.il-job--failed .il-job-status { background: rgba(163, 51, 51, 0.18); }
+.il-job--done .il-job-status { background: rgba(60, 130, 80, 0.2); }
+.il-job .il-log { border-radius: 0; margin: 0; max-height: 360px; overflow: auto; font-size: .8rem; }
+.il-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 720px) { .il-settings-grid { grid-template-columns: 1fr; } }
+.il-settings-card {
+  border: 1px solid rgba(42, 37, 32, 0.18);
+  border-radius: 12px;
+  padding: 14px;
+  background: var(--paper-2);
+}
+.il-settings-card h3 { font-family: var(--font-display); font-size: 18px; margin-bottom: 8px; }
+.il-settings-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
+  align-items: center;
+  margin: 8px 0;
+  font-size: 14px;
+}
+.il-settings-row input, .il-settings-row select { width: 100%; font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(42, 37, 32, 0.18); background: var(--paper); color: var(--ink); }
+.il-settings-row--conn { grid-template-columns: 1.2fr 1fr; align-items: start; padding: 8px 0; border-bottom: 1px solid rgba(42, 37, 32, 0.08); }
+.il-settings-row--conn > span:first-child { display: flex; flex-direction: column; gap: 2px; }
+.il-settings-help { font-size: 12px; color: var(--muted); }
+.il-settings-conn-input { display: flex; flex-direction: column; gap: 6px; }
+.il-settings-check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); margin: 6px 0; }

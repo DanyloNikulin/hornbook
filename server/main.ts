@@ -14,6 +14,8 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApi, sendJson } from './api.ts';
 import { FolderStore } from './store.ts';
+import { JobRunner } from './jobs.ts';
+import { pipelineEnv } from './secrets.ts';
 import { isMain } from '../scripts/lib/is-main.ts';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
@@ -60,7 +62,12 @@ const MIME: Record<string, string> = {
 export function startServer(opts: Options): ReturnType<typeof createServer> {
   const store = new FolderStore(opts.journal);
   const mode = opts.host === '127.0.0.1' || opts.host === 'localhost' ? 'local' : 'hosted';
-  const api = createApi({ store, mode });
+  const jobs = new JobRunner({
+    repoRoot,
+    journalDir: () => store.dir,
+    env: () => pipelineEnv(store.dir),
+  });
+  const api = createApi({ store, jobs, mode });
   const distRoot = opts.dist;
   const hasDist = opts.serveStatic && existsSync(join(distRoot, 'index.html'));
 

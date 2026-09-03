@@ -47,6 +47,10 @@ export const routes: Routes = [
         loadComponent: () => import('./compose/compose.component').then((m) => m.ComposeComponent),
       },
       {
+        path: 'settings',
+        loadComponent: () => import('./settings/settings.component').then((m) => m.SettingsComponent),
+      },
+      {
         path: '**',
         loadComponent: () => import('./not-found/not-found.component').then((m) => m.NotFoundComponent),
       },

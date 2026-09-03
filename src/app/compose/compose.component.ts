@@ -1,13 +1,14 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Lesson, type LessonT } from '../../lib/schema';
-import type { ProcessResult } from '../../lib/api-types';
-import { ApiService } from '../api.service';
+import type { JobView } from '../../lib/api-types';
 import { LessonsService } from '../lessons.service';
 import { VocabService } from '../vocab.service';
 import { CardsService } from '../cards.service';
+import { SearchService } from '../search.service';
 import { SectionService } from '../section.service';
+import { JobsService } from '../jobs.service';
 
 type From = 'video' | 'audio' | 'transcript' | 'json';
 
@@ -18,20 +19,28 @@ type From = 'video' | 'audio' | 'transcript' | 'json';
 })
 export class ComposeComponent {
   protected readonly sec = inject(SectionService);
-  private readonly api = inject(ApiService);
   private readonly lessons = inject(LessonsService);
   private readonly vocab = inject(VocabService);
   private readonly cards = inject(CardsService);
+  private readonly search = inject(SearchService);
+  private readonly jobs = inject(JobsService);
   private readonly router = inject(Router);
 
   protected title = '';
   protected date = new Date().toISOString().slice(0, 10);
   protected summary = '';
   protected article = '';
+  protected transcript = '';
+
   protected readonly error = signal<string | null>(null);
   protected readonly ok = signal<string | null>(null);
   protected readonly busy = signal(false);
-  protected readonly log = signal<string | null>(null);
+
+  protected readonly job = computed(() => this.jobs.current());
+  protected readonly jobRunning = computed(() => {
+    const j = this.job();
+    return j?.status === 'queued' || j?.status === 'running';
+  });
 
   private draft(): LessonT | null {
     const slug =
@@ -56,6 +65,12 @@ export class ComposeComponent {
     return parsed.data;
   }
 
+  private invalidate(): void {
+    this.vocab.invalidate();
+    this.cards.invalidate();
+    this.search.invalidate();
+  }
+
   /** Write the lesson into the section folder and open it. */
   protected async save(): Promise<void> {
     this.error.set(null);
@@ -65,8 +80,7 @@ export class ComposeComponent {
     this.busy.set(true);
     try {
       const saved = await this.lessons.save(lesson);
-      this.vocab.invalidate();
-      this.cards.invalidate();
+      this.invalidate();
       await this.router.navigate(this.sec.link('lesson', saved.slug));
     } catch (err) {
       this.error.set((err as Error).message);
@@ -88,37 +102,50 @@ export class ComposeComponent {
     this.ok.set(`Downloaded ${a.download}.`);
   }
 
+  /** Pasted transcript → pipeline (extract only). */
+  protected async submitTranscript(): Promise<void> {
+    const text = this.transcript.trim();
+    if (!text) {
+      this.error.set('Paste a transcript first.');
+      return;
+    }
+    await this.runProcess('transcript.txt', btoa(unescape(encodeURIComponent(text))), 'transcript');
+  }
+
   protected async onFile(ev: Event): Promise<void> {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    this.error.set(null);
-    this.ok.set(null);
-    this.log.set(null);
-    this.busy.set(true);
     try {
       const base64 = await toBase64(file);
-      const from = inferFrom(file.name);
-      const result = await this.api.post<ProcessResult>(`${this.sec.apiBase()}/process`, {
-        filename: file.name,
-        base64,
-        date: this.date,
-        from,
-      });
-      this.log.set(result.log);
-      if (!result.ok) {
-        this.error.set('Processing failed — see the log below.');
+      await this.runProcess(file.name, base64, inferFrom(file.name));
+    } finally {
+      input.value = '';
+    }
+  }
+
+  private async runProcess(filename: string, base64: string, from: From): Promise<void> {
+    this.error.set(null);
+    this.ok.set(null);
+    this.busy.set(true);
+    try {
+      const job: JobView = await this.jobs.run({ kind: 'process', filename, base64, date: this.date, from });
+      if (job.status !== 'done') {
+        this.error.set(job.error ?? 'Processing failed — see the log below.');
         return;
       }
       await this.lessons.reload();
-      this.vocab.invalidate();
-      this.cards.invalidate();
-      this.ok.set('Lesson added to this pair.');
+      this.invalidate();
+      const slug = job.result?.slug;
+      if (slug) {
+        await this.router.navigate(this.sec.link('lesson', slug));
+      } else {
+        this.ok.set('Lesson added to this pair.');
+      }
     } catch (err) {
       this.error.set((err as Error).message);
     } finally {
       this.busy.set(false);
-      input.value = '';
     }
   }
 }

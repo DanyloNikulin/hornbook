@@ -3,11 +3,14 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { FolderStore, HttpError, type DerivedKind } from './store.ts';
+import type { JobRunner } from './jobs.ts';
+import type { StartJob } from '../src/lib/api-types.ts';
 
 const MAX_BODY_BYTES = 512 * 1024 * 1024; // base64 uploads of lesson video
 
 export interface ApiContext {
   store: FolderStore;
+  jobs: JobRunner;
   mode: 'local' | 'hosted';
 }
 
@@ -75,7 +78,28 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
   on('GET', '/api/sections/:id/progress', (_r, _s, p) => store.progress(p['id']));
   on('PUT', '/api/sections/:id/progress', async (_r, _s, p, body) => store.saveProgress(p['id'], await body()));
 
-  on('POST', '/api/sections/:id/process', async (_r, _s, p, body) => store.processFile(p['id'], await body()));
+  // Settings: journal-level provider defaults + connection values.
+  on('GET', '/api/settings', () => store.settings());
+  on('PUT', '/api/settings', async (_r, _s, _p, body) => store.updateSettings(await body()));
+
+  // Jobs: the pipeline scripts run as child processes, one at a time.
+  on('POST', '/api/sections/:id/jobs', async (_r, _s, p, body) => {
+    store.section(p['id']);
+    const input = (await body()) as Partial<StartJob>;
+    if (!input || typeof input !== 'object' || !isStartJob(input)) {
+      throw new HttpError(400, 'Invalid job request');
+    }
+    return ctx.jobs.enqueue(p['id'], input);
+  });
+  on('GET', '/api/sections/:id/jobs', (_r, _s, p) => {
+    store.section(p['id']);
+    return ctx.jobs.list(p['id']);
+  });
+  on('GET', '/api/jobs/:id', (_r, _s, p) => {
+    const job = ctx.jobs.get(p['id']);
+    if (!job) throw new HttpError(404, `No job "${p['id']}"`);
+    return job;
+  });
 
   on('GET', '/api/sections/:id/files', (_r, _s, p) => store.listFiles(p['id']));
 
@@ -117,6 +141,27 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
     }
     return true;
   };
+}
+
+function isStartJob(input: Partial<StartJob>): input is StartJob {
+  switch (input.kind) {
+    case 'process':
+      return (
+        typeof input.filename === 'string' &&
+        input.filename.length > 0 &&
+        typeof input.base64 === 'string' &&
+        input.base64.length > 0 &&
+        typeof input.date === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(input.date) &&
+        (input.from === undefined || ['video', 'audio', 'transcript', 'json'].includes(input.from))
+      );
+    case 'cheatsheet':
+      return input.force === undefined || typeof input.force === 'boolean';
+    case 'review-topics':
+      return true;
+    default:
+      return false;
+  }
 }
 
 export function sendJson(res: ServerResponse, status: number, body: unknown): void {

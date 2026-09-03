@@ -65,6 +65,8 @@ Thumbs.db
 /journal/*/_derived/
 /journal/*/_progress.json
 /journal/*/_progress.corrupt-*.json
+/journal/secrets.json
+/journal/_uploads/
 
 # Wrangler local cache
 .wrangler/

@@ -1,0 +1,129 @@
+<section class="il-panel" style="padding-top: 2rem;">
+  <div class="il-panel-inner" style="max-width: 760px; margin: 0 auto;">
+    <p><a [routerLink]="sec.home()" class="il-lesson-bc-link">← Lessons</a></p>
+    <h1 class="il-section-title">Settings · {{ sec.label() }}</h1>
+    <p class="il-section-sub">Which models turn recordings into conspects, and how to reach them. Everything is stored in your journal folder.</p>
+
+    @if (loading()) {
+      <p class="il-stat-sub">Loading…</p>
+    } @else {
+
+      <h2 class="il-compose-h">Providers</h2>
+      <p class="il-section-sub">Journal defaults apply to every pair. Tick “override” to give this pair its own.</p>
+
+      <div class="il-settings-grid">
+        <div class="il-settings-card">
+          <h3>Transcribe <span class="il-stat-sub">(audio → text)</span></h3>
+          <label class="il-settings-row">
+            <span>Default driver</span>
+            <select [(ngModel)]="defaults.transcribe.driver">
+              @for (d of transcribeDrivers; track d) { <option [value]="d">{{ d }}</option> }
+            </select>
+          </label>
+          <label class="il-settings-row">
+            <span>Default model</span>
+            <input type="text" [(ngModel)]="defaults.transcribe.model" placeholder="whisper model or gpt-4o-transcribe" />
+          </label>
+          <label class="il-settings-check">
+            <input type="checkbox" [(ngModel)]="override.transcribe" /> Override for this pair
+          </label>
+          @if (override.transcribe) {
+            <label class="il-settings-row">
+              <span>Driver</span>
+              <select [(ngModel)]="overrides.transcribe.driver">
+                @for (d of transcribeDrivers; track d) { <option [value]="d">{{ d }}</option> }
+              </select>
+            </label>
+            <label class="il-settings-row">
+              <span>Model</span>
+              <input type="text" [(ngModel)]="overrides.transcribe.model" />
+            </label>
+          }
+          <p class="il-stat-sub">In effect: {{ effective('transcribe').driver }} · {{ effective('transcribe').model }}</p>
+        </div>
+
+        <div class="il-settings-card">
+          <h3>Extract <span class="il-stat-sub">(text → conspect)</span></h3>
+          <label class="il-settings-row">
+            <span>Default driver</span>
+            <select [(ngModel)]="defaults.extract.driver">
+              @for (d of extractDrivers; track d) { <option [value]="d">{{ d }}</option> }
+            </select>
+          </label>
+          <label class="il-settings-row">
+            <span>Default model</span>
+            <input type="text" [(ngModel)]="defaults.extract.model" placeholder="llama3.1, claude-sonnet-4-6, gpt-4o" />
+          </label>
+          <label class="il-settings-check">
+            <input type="checkbox" [(ngModel)]="override.extract" /> Override for this pair
+          </label>
+          @if (override.extract) {
+            <label class="il-settings-row">
+              <span>Driver</span>
+              <select [(ngModel)]="overrides.extract.driver">
+                @for (d of extractDrivers; track d) { <option [value]="d">{{ d }}</option> }
+              </select>
+            </label>
+            <label class="il-settings-row">
+              <span>Model</span>
+              <input type="text" [(ngModel)]="overrides.extract.model" />
+            </label>
+          }
+          <p class="il-stat-sub">In effect: {{ effective('extract').driver }} · {{ effective('extract').model }}</p>
+        </div>
+      </div>
+
+      <h2 class="il-compose-h" style="margin-top: 24px;">Connections</h2>
+      <p class="il-section-sub">Keys and endpoints, shared by all pairs. Stored in <code>secrets.json</code> inside the journal folder, which git ignores. Leave a field empty to keep its value.</p>
+      @if (settings(); as s) {
+        <div class="il-settings-card">
+          @for (key of connectionKeys; track key) {
+            <div class="il-settings-row il-settings-row--conn">
+              <span>
+                <code>{{ key }}</code>
+                <span class="il-stat-sub">
+                  @if (s.connections[key].set) {
+                    set ({{ s.connections[key].source }}) · {{ s.connections[key].hint }}
+                  } @else {
+                    not set
+                  }
+                </span>
+                <span class="il-settings-help">{{ help[key] }}</span>
+              </span>
+              <span class="il-settings-conn-input">
+                <input [type]="isSecret(key) ? 'password' : 'text'" [(ngModel)]="connectionInput[key]"
+                       [placeholder]="s.connections[key].set ? 'replace…' : 'value'" autocomplete="off" />
+                @if (s.connections[key].set && s.connections[key].source === 'journal') {
+                  <label class="il-settings-check"><input type="checkbox" [(ngModel)]="clearConnection[key]" /> clear</label>
+                }
+              </span>
+            </div>
+          }
+        </div>
+      }
+
+      <div style="display:flex; gap:8px; align-items:center; margin: 16px 0 28px;">
+        <button type="button" class="il-btn" [disabled]="saving()" (click)="save()">{{ saving() ? 'Saving…' : 'Save settings' }}</button>
+        @if (saved()) { <span style="color: var(--success);">{{ saved() }}</span> }
+      </div>
+
+      <h2 class="il-compose-h">Maintenance</h2>
+      <p class="il-section-sub">Topic review reads this pair's lessons and proposes new topic tags for the whole journal. It needs an Anthropic key and at least ten lessons.</p>
+      <button type="button" class="il-btn ghost" [disabled]="jobRunning()" (click)="reviewTopics()">{{ jobRunning() ? 'Running…' : 'Review topics' }}</button>
+
+      @if (job(); as j) {
+        <div class="il-job" [class.il-job--failed]="j.status === 'failed'" [class.il-job--done]="j.status === 'done'">
+          <div class="il-job-head">
+            <span class="il-job-status">{{ j.status }}</span>
+            <span>{{ j.label }}</span>
+          </div>
+          <pre class="il-log">{{ j.log || '(waiting for output)' }}</pre>
+        </div>
+      }
+    }
+
+    @if (error()) {
+      <p style="color: #a33; margin-top: 1rem;" role="alert">{{ error() }}</p>
+    }
+  </div>
+</section>

@@ -59,15 +59,23 @@ root `journal.config.json`) migrates with `npm run migrate`.
 
 `--section` is optional while the journal has one section.
 
-## LLM drivers (`journal.config.json` → `providers`)
+## LLM drivers
+
+Set them on the Settings page of any pair (⚙ in the header), or edit
+`journal.config.json` → `providers` by hand. A pair can override the journal defaults.
 
 | Field | Drivers |
 |---|---|
 | `transcribe` | `openai` (`OPENAI_API_KEY`) or `whisper-cli` (`WHISPER_BIN`, `WHISPER_MODEL`) |
 | `extract` | `anthropic` (`ANTHROPIC_API_KEY`), `openai`, or `ollama` (`OLLAMA_HOST`, default `http://127.0.0.1:11434`) |
 
-A section can override `providers` for itself. Copy `.env` keys locally. Never commit them. If
-extract has no vision, slides are skipped.
+Keys and endpoints entered on the Settings page are stored in `journal/secrets.json`, which git
+ignores; values from the environment (`.env`) are used when the journal has none. Never commit
+keys. If extract has no vision, slides are skipped.
+
+Recordings dropped on `/compose` run as jobs inside the app: transcribe, extract, save. The cheat
+sheet page updates itself with "Update from new lessons" (Anthropic key required), and Settings
+has "Review topics".
 
 ## Language pair
 

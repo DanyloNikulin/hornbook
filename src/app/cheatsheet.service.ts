@@ -25,6 +25,11 @@ export class CheatsheetService {
     return promise;
   }
 
+  /** Drop the cached sheet (after a rebuild job). */
+  invalidate(): void {
+    this.cache.delete(this.section.id());
+  }
+
   private async fetchAndValidate(sectionId: string): Promise<CheatsheetT> {
     const raw = await this.api.get<unknown>(`/api/sections/${encodeURIComponent(sectionId)}/cheatsheet`);
     const result = Cheatsheet.safeParse(raw);

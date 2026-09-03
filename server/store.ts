@@ -4,10 +4,7 @@
 // the HTTP-facing rules (404/409) and keeps derived files fresh on writes.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join, extname } from 'node:path';
-import { tmpdir } from 'node:os';
-import { randomBytes } from 'node:crypto';
-import { spawn } from 'node:child_process';
+import { join } from 'node:path';
 import {
   Cheatsheet,
   EMPTY_PROGRESS,
@@ -29,7 +26,8 @@ import {
   type SectionConfigT,
 } from '../src/lib/journal-config.ts';
 import { languageFlag } from '../src/lib/languages.ts';
-import type { SectionSummary, ConfigView } from '../src/lib/api-types.ts';
+import { CONNECTION_KEYS, type SectionSummary, type ConfigView, type SettingsView } from '../src/lib/api-types.ts';
+import { connectionViews, updateSecrets } from './secrets.ts';
 import * as journal from '../scripts/lib/journal.ts';
 import { lessonToMarkdown } from '../scripts/lib/markdown.ts';
 import { z } from 'zod';
@@ -70,11 +68,11 @@ const UpdateSectionInput = z.object({
   providers: Providers.partial().nullable().optional(),
 });
 
-const ProcessInput = z.object({
-  filename: z.string().min(1),
-  base64: z.string().min(1),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  from: z.enum(['video', 'audio', 'transcript', 'json']).optional(),
+const SettingsUpdateInput = z.object({
+  providers: Providers.optional(),
+  connections: z
+    .object(Object.fromEntries(CONNECTION_KEYS.map((k) => [k, z.string().max(4096).nullable().optional()])))
+    .optional(),
 });
 
 export class FolderStore {
@@ -286,45 +284,27 @@ export class FolderStore {
     return result.data;
   }
 
-  // ── pipeline ─────────────────────────────────────────────────────────────
+  // ── settings ─────────────────────────────────────────────────────────────
 
-  /**
-   * Run scripts/process.ts on an uploaded file. Synchronous from the API's
-   * point of view (the request waits); the job queue with progress arrives
-   * with phase 6.
-   */
-  async processFile(id: string, input: unknown): Promise<{ ok: boolean; log: string }> {
-    this.section(id);
-    const parsed = ProcessInput.safeParse(input);
-    if (!parsed.success) throw new HttpError(400, 'Invalid process request', parsed.error.format());
-    const { filename, base64, date, from } = parsed.data;
-    const ext = extname(filename).toLowerCase() || '.bin';
-    const tmp = join(tmpdir(), `hornbook-${randomBytes(6).toString('hex')}${ext}`);
-    writeFileSync(tmp, Buffer.from(base64, 'base64'));
-    const args = [
-      '--import',
-      'tsx',
-      join(journal.repoRootDir(), 'scripts', 'process.ts'),
-      tmp,
-      '--date',
-      date,
-      '--section',
-      id,
-      ...(from ? ['--from', from] : []),
-    ];
-    return new Promise((resolve) => {
-      const child = spawn(process.execPath, args, {
-        cwd: journal.repoRootDir(),
-        env: { ...process.env, HORNBOOK_JOURNAL: journal.journalDir() },
-      });
-      let out = '';
-      child.stdout.on('data', (c: Buffer) => (out += c.toString()));
-      child.stderr.on('data', (c: Buffer) => (out += c.toString()));
-      child.on('close', (code) => {
-        rmSync(tmp, { force: true });
-        resolve({ ok: code === 0, log: out.slice(-8000) });
-      });
-    });
+  settings(): SettingsView {
+    journal.invalidateConfig();
+    return {
+      providers: journal.loadJournalConfig().providers,
+      connections: connectionViews(journal.journalDir()),
+    };
+  }
+
+  updateSettings(input: unknown): SettingsView {
+    const parsed = SettingsUpdateInput.safeParse(input);
+    if (!parsed.success) throw new HttpError(400, 'Invalid settings', parsed.error.format());
+    if (parsed.data.providers) {
+      const config = journal.loadJournalConfig();
+      journal.saveJournalConfig({ ...config, providers: parsed.data.providers });
+    }
+    if (parsed.data.connections) {
+      updateSecrets(journal.journalDir(), parsed.data.connections);
+    }
+    return this.settings();
   }
 
   /** Files of a section dir, for diagnostics. */
