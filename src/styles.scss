@@ -40,6 +40,13 @@
   --r-lg: 22px;
   --r-xl: 28px;
 
+  /* Backdrop layers. A section theme overrides these on the root element
+     (see src/app/theme.service.ts); --backdrop-image stays `none` unless the
+     section has an uploaded image. */
+  --backdrop-top: #2c3539;
+  --backdrop-glow: rgba(31, 78, 95, 0.28);
+  --backdrop-image: none;
+
   --shadow-1: 0 1px 0 rgba(42, 37, 32, 0.04), 0 1px 2px rgba(42, 37, 32, 0.04);
   --shadow-2: 0 2px 4px rgba(42, 37, 32, 0.06), 0 8px 20px -8px rgba(42, 37, 32, 0.16);
   --shadow-3: 0 10px 30px -10px rgba(42, 37, 32, 0.28), 0 4px 10px rgba(42, 37, 32, 0.06);
@@ -87,10 +94,22 @@ h1, h2, h3, h4 {
 
 .il-backdrop {
   background:
-    radial-gradient(1200px 500px at 50% -10%, rgba(31, 78, 95, 0.28), transparent 60%),
-    linear-gradient(180deg, #2c3539 0%, var(--paper) 72%);
+    radial-gradient(1200px 500px at 50% -10%, var(--backdrop-glow), transparent 60%),
+    linear-gradient(180deg, var(--backdrop-top) 0%, var(--paper) 72%);
   filter: none;
   transform: none;
+}
+
+/* Optional per-section photo, under the gradient wash of ::after. */
+.il-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--backdrop-image);
+  background-size: cover;
+  background-position: center top;
+  opacity: 0.85;
 }
 
 /* ---------- Page wrapper ---------- */
@@ -776,8 +795,8 @@ h1, h2, h3, h4 {
 /* ---------- Day theme ---------- */
 [data-theme="day"] .il-backdrop {
   background:
-    radial-gradient(1200px 500px at 50% -10%, rgba(31, 78, 95, 0.18), transparent 60%),
-    linear-gradient(180deg, #c5b8a0 0%, var(--paper) 72%);
+    radial-gradient(1200px 500px at 50% -10%, var(--backdrop-glow), transparent 60%),
+    linear-gradient(180deg, var(--backdrop-top) 0%, var(--paper) 72%);
   filter: none;
 }
 [data-theme="day"] .il-backdrop::after {
@@ -813,10 +832,14 @@ h1, h2, h3, h4 {
   --shadow-3:    0 10px 30px -10px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.25);
 }
 
+[data-theme="night"] {
+  --backdrop-top: #12100e;
+  --backdrop-glow: rgba(138, 172, 204, 0.18);
+}
 [data-theme="night"] .il-backdrop {
   background:
-    radial-gradient(1200px 500px at 50% -10%, rgba(138, 172, 204, 0.18), transparent 55%),
-    linear-gradient(180deg, #12100e 0%, var(--paper) 72%);
+    radial-gradient(1200px 500px at 50% -10%, var(--backdrop-glow), transparent 55%),
+    linear-gradient(180deg, var(--backdrop-top) 0%, var(--paper) 72%);
   filter: none;
 }
 [data-theme="night"] .il-backdrop::after {
@@ -1615,3 +1638,38 @@ h1, h2, h3, h4 {
 .il-settings-help { font-size: 12px; color: var(--muted); }
 .il-settings-conn-input { display: flex; flex-direction: column; gap: 6px; }
 .il-settings-check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); margin: 6px 0; }
+
+/* ---------- Theme presets (settings) ---------- */
+.il-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+.il-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(42, 37, 32, 0.18);
+  background: var(--paper-2);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.il-preset:hover { transform: translateY(-1px); }
+.il-preset.selected { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.il-preset-swatches { display: flex; height: 26px; border-radius: 7px; overflow: hidden; }
+.il-preset-swatches > span { flex: 1; }
+.il-preset-name { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
+.il-backdrop-thumb {
+  width: 100%;
+  max-width: 220px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(42, 37, 32, 0.18);
+}

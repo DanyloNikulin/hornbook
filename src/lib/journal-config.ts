@@ -20,12 +20,17 @@ export const Providers = z.object({
   extract: ProviderConfig,
 });
 
-/** Optional per-section look (phase 9). Stored now so configs stay forward compatible. */
+/**
+ * Per-section look. `preset` names a bundled theme (src/lib/themes.ts);
+ * `primary` / `accent` / `display_font` override it; `backdrop` is the file
+ * name of an image stored in the section folder and served by the API.
+ */
 export const SectionTheme = z.object({
-  backdrop: z.string().optional(),
-  primary: z.string().optional(),
-  accent: z.string().optional(),
-  display_font: z.string().optional(),
+  preset: z.string().max(40).optional(),
+  backdrop: z.string().max(120).optional(),
+  primary: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).optional(),
+  accent: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).optional(),
+  display_font: z.string().max(40).optional(),
 });
 
 /**

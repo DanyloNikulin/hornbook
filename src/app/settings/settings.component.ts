@@ -1,7 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import type { ProvidersT } from '../../lib/journal-config';
+import type { ProvidersT, SectionThemeT } from '../../lib/journal-config';
+import { DEFAULT_PRESET_ID, DISPLAY_FONTS, THEME_PRESETS, type ThemePreset } from '../../lib/themes';
 import {
   CONNECTION_KEYS,
   SECRET_KEYS,
@@ -14,6 +15,7 @@ import { ApiService } from '../api.service';
 import { JournalService } from '../journal.service';
 import { SectionService } from '../section.service';
 import { JobsService } from '../jobs.service';
+import { ThemeService } from '../theme.service';
 
 type Field = 'transcribe' | 'extract';
 
@@ -43,7 +45,10 @@ export class SettingsComponent {
   private readonly api = inject(ApiService);
   private readonly journal = inject(JournalService);
   private readonly jobs = inject(JobsService);
+  private readonly theme = inject(ThemeService);
 
+  protected readonly presets = THEME_PRESETS;
+  protected readonly displayFonts = DISPLAY_FONTS;
   protected readonly transcribeDrivers = TRANSCRIBE_DRIVERS;
   protected readonly extractDrivers = EXTRACT_DRIVERS;
   protected readonly connectionKeys = CONNECTION_KEYS;
@@ -74,6 +79,14 @@ export class SettingsComponent {
     CONNECTION_KEYS.map((k) => [k, false]),
   ) as Record<ConnectionKey, boolean>;
 
+  // ---- look ----
+  protected readonly preset = signal<string>(DEFAULT_PRESET_ID);
+  protected readonly displayFont = signal<string>('');
+  protected readonly backdrop = signal<string | undefined>(undefined);
+  protected readonly backdropBusy = signal(false);
+  /** Cache-busting suffix so a replaced image is re-fetched. */
+  protected readonly backdropStamp = signal(Date.now());
+
   protected readonly job = computed(() => this.jobs.current());
   protected readonly jobRunning = computed(() => {
     const j = this.job();
@@ -81,7 +94,87 @@ export class SettingsComponent {
   });
 
   constructor() {
+    const t = this.sec.theme();
+    this.preset.set(t?.preset ?? DEFAULT_PRESET_ID);
+    this.displayFont.set(t?.display_font ?? '');
+    this.backdrop.set(t?.backdrop);
     void this.load();
+  }
+
+  protected backdropUrl(): string {
+    return `${this.sec.apiBase()}/backdrop?v=${this.backdropStamp()}`;
+  }
+
+  /** Paint a preset without saving, so the choice is visible immediately. */
+  protected previewPreset(p: ThemePreset): void {
+    this.preset.set(p.id);
+    this.theme.preview(this.draftTheme());
+  }
+
+  protected previewFont(id: string): void {
+    this.displayFont.set(id);
+    this.theme.preview(this.draftTheme());
+  }
+
+  private draftTheme(): SectionThemeT & { backdropUrl?: string } {
+    const theme: SectionThemeT = {};
+    if (this.preset() !== DEFAULT_PRESET_ID) theme.preset = this.preset();
+    if (this.displayFont()) theme.display_font = this.displayFont();
+    if (this.backdrop()) theme.backdrop = this.backdrop();
+    return { ...theme, backdropUrl: this.backdrop() ? this.backdropUrl() : undefined };
+  }
+
+  /** Theme to persist: null when everything is at its default. */
+  private themeToSave(): SectionThemeT | null {
+    const theme = { ...this.draftTheme() };
+    delete theme.backdropUrl;
+    return Object.keys(theme).length > 0 ? theme : null;
+  }
+
+  protected async uploadBackdrop(ev: Event): Promise<void> {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.backdropBusy.set(true);
+    this.error.set(null);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      const updated = await this.api.put<SectionSummary>(`${this.sec.apiBase()}/backdrop`, {
+        filename: file.name,
+        base64,
+      });
+      this.sec.set(updated);
+      this.backdrop.set(updated.theme?.backdrop);
+      this.backdropStamp.set(Date.now());
+      this.theme.preview(this.draftTheme());
+      await this.journal.refresh();
+    } catch (err) {
+      this.error.set((err as Error).message);
+    } finally {
+      this.backdropBusy.set(false);
+      input.value = '';
+    }
+  }
+
+  protected async removeBackdrop(): Promise<void> {
+    this.backdropBusy.set(true);
+    this.error.set(null);
+    try {
+      const updated = await this.api.delete<SectionSummary>(`${this.sec.apiBase()}/backdrop`);
+      this.sec.set(updated);
+      this.backdrop.set(undefined);
+      this.theme.preview(this.draftTheme());
+      await this.journal.refresh();
+    } catch (err) {
+      this.error.set((err as Error).message);
+    } finally {
+      this.backdropBusy.set(false);
+    }
   }
 
   protected isSecret(key: ConnectionKey): boolean {
@@ -132,8 +225,10 @@ export class SettingsComponent {
       const hasOverride = Object.keys(sectionProviders).length > 0;
       const updated = await this.api.patch<SectionSummary>(this.sec.apiBase(), {
         providers: hasOverride ? sectionProviders : null,
+        theme: this.themeToSave(),
       });
       this.sec.set(updated);
+      this.theme.restore();
       await this.journal.refresh();
 
       for (const key of CONNECTION_KEYS) {

@@ -1,5 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 import type { SectionSummary } from '../lib/api-types';
+import type { SectionThemeT } from '../lib/journal-config';
 import { languageName, pairLabel, speechLocale } from '../lib/journal-config';
 
 /**
@@ -51,6 +52,11 @@ export class SectionService {
   /** Router commands for the section home. */
   home(): (string | number)[] {
     return ['/', this.id()];
+  }
+
+  /** The section's stored look, if any. */
+  theme(): SectionThemeT | undefined {
+    return this.current()?.theme;
   }
 
   /** API prefix for the current section. */

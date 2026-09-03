@@ -1,12 +1,11 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs/operators';
 import { REPO_URL } from './constants';
 import { JournalService } from './journal.service';
 import { SectionService } from './section.service';
-
-type Theme = 'night' | 'day';
+import { ThemeService } from './theme.service';
 
 @Component({
   selector: 'app-root',
@@ -23,7 +22,8 @@ export class AppComponent {
   protected readonly sections = computed(() => this.journal.sections());
   protected readonly serverError = computed(() => this.journal.loadError());
 
-  protected readonly theme = signal<Theme>(this.savedTheme());
+  private readonly themeService = inject(ThemeService);
+  protected readonly theme = this.themeService.mode;
   protected readonly menuOpen = signal(false);
 
   private readonly url = toSignal(
@@ -44,12 +44,6 @@ export class AppComponent {
 
   constructor() {
     const router = this.router;
-    effect(() => {
-      const t = this.theme();
-      document.documentElement.setAttribute('data-theme', t);
-      localStorage.setItem('hornbook-theme', t);
-    });
-
     // Close mobile menu on any navigation
     router.events
       .pipe(filter((e) => e instanceof NavigationEnd))
@@ -57,7 +51,7 @@ export class AppComponent {
   }
 
   protected toggleTheme(): void {
-    this.theme.update((t) => (t === 'night' ? 'day' : 'night'));
+    this.themeService.toggle();
   }
 
   protected toggleMenu(): void {
@@ -73,11 +67,4 @@ export class AppComponent {
     void this.router.navigate(['/', id, ...target]);
   }
 
-  private savedTheme(): Theme {
-    const s = typeof localStorage !== 'undefined' ? localStorage.getItem('hornbook-theme') : null;
-    if (s === 'night' || s === 'day') return s;
-    return typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches
-      ? 'night'
-      : 'day';
-  }
 }

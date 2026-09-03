@@ -89,6 +89,13 @@ Keys and endpoints entered in Settings are stored in `journal/secrets.json`, whi
 Values from the environment or a local `.env` are used when the journal has none. Never commit
 keys. If the extract model has no vision, slides are skipped.
 
+## Look
+
+Each pair can have its own atmosphere, chosen in Settings: one of six bundled presets (each
+defined for day and night), a display font from the bundled three, and optionally a backdrop
+photo. The photo is stored in the pair's folder and served by your own server — it never leaves
+the machine. Switching pairs repaints the app immediately.
+
 ## Language pair
 
 `target` drives three things: the extraction prompt, browser text-to-speech, and the

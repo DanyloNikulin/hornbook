@@ -8,7 +8,49 @@
       <p class="il-stat-sub">Loading…</p>
     } @else {
 
-      <h2 class="il-compose-h">Providers</h2>
+      <h2 class="il-compose-h">Look</h2>
+      <p class="il-section-sub">Give this pair its own atmosphere. Every preset works in both day and night mode; the choice applies as soon as you click it, and is kept when you save.</p>
+      <div class="il-preset-grid">
+        @for (p of presets; track p.id) {
+          <button type="button" class="il-preset" [class.selected]="preset() === p.id"
+                  [attr.aria-pressed]="preset() === p.id" (click)="previewPreset(p)">
+            <span class="il-preset-swatches" aria-hidden="true">
+              <span [style.background]="p.day.backdropTop"></span>
+              <span [style.background]="p.day.primary"></span>
+              <span [style.background]="p.day.accent"></span>
+              <span [style.background]="p.night.primary"></span>
+            </span>
+            <span class="il-preset-name">{{ p.name }}</span>
+            <span class="il-settings-help">{{ p.note }}</span>
+          </button>
+        }
+      </div>
+
+      <div class="il-settings-card" style="margin-top: 12px;">
+        <label class="il-settings-row">
+          <span>Display font</span>
+          <select [ngModel]="displayFont()" (ngModelChange)="previewFont($event)" name="displayFont">
+            <option value="">Default (Cormorant Garamond)</option>
+            @for (f of displayFonts; track f.id) { <option [value]="f.id">{{ f.name }}</option> }
+          </select>
+        </label>
+        <div class="il-settings-row il-settings-row--conn">
+          <span>
+            <span>Backdrop photo</span>
+            <span class="il-settings-help">Optional. Stored in this pair's folder and served by your own server — nothing is uploaded anywhere.</span>
+          </span>
+          <span class="il-settings-conn-input">
+            @if (backdrop()) {
+              <img class="il-backdrop-thumb" [src]="backdropUrl()" alt="Current backdrop" />
+              <button type="button" class="il-btn ghost sm" [disabled]="backdropBusy()" (click)="removeBackdrop()">Remove</button>
+            } @else {
+              <input type="file" accept="image/*" [disabled]="backdropBusy()" (change)="uploadBackdrop($event)" />
+            }
+          </span>
+        </div>
+      </div>
+
+      <h2 class="il-compose-h" style="margin-top: 24px;">Providers</h2>
       <p class="il-section-sub">Journal defaults apply to every pair. Tick “override” to give this pair its own.</p>
 
       <div class="il-settings-grid">

@@ -68,6 +68,15 @@ const UpdateSectionInput = z.object({
   providers: Providers.partial().nullable().optional(),
 });
 
+const BACKDROP_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif']);
+const MAX_BACKDROP_BYTES = 8 * 1024 * 1024;
+const BS = String.fromCharCode(92);
+
+const BackdropInput = z.object({
+  filename: z.string().min(1).max(200),
+  base64: z.string().min(1),
+});
+
 const SettingsUpdateInput = z.object({
   providers: Providers.optional(),
   connections: z
@@ -282,6 +291,62 @@ export class FolderStore {
     mkdirSync(journal.sectionDir(id), { recursive: true });
     writeFileSync(journal.progressPath(id), JSON.stringify(result.data, null, 2) + '\n', 'utf8');
     return result.data;
+  }
+
+  // ── backdrop image ───────────────────────────────────────────────────────
+
+  /** Absolute path of a section's backdrop image, or null when it has none. */
+  backdropPath(id: string): string | null {
+    const section = this.section(id);
+    const name = section.theme?.backdrop;
+    if (!name) return null;
+    // The name is written by saveBackdrop and always a bare file name; guard
+    // anyway so a hand-edited config cannot read outside the section folder.
+    if (name.includes('/') || name.includes(BS) || name.startsWith('.')) return null;
+    const path = join(journal.sectionDir(id), name);
+    return existsSync(path) ? path : null;
+  }
+
+  /**
+   * Store an uploaded image as the section's backdrop, replacing any
+   * previous one. Returns the section with the new theme.
+   */
+  saveBackdrop(id: string, input: unknown): SectionSummary {
+    const parsed = BackdropInput.safeParse(input);
+    if (!parsed.success) throw new HttpError(400, 'Invalid image', parsed.error.format());
+    const { filename, base64 } = parsed.data;
+    const ext = (/\.([a-z0-9]{2,5})$/i.exec(filename)?.[1] ?? 'jpg').toLowerCase();
+    if (!BACKDROP_EXTENSIONS.has(ext)) {
+      throw new HttpError(400, `Unsupported image type ".${ext}" (use ${[...BACKDROP_EXTENSIONS].join(', ')})`);
+    }
+    const data = Buffer.from(base64, 'base64');
+    if (data.length === 0) throw new HttpError(400, 'Image is empty');
+    if (data.length > MAX_BACKDROP_BYTES) {
+      throw new HttpError(413, `Image is larger than ${Math.round(MAX_BACKDROP_BYTES / 1024 / 1024)} MB`);
+    }
+    this.clearBackdropFiles(id);
+    const name = `_backdrop.${ext}`;
+    mkdirSync(journal.sectionDir(id), { recursive: true });
+    writeFileSync(join(journal.sectionDir(id), name), data);
+    const section = this.section(id);
+    return this.updateSection(id, { theme: { ...section.theme, backdrop: name } });
+  }
+
+  /** Remove the backdrop image and the reference to it. */
+  deleteBackdrop(id: string): SectionSummary {
+    const section = this.section(id);
+    this.clearBackdropFiles(id);
+    const theme = { ...section.theme };
+    delete theme.backdrop;
+    return this.updateSection(id, { theme: Object.keys(theme).length > 0 ? theme : null });
+  }
+
+  private clearBackdropFiles(id: string): void {
+    const dir = journal.sectionDir(id);
+    if (!existsSync(dir)) return;
+    for (const f of readdirSync(dir)) {
+      if (/^_backdrop\./.test(f)) rmSync(join(dir, f), { force: true });
+    }
   }
 
   // ── settings ─────────────────────────────────────────────────────────────

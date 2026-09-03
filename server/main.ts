@@ -112,7 +112,8 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
     try {
       if (await api(req, res)) return;
     } catch (err) {
-      sendJson(res, 500, { error: (err as Error).message });
+      if (res.headersSent) res.destroy();
+      else sendJson(res, 500, { error: (err as Error).message });
       return;
     }
 

@@ -2,11 +2,22 @@
 // here. Bodies are JSON. Errors are `{ error, details? }` with a status.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { createReadStream } from 'node:fs';
+import { extname } from 'node:path';
 import { FolderStore, HttpError, type DerivedKind } from './store.ts';
 import type { JobRunner } from './jobs.ts';
 import type { StartJob } from '../src/lib/api-types.ts';
 
 const MAX_BODY_BYTES = 512 * 1024 * 1024; // base64 uploads of lesson video
+
+const MIME_BY_EXT: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+  '.gif': 'image/gif',
+};
 
 export interface ApiContext {
   store: FolderStore;
@@ -78,6 +89,21 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
   on('GET', '/api/sections/:id/progress', (_r, _s, p) => store.progress(p['id']));
   on('PUT', '/api/sections/:id/progress', async (_r, _s, p, body) => store.saveProgress(p['id'], await body()));
 
+  // Backdrop image of a section (optional; themes are otherwise gradients).
+  on('GET', '/api/sections/:id/backdrop', (_r, res, p) => {
+    const path = store.backdropPath(p['id']);
+    if (!path) throw new HttpError(404, 'This pair has no backdrop image');
+    res.writeHead(200, {
+      'Content-Type': MIME_BY_EXT[extname(path).toLowerCase()] ?? 'application/octet-stream',
+      // The file name never changes, so the browser must revalidate.
+      'Cache-Control': 'no-cache',
+    });
+    createReadStream(path).pipe(res);
+    return undefined;
+  });
+  on('PUT', '/api/sections/:id/backdrop', async (_r, _s, p, body) => store.saveBackdrop(p['id'], await body()));
+  on('DELETE', '/api/sections/:id/backdrop', (_r, _s, p) => store.deleteBackdrop(p['id']));
+
   // Settings: journal-level provider defaults + connection values.
   on('GET', '/api/settings', () => store.settings());
   on('PUT', '/api/settings', async (_r, _s, _p, body) => store.updateSettings(await body()));
@@ -129,14 +155,24 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
     const body = (): Promise<unknown> => readJson(req);
     try {
       const result = await matched.handler(req, res, params, body);
-      if (!res.writableEnded) sendJson(res, method === 'POST' && url.pathname === '/api/sections' ? 201 : 200, result ?? { ok: true });
+      // A handler that answered itself (a streamed file) has sent headers
+      // even though the response is still being written — writableEnded
+      // alone is not enough, and writing again throws.
+      if (!res.headersSent) {
+        sendJson(res, method === 'POST' && url.pathname === '/api/sections' ? 201 : 200, result ?? { ok: true });
+      }
     } catch (err) {
-      if (err instanceof HttpError) {
-        sendJson(res, err.status, { error: err.message, details: err.details });
-      } else {
+      const httpErr = err instanceof HttpError;
+      if (!httpErr) {
         const e = err as Error;
         console.error(`[api] ${method} ${url.pathname}:`, e.stack ?? e.message);
-        sendJson(res, 500, { error: e.message });
+      }
+      if (res.headersSent) {
+        res.destroy();
+      } else if (httpErr) {
+        sendJson(res, err.status, { error: err.message, details: err.details });
+      } else {
+        sendJson(res, 500, { error: (err as Error).message });
       }
     }
     return true;
