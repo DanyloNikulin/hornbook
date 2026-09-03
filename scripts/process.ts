@@ -17,6 +17,7 @@ import { extract } from './extract.ts';
 import { lessonToMarkdown } from './lib/markdown.ts';
 import { Lesson, type LessonT } from '../src/lib/schema.ts';
 import { repoRootDir, resolveSectionArg, sectionDir, writeDerived, lessonFileStem } from './lib/journal.ts';
+import { currentProviders } from './lib/config.ts';
 import { isMain } from './lib/is-main.ts';
 
 type From = 'video' | 'audio' | 'transcript' | 'json';
@@ -117,6 +118,11 @@ async function main(): Promise<void> {
   if (from === 'transcript') {
     console.log('=== Transcript (skip transcribe/frames) ===');
     copyFileSync(input, join(workdir, 'transcript.txt'));
+  } else if (currentProviders().transcribe.driver === 'skip') {
+    console.error(
+      'Hearing is skipped. Pass a .txt transcript, or set up whisper.cpp / OpenAI in Application settings.',
+    );
+    process.exit(1);
   } else {
     console.log(`\n=== Transcribe (${from}) ===`);
     const transcript = await transcribe(input, workdir);

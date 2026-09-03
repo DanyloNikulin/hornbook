@@ -11,7 +11,7 @@ const Iso639 = z
 const SectionIdRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export const ProviderConfig = z.object({
-  driver: z.enum(['openai', 'anthropic', 'ollama', 'whisper-cli']),
+  driver: z.enum(['openai', 'anthropic', 'ollama', 'whisper-cli', 'skip']),
   model: z.string().min(1),
 });
 

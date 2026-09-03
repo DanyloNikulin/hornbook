@@ -104,7 +104,14 @@ flags a wrong one (gender or number) for targets with an article table: it, es, 
 en, el, ar, he (see `src/lib/articles.ts`). Other targets compare the full typed string.
 Gender/number slash variants (`bello/a`, `гарний/а`) work for any target.
 
-Learner-side text is written by the model in `learner`; the UI chrome is English.
+Learner-side text is written by the model in `learner`. UI chrome goes through
+locale catalogs (`src/lib/i18n.en.ts`, `src/lib/i18n.it.ts`). English is the
+default; the interface language is chosen on **Application** settings, not
+from the open pair. Pair settings (look, model overrides, topic review) stay
+on that pair's ⚙ page. Models are set as two steps — hear the recording, then
+write the conspect — each on this computer, the home network (Ollama), or an
+internet API. Native file inputs are wrapped so their labels follow the catalog
+rather than the browser language.
 
 ## Hosting
 

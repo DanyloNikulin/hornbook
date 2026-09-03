@@ -1,13 +1,13 @@
 <section class="max-w-3xl mx-auto px-6 py-10 space-y-8" style="background: var(--paper); min-height: 100vh;">
   <header class="space-y-3">
     <a [routerLink]="sec.home()" class="inline-flex items-center gap-1.5 text-sm transition-colors hover:text-[var(--primary)]" style="color: var(--muted);">
-      ← all lessons
+      {{ 'common.allLessons' | t }}
     </a>
     <h1 class="font-display text-4xl font-semibold" style="color: var(--ink);">
-      Search
+      {{ 'search.title' | t }}
     </h1>
     <p class="text-sm" style="color: var(--ink-2);">
-      Across articles, glossary, grammar, quotes, and slides.
+      {{ 'search.sub' | t }}
     </p>
   </header>
 
@@ -16,14 +16,14 @@
     autofocus
     [ngModel]="query()"
     (ngModelChange)="setQuery($event)"
-    placeholder="Word, topic, or phrase…"
+    [placeholder]="'search.placeholder' | t"
     class="w-full px-5 py-3 rounded-full outline-none text-lg transition-colors"
     style="background: var(--paper-2); border: 1px solid var(--line); color: var(--ink); font-family: var(--font-body);"
   />
 
   @if (!query()) {
     <div class="space-y-2 text-sm" style="color: var(--muted);">
-      <p>Try:</p>
+      <p>{{ 'search.try' | t }}</p>
       <div class="flex flex-wrap gap-2">
         @for (e of examples; track e) {
           <button type="button" (click)="setQuery(e)" class="il-chip">
@@ -34,19 +34,19 @@
     </div>
   } @else if (loading()) {
     <div class="rounded-2xl border border-dashed p-12 text-center" style="border-color: var(--line); color: var(--muted);">
-      Searching…
+      {{ 'search.searching' | t }}
     </div>
   } @else if (error()) {
     <div class="rounded-2xl border border-dashed p-12 text-center" style="border-color: var(--line); color: var(--muted);">
-      <p>Could not load the search index.</p>
-      <button type="button" (click)="reload()" class="il-btn sm mt-3">Try again</button>
+      <p>{{ 'search.loadFailed' | t }}</p>
+      <button type="button" (click)="reload()" class="il-btn sm mt-3">{{ 'common.tryAgain' | t }}</button>
     </div>
   } @else if (hits().length === 0) {
     <div class="rounded-2xl border border-dashed p-12 text-center" style="border-color: var(--line); color: var(--muted);">
-      Nothing for “{{ debounced() }}”.
+      {{ 'search.nothing' | t: { q: debounced() } }}
     </div>
   } @else {
-    <p class="text-xs" style="color: var(--muted);">{{ hits().length }} results</p>
+    <p class="text-xs" style="color: var(--muted);">{{ 'count.results' | t: { n: hits().length } }}</p>
     <ul class="space-y-3">
       @for (h of hits(); track $index) {
         <li>

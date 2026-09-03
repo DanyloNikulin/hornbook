@@ -7,24 +7,31 @@ import { LessonsService } from '../lessons.service';
 import { VocabService } from '../vocab.service';
 import { CardsService } from '../cards.service';
 import { SearchService } from '../search.service';
+import { providersFor } from '../../lib/journal-config';
+import { canHear } from '../../lib/pipeline';
 import { SectionService } from '../section.service';
+import { JournalService } from '../journal.service';
+import { TPipe } from '../i18n.pipe';
+import { I18nService } from '../i18n.service';
 import { JobsService } from '../jobs.service';
 
 type From = 'video' | 'audio' | 'transcript' | 'json';
 
 @Component({
   selector: 'app-compose',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, TPipe],
   templateUrl: './compose.component.html',
 })
 export class ComposeComponent {
   protected readonly sec = inject(SectionService);
+  private readonly journal = inject(JournalService);
   private readonly lessons = inject(LessonsService);
   private readonly vocab = inject(VocabService);
   private readonly cards = inject(CardsService);
   private readonly search = inject(SearchService);
   private readonly jobs = inject(JobsService);
   private readonly router = inject(Router);
+  private readonly i18n = inject(I18nService);
 
   protected title = '';
   protected date = new Date().toISOString().slice(0, 10);
@@ -35,11 +42,20 @@ export class ComposeComponent {
   protected readonly error = signal<string | null>(null);
   protected readonly ok = signal<string | null>(null);
   protected readonly busy = signal(false);
+  protected readonly pickedName = signal<string | null>(null);
 
   protected readonly job = computed(() => this.jobs.current());
   protected readonly jobRunning = computed(() => {
     const j = this.job();
     return j?.status === 'queued' || j?.status === 'running';
+  });
+
+  /** Recording ingest needs a transcribe driver. Skip means paste a transcript. */
+  protected readonly canHear = computed(() => {
+    const section = this.sec.current();
+    const cfg = this.journal.config();
+    const transcribe = section ? providersFor(cfg, section).transcribe : cfg.providers.transcribe;
+    return canHear(transcribe.driver);
   });
 
   private draft(): LessonT | null {
@@ -59,7 +75,7 @@ export class ComposeComponent {
       article_md: this.article.trim() || '## Takeaway\n\n',
     });
     if (!parsed.success) {
-      this.error.set('Lesson is not valid yet. Add a title, a date and a summary.');
+      this.error.set(this.i18n.t('compose.invalid'));
       return null;
     }
     return parsed.data;
@@ -99,14 +115,14 @@ export class ComposeComponent {
     a.href = URL.createObjectURL(blob);
     a.download = `${lesson.id}.json`;
     a.click();
-    this.ok.set(`Downloaded ${a.download}.`);
+    this.ok.set(this.i18n.t('compose.downloaded', { name: a.download }));
   }
 
   /** Pasted transcript → pipeline (extract only). */
   protected async submitTranscript(): Promise<void> {
     const text = this.transcript.trim();
     if (!text) {
-      this.error.set('Paste a transcript first.');
+      this.error.set(this.i18n.t('compose.pasteFirst'));
       return;
     }
     await this.runProcess('transcript.txt', btoa(unescape(encodeURIComponent(text))), 'transcript');
@@ -116,6 +132,7 @@ export class ComposeComponent {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+    this.pickedName.set(file.name);
     try {
       const base64 = await toBase64(file);
       await this.runProcess(file.name, base64, inferFrom(file.name));
@@ -131,7 +148,7 @@ export class ComposeComponent {
     try {
       const job: JobView = await this.jobs.run({ kind: 'process', filename, base64, date: this.date, from });
       if (job.status !== 'done') {
-        this.error.set(job.error ?? 'Processing failed — see the log below.');
+        this.error.set(job.error ?? this.i18n.t('compose.failed'));
         return;
       }
       await this.lessons.reload();
@@ -140,7 +157,7 @@ export class ComposeComponent {
       if (slug) {
         await this.router.navigate(this.sec.link('lesson', slug));
       } else {
-        this.ok.set('Lesson added to this pair.');
+        this.ok.set(this.i18n.t('compose.added'));
       }
     } catch (err) {
       this.error.set((err as Error).message);

@@ -25,7 +25,9 @@ describe('AppComponent', () => {
     expect(text).toContain('Hornbook');
     expect(text).toContain('Pairs');
     expect(text).toContain('New pair');
+    expect(text).toContain('Application');
     expect(text).not.toContain('Glossary');
+    expect((fixture.nativeElement as HTMLElement).querySelector('.il-locale-btn')).toBeNull();
   });
 
   it('shows section links once a section is current and the URL is inside it', async () => {
@@ -46,4 +48,5 @@ describe('AppComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Pairs');
   });
+
 });

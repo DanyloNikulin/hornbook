@@ -9,6 +9,7 @@ import { VocabService } from '../vocab.service';
 import { ProgressService } from '../progress.service';
 import { today } from '../../lib/sm2';
 import { TOPIC_VOCAB, type DerivedVocabT, type LessonMetaT, type TopicT } from '../../lib/schema';
+import { TPipe } from '../i18n.pipe';
 import { JournalService } from '../journal.service';
 
 const TOPIC_SET = new Set<string>(TOPIC_VOCAB);
@@ -16,7 +17,7 @@ const PAGE_SIZE = 12;
 
 @Component({
   selector: 'app-lesson-list',
-  imports: [RouterLink],
+  imports: [RouterLink, TPipe],
   templateUrl: './lesson-list.component.html',
 })
 export class LessonListComponent {

@@ -9,6 +9,7 @@ import {
   resource,
   signal,
 } from '@angular/core';
+import { TPipe } from '../i18n.pipe';
 import { SectionService } from '../section.service';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -36,7 +37,7 @@ const MISMATCH_FLASH_MS = 600;
 
 @Component({
   selector: 'app-flashcards',
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, TPipe],
   templateUrl: './flashcards.component.html',
 })
 export class FlashcardsComponent {

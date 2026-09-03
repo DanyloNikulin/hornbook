@@ -240,6 +240,27 @@ h1, h2, h3, h4 {
 }
 .il-theme-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
+.il-file {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+.il-file-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.il-file:focus-within .il-btn { outline: 2px solid var(--primary); outline-offset: 2px; }
+.il-file-name { font-size: 13px; color: var(--muted); }
+
 /* ---------- Mobile nav controls ---------- */
 .il-nav-mobile-controls {
   display: none;
@@ -1638,6 +1659,52 @@ h1, h2, h3, h4 {
 .il-settings-help { font-size: 12px; color: var(--muted); }
 .il-settings-conn-input { display: flex; flex-direction: column; gap: 6px; }
 .il-settings-check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); margin: 6px 0; }
+.il-settings-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 20px; }
+.il-locale-picks { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 8px; }
+.il-locale-picks .il-chip { gap: 8px; }
+.il-pipe-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 12px 0;
+}
+@media (max-width: 720px) { .il-pipe-grid { grid-template-columns: 1fr; } }
+.il-pipe {
+  border: 1px solid rgba(42, 37, 32, 0.18);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--paper-2);
+}
+.il-pipe-title { font-family: var(--font-display); font-size: 20px; margin: 0 0 4px; }
+.il-pipe-step {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 14px 0 6px;
+}
+.il-settings-row--stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  grid-template-columns: none;
+}
+.il-pipe-models {
+  margin: 0 0 4px;
+  max-height: 9.5rem;
+  overflow: auto;
+}
+.il-pipe-models .il-chip {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+.il-pipe-check { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.il-pipe-result { font-size: 13px; margin: 0; }
+.il-pipe-result--ok { color: var(--success); }
+.il-pipe-result--bad { color: #a33; }
 
 /* ---------- Theme presets (settings) ---------- */
 .il-preset-grid {

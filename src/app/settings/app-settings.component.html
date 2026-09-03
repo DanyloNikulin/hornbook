@@ -1,0 +1,51 @@
+<section class="il-panel" style="padding-top: 2rem;">
+  <div class="il-panel-inner" style="max-width: 760px; margin: 0 auto;">
+    <p><a [routerLink]="backHome()" class="il-lesson-bc-link">{{ backLabel() | t }}</a></p>
+    <h1 class="il-section-title">{{ 'settings.appTitle' | t }}</h1>
+    <p class="il-section-sub">{{ 'settings.appSub' | t }}</p>
+    <app-settings-nav />
+
+    <h2 class="il-compose-h">{{ 'settings.interface' | t }}</h2>
+    <p class="il-section-sub">{{ 'settings.interfaceSub' | t }}</p>
+    <div class="il-locale-picks" role="radiogroup" [attr.aria-label]="'settings.interface' | t">
+      @for (id of locales; track id) {
+        <button type="button" class="il-chip" [class.active]="locale() === id"
+                role="radio" [attr.aria-checked]="locale() === id"
+                (click)="setLocale(id)">
+          {{ localeMeta[id].autonym }}
+          <span class="il-stat-sub">{{ localeMeta[id].code }}</span>
+        </button>
+      }
+    </div>
+
+    @if (loading()) {
+      <p class="il-stat-sub">{{ 'common.loading' | t }}</p>
+    } @else {
+      <h2 class="il-compose-h" style="margin-top: 24px;">{{ 'settings.providers' | t }}</h2>
+      <p class="il-section-sub">{{ 'pipeline.lead' | t }}</p>
+      <p class="il-settings-help" style="margin-bottom: 12px;">{{ 'pipeline.needBoth' | t }}</p>
+
+      <div class="il-pipe-grid">
+        <app-pipeline-setup
+          job="transcribe"
+          [config]="defaults.transcribe"
+          [connections]="settings()?.connections ?? null"
+          [draft]="connectionInput" />
+        <app-pipeline-setup
+          job="extract"
+          [config]="defaults.extract"
+          [connections]="settings()?.connections ?? null"
+          [draft]="connectionInput" />
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center; margin: 16px 0 28px;">
+        <button type="button" class="il-btn" [disabled]="saving()" (click)="save()">{{ saving() ? ('settings.saving' | t) : ('settings.save' | t) }}</button>
+        @if (saved()) { <span style="color: var(--success);">{{ saved() }}</span> }
+      </div>
+    }
+
+    @if (error()) {
+      <p style="color: #a33; margin-top: 1rem;" role="alert">{{ error() }}</p>
+    }
+  </div>
+</section>

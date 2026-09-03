@@ -12,6 +12,11 @@ export const routes: Routes = [
     loadComponent: () => import('./setup/setup.component').then((m) => m.SetupComponent),
   },
   {
+    path: 'settings',
+    loadComponent: () =>
+      import('./settings/app-settings.component').then((m) => m.AppSettingsComponent),
+  },
+  {
     // Everything inside a language pair. The guard resolves the section and
     // preloads its manifest and progress before any child activates.
     path: ':section',
@@ -49,6 +54,11 @@ export const routes: Routes = [
       {
         path: 'settings',
         loadComponent: () => import('./settings/settings.component').then((m) => m.SettingsComponent),
+      },
+      {
+        path: 'application',
+        loadComponent: () =>
+          import('./settings/app-settings.component').then((m) => m.AppSettingsComponent),
       },
       {
         path: '**',

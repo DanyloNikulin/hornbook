@@ -2,6 +2,7 @@ import { Component, computed, inject, resource, signal } from '@angular/core';
 import { SectionService } from '../section.service';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { TPipe } from '../i18n.pipe';
 import { VocabService } from '../vocab.service';
 import type { DerivedVocabT, LevelT } from '../../lib/schema';
 
@@ -10,7 +11,7 @@ const PAGE_SIZE = 15;
 
 @Component({
   selector: 'app-vocab',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, TPipe],
   templateUrl: './vocab.component.html',
 })
 export class VocabComponent {

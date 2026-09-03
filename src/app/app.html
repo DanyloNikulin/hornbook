@@ -5,11 +5,11 @@
 <div class="il-page">
 
   <!-- Navigation -->
-  <nav class="il-nav" aria-label="Main">
+  <nav class="il-nav" [attr.aria-label]="'nav.main' | t">
 
     <!-- Main row: brand + desktop links + mobile controls -->
     <div class="il-nav-row">
-      <a routerLink="/" class="il-brand" [attr.aria-label]="brandName() + ' — home'">
+      <a routerLink="/" class="il-brand" [attr.aria-label]="'nav.homeAria' | t: { brand: brandName() }">
         <span class="il-brand-mark" aria-hidden="true">hb</span>
         <span>
           <div class="il-brand-name">{{ brandName() }}</div>
@@ -22,7 +22,7 @@
         @if (inSection()) {
           @if (sections().length > 1) {
             <select class="il-section-switch"
-                    aria-label="Language pair"
+                    [attr.aria-label]="'nav.pair' | t"
                     (change)="switchSection($any($event.target).value)">
               @for (s of sections(); track s.id) {
                 <option [value]="s.id" [selected]="s.id === section.id()">{{ s.flags.target }} {{ s.label }}</option>
@@ -33,21 +33,22 @@
              routerLinkActive="active"
              [routerLinkActiveOptions]="{ exact: true }"
              class="il-nav-link">
-            Lessons
+            {{ 'nav.lessons' | t }}
           </a>
-          <a [routerLink]="section.link('vocab')" routerLinkActive="active" class="il-nav-link">Glossary</a>
-          <a [routerLink]="section.link('flashcards')" routerLinkActive="active" class="il-nav-link">Cards</a>
-          <a [routerLink]="section.link('cheatsheet')" routerLinkActive="active" class="il-nav-link">Sheet</a>
-          <a [routerLink]="section.link('search')" routerLinkActive="active" class="il-nav-link">Search</a>
-          <a [routerLink]="section.link('compose')" routerLinkActive="active" class="il-nav-link">Add</a>
-          <a [routerLink]="section.link('settings')" routerLinkActive="active" class="il-nav-link" aria-label="Settings">⚙</a>
+          <a [routerLink]="section.link('vocab')" routerLinkActive="active" class="il-nav-link">{{ 'nav.glossary' | t }}</a>
+          <a [routerLink]="section.link('flashcards')" routerLinkActive="active" class="il-nav-link">{{ 'nav.cards' | t }}</a>
+          <a [routerLink]="section.link('cheatsheet')" routerLinkActive="active" class="il-nav-link">{{ 'nav.sheet' | t }}</a>
+          <a [routerLink]="section.link('search')" routerLinkActive="active" class="il-nav-link">{{ 'nav.search' | t }}</a>
+          <a [routerLink]="section.link('compose')" routerLinkActive="active" class="il-nav-link">{{ 'nav.add' | t }}</a>
+          <a [routerLink]="section.link('settings')" routerLinkActive="active" class="il-nav-link" [attr.aria-label]="'nav.settings' | t">⚙</a>
         } @else {
-          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="il-nav-link">Pairs</a>
-          <a routerLink="/setup" routerLinkActive="active" class="il-nav-link">New pair</a>
+          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="il-nav-link">{{ 'nav.pairs' | t }}</a>
+          <a routerLink="/setup" routerLinkActive="active" class="il-nav-link">{{ 'nav.newPair' | t }}</a>
+          <a routerLink="/settings" routerLinkActive="active" class="il-nav-link">{{ 'nav.appSettings' | t }}</a>
         }
         <button type="button" (click)="toggleTheme()"
                 class="il-theme-btn"
-                [attr.aria-label]="theme() === 'night' ? 'Switch to day mode' : 'Switch to night mode'">
+                [attr.aria-label]="theme() === 'night' ? ('nav.themeToDay' | t) : ('nav.themeToNight' | t)">
           @if (theme() === 'night') {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
           } @else {
@@ -60,7 +61,7 @@
       <div class="il-nav-mobile-controls">
         <button type="button" (click)="toggleTheme()"
                 class="il-theme-btn"
-                [attr.aria-label]="theme() === 'night' ? 'Switch to day mode' : 'Switch to night mode'">
+                [attr.aria-label]="theme() === 'night' ? ('nav.themeToDay' | t) : ('nav.themeToNight' | t)">
           @if (theme() === 'night') {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
           } @else {
@@ -70,7 +71,7 @@
         <button type="button" class="il-hamburger"
                 (click)="toggleMenu()"
                 [attr.aria-expanded]="menuOpen()"
-                [attr.aria-label]="menuOpen() ? 'Close menu' : 'Open menu'">
+                [attr.aria-label]="menuOpen() ? ('nav.closeMenu' | t) : ('nav.openMenu' | t)">
           @if (!menuOpen()) {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <line x1="3" y1="6" x2="21" y2="6"/>
@@ -89,7 +90,7 @@
 
     <!-- Mobile dropdown menu (rendered only when open) -->
     @if (menuOpen()) {
-      <div class="il-mobile-menu" role="navigation" aria-label="Mobile menu">
+      <div class="il-mobile-menu" role="navigation" [attr.aria-label]="'nav.mobileMenu' | t">
         @if (inSection()) {
           @for (s of sections(); track s.id) {
             @if (s.id !== section.id()) {
@@ -99,16 +100,17 @@
           <a [routerLink]="section.home()"
              routerLinkActive="active"
              [routerLinkActiveOptions]="{ exact: true }"
-             class="il-mobile-link">Lessons</a>
-          <a [routerLink]="section.link('vocab')" routerLinkActive="active" class="il-mobile-link">Glossary</a>
-          <a [routerLink]="section.link('flashcards')" routerLinkActive="active" class="il-mobile-link">Cards</a>
-          <a [routerLink]="section.link('cheatsheet')" routerLinkActive="active" class="il-mobile-link">Sheet</a>
-          <a [routerLink]="section.link('search')" routerLinkActive="active" class="il-mobile-link">Search</a>
-          <a [routerLink]="section.link('compose')" routerLinkActive="active" class="il-mobile-link">Add</a>
-          <a [routerLink]="section.link('settings')" routerLinkActive="active" class="il-mobile-link">Settings</a>
+             class="il-mobile-link">{{ 'nav.lessons' | t }}</a>
+          <a [routerLink]="section.link('vocab')" routerLinkActive="active" class="il-mobile-link">{{ 'nav.glossary' | t }}</a>
+          <a [routerLink]="section.link('flashcards')" routerLinkActive="active" class="il-mobile-link">{{ 'nav.cards' | t }}</a>
+          <a [routerLink]="section.link('cheatsheet')" routerLinkActive="active" class="il-mobile-link">{{ 'nav.sheet' | t }}</a>
+          <a [routerLink]="section.link('search')" routerLinkActive="active" class="il-mobile-link">{{ 'nav.search' | t }}</a>
+          <a [routerLink]="section.link('compose')" routerLinkActive="active" class="il-mobile-link">{{ 'nav.add' | t }}</a>
+          <a [routerLink]="section.link('settings')" routerLinkActive="active" class="il-mobile-link">{{ 'nav.settings' | t }}</a>
         }
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="il-mobile-link">Pairs</a>
-        <a routerLink="/setup" routerLinkActive="active" class="il-mobile-link">New pair</a>
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="il-mobile-link">{{ 'nav.pairs' | t }}</a>
+        <a routerLink="/setup" routerLinkActive="active" class="il-mobile-link">{{ 'nav.newPair' | t }}</a>
+        <a routerLink="/settings" routerLinkActive="active" class="il-mobile-link">{{ 'nav.appSettings' | t }}</a>
       </div>
     }
 
@@ -118,7 +120,7 @@
   <main>
     @if (serverError()) {
       <p class="il-server-error" role="alert">
-        Cannot reach the Hornbook server ({{ serverError() }}). Start it with <code>npm start</code> and reload.
+        {{ 'app.serverError' | t: { detail: serverError()!, cmd: 'npm start' } }}
       </p>
     }
     <router-outlet />
@@ -126,9 +128,9 @@
 
   <!-- Footer -->
   <footer class="il-footer">
-    <span>Conspects from your lessons · your folder is the database</span>
+    <span>{{ 'footer.line' | t }}</span>
     @if (repoUrl) {
-      <a [href]="repoUrl" target="_blank" rel="noopener noreferrer">source ↗</a>
+      <a [href]="repoUrl" target="_blank" rel="noopener noreferrer">{{ 'footer.source' | t }}</a>
     }
   </footer>
 
@@ -136,7 +138,7 @@
 
 <!-- Floating cheatsheet button (inside a section, hidden on the cheatsheet page) -->
 @if (inSection() && !isCheatsheet()) {
-  <a [routerLink]="section.link('cheatsheet')" class="il-fab" aria-label="Cheatsheet">
+  <a [routerLink]="section.link('cheatsheet')" class="il-fab" [attr.aria-label]="'nav.cheatsheetAria' | t">
     <span class="il-fab-icon" aria-hidden="true">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 3v4a1 1 0 0 0 1 1h4"/>
@@ -145,8 +147,8 @@
       </svg>
     </span>
     <span>
-      <span class="il-fab-sub">SOS</span>
-      <span>Sheet</span>
+      <span class="il-fab-sub">{{ 'nav.sos' | t }}</span>
+      <span>{{ 'nav.sheet' | t }}</span>
     </span>
   </a>
 }

@@ -1,0 +1,185 @@
+import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { filterApiModels, modelIdsFromList, parseProbeInput, probePipeline, type ProbeDeps } from './probe.ts';
+
+function deps(fetchImpl: ProbeDeps['fetch'], exists: ProbeDeps['exists'] = () => false): ProbeDeps {
+  return { fetch: fetchImpl, exists, env: {} };
+}
+
+describe('parseProbeInput', () => {
+  it('rejects a body without a job', () => {
+    expect(() => parseProbeInput({ driver: 'openai', model: 'x' })).toThrow(/job/);
+  });
+});
+
+describe('probePipeline', () => {
+  it('fails whisper when the binary path is missing', async () => {
+    const result = await probePipeline(
+      { job: 'transcribe', driver: 'whisper-cli', model: 'ggml-base.bin' },
+      tmpdir(),
+      deps(vi.fn()),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.detail).toMatch(/whisper\.cpp binary/i);
+  });
+
+  it('accepts whisper when binary and model files exist', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hornbook-probe-'));
+    const bin = join(dir, 'whisper-cli.exe');
+    const model = join(dir, 'ggml-base.bin');
+    writeFileSync(bin, '');
+    writeFileSync(model, '');
+    try {
+      const result = await probePipeline(
+        {
+          job: 'transcribe',
+          driver: 'whisper-cli',
+          model,
+          connections: { WHISPER_BIN: bin },
+        },
+        dir,
+        deps(vi.fn(), (p) => p === bin || p === model),
+      );
+      expect(result.ok).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a reachable Ollama without the named model', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ models: [{ name: 'llama3.2:latest' }] }),
+    });
+    const result = await probePipeline(
+      { job: 'extract', driver: 'ollama', model: 'llama3.1' },
+      tmpdir(),
+      deps(fetchImpl),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.detail).toMatch(/not pulled|Pick one/);
+    expect(result.models).toEqual(['llama3.2:latest']);
+  });
+
+  it('lists pulled Ollama models so the user can pick one', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ models: [{ name: 'llama3.1:latest' }, { name: 'qwen2.5:7b' }] }),
+    });
+    const result = await probePipeline(
+      { job: 'extract', driver: 'ollama', model: '' },
+      tmpdir(),
+      deps(fetchImpl),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.models).toEqual(['llama3.1:latest', 'qwen2.5:7b']);
+  });
+
+  it('passes skip-hearing without touching the network', async () => {
+    const fetchImpl = vi.fn();
+    const result = await probePipeline(
+      { job: 'transcribe', driver: 'skip', model: '-' },
+      tmpdir(),
+      deps(fetchImpl),
+    );
+    expect(result.ok).toBe(true);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('rejects a missing OpenAI key without calling the network', async () => {
+    const fetchImpl = vi.fn();
+    const result = await probePipeline(
+      { job: 'extract', driver: 'openai', model: 'gpt-4o' },
+      tmpdir(),
+      deps(fetchImpl),
+    );
+    expect(result.ok).toBe(false);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('lists models from an OpenAI key and does not invent a pick', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          { id: 'gpt-4o' },
+          { id: 'gpt-4o-2024-08-06' },
+          { id: 'whisper-1' },
+          { id: 'gpt-4o-transcribe' },
+          { id: 'text-embedding-3-small' },
+        ],
+      }),
+    });
+    const result = await probePipeline(
+      { job: 'extract', driver: 'openai', model: '', connections: { OPENAI_API_KEY: 'sk-test-1234567890' } },
+      tmpdir(),
+      deps(fetchImpl),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.models).toEqual(['gpt-4o']);
+    expect(result.detail).toMatch(/Pick one/i);
+  });
+
+  it('lists only hearing models for an OpenAI transcribe probe', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [{ id: 'gpt-4o' }, { id: 'whisper-1' }, { id: 'gpt-4o-mini-transcribe' }],
+      }),
+    });
+    const result = await probePipeline(
+      {
+        job: 'transcribe',
+        driver: 'openai',
+        model: '',
+        connections: { OPENAI_API_KEY: 'sk-test-1234567890' },
+      },
+      tmpdir(),
+      deps(fetchImpl),
+    );
+    expect(result.models).toEqual(['whisper-1', 'gpt-4o-mini-transcribe']);
+  });
+
+  it('lists Anthropic models from /v1/models', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [{ id: 'claude-sonnet-4-6' }, { id: 'claude-haiku-4-5' }],
+      }),
+    });
+    const result = await probePipeline(
+      {
+        job: 'extract',
+        driver: 'anthropic',
+        model: 'claude-sonnet-4-6',
+        connections: { ANTHROPIC_API_KEY: 'sk-ant-test-1234567890' },
+      },
+      tmpdir(),
+      deps(fetchImpl),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.models).toEqual(['claude-sonnet-4-6', 'claude-haiku-4-5']);
+    expect(fetchImpl.mock.calls[0]?.[0]).toMatch(/\/v1\/models/);
+  });
+});
+
+describe('filterApiModels', () => {
+  it('drops dated aliases and non-job models without keeping a catalog', () => {
+    expect(
+      filterApiModels('extract', [
+        'gpt-4o',
+        'gpt-4o-2024-08-06',
+        'whisper-1',
+        'text-embedding-3-large',
+        'o4-mini',
+      ]),
+    ).toEqual(['gpt-4o', 'o4-mini']);
+    expect(filterApiModels('transcribe', ['gpt-4o', 'whisper-1', 'gpt-4o-transcribe'])).toEqual([
+      'whisper-1',
+      'gpt-4o-transcribe',
+    ]);
+    expect(modelIdsFromList({ data: [{ id: 'a' }, { id: 'a' }, { name: 'nope' }] })).toEqual(['a']);
+  });
+});

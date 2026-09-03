@@ -3,21 +3,22 @@
   <!-- Header -->
   <header class="space-y-3">
     <a [routerLink]="sec.home()" class="inline-flex items-center gap-1.5 text-sm transition-colors hover:text-[var(--primary)]" style="color: var(--muted);">
-      ← all lessons
+      {{ 'common.allLessons' | t }}
     </a>
     <div class="flex items-start justify-between gap-3 flex-wrap">
       <h1 class="font-display text-4xl font-semibold" style="color: var(--ink);">
-        Cheatsheet
+        {{ 'sheet.title' | t }}
       </h1>
       <div class="flex gap-2 flex-wrap">
         <button type="button" class="il-btn sm" [disabled]="jobRunning()" (click)="rebuild(false)">
-          {{ jobRunning() ? 'Updating…' : 'Update from new lessons' }}
+          {{ jobRunning() ? ('sheet.updating' | t) : ('sheet.update' | t) }}
         </button>
-        <button type="button" class="il-btn ghost sm" [disabled]="jobRunning()" (click)="rebuild(true)">Rebuild all</button>
+        <button type="button" class="il-btn ghost sm" [disabled]="jobRunning()" (click)="rebuild(true)">{{ 'sheet.rebuild' | t }}</button>
       </div>
     </div>
     <p class="max-w-2xl" style="color: var(--ink-2);">
-      Grammar from every lesson, condensed. Updating asks the model to merge lessons that are not in the sheet yet; it needs an Anthropic key in <a [routerLink]="sec.link('settings')" class="underline">Settings</a>.
+      {{ 'sheet.subLead' | t }}
+      <a [routerLink]="sec.link('application')" class="underline">{{ 'nav.appSettings' | t }}</a>.
     </p>
     @if (jobError()) {
       <p style="color: #a33;" role="alert">{{ jobError() }}</p>
@@ -25,11 +26,11 @@
     @if (showLog() && job(); as j) {
       <div class="il-job" [class.il-job--failed]="j.status === 'failed'" [class.il-job--done]="j.status === 'done'">
         <div class="il-job-head">
-          <span class="il-job-status">{{ j.status }}</span>
+          <span class="il-job-status">{{ ('job.' + j.status) | t }}</span>
           <span>{{ j.label }}</span>
-          <button type="button" class="il-btn ghost sm" style="margin-left:auto" (click)="showLog.set(false)">hide</button>
+          <button type="button" class="il-btn ghost sm" style="margin-left:auto" (click)="showLog.set(false)">{{ 'common.hide' | t }}</button>
         </div>
-        <pre class="il-log">{{ j.log || '(waiting for output)' }}</pre>
+        <pre class="il-log">{{ j.log || ('job.waiting' | t) }}</pre>
       </div>
     }
   </header>
@@ -37,28 +38,28 @@
   <!-- Loading / error / empty / populated -->
   @if (loading() && cheatsheet().categories.length === 0) {
     <div class="rounded-2xl border border-dashed p-12 text-center" style="border-color: var(--line); color: var(--muted);">
-      Loading cheatsheet…
+      {{ 'sheet.loading' | t }}
     </div>
   } @else if (error()) {
     <div class="rounded-2xl border border-dashed p-12 text-center" style="border-color: var(--line); color: var(--muted);">
-      <p>Could not load the cheatsheet.</p>
-      <button type="button" (click)="reload()" class="il-btn sm mt-3">Try again</button>
+      <p>{{ 'sheet.loadFailed' | t }}</p>
+      <button type="button" (click)="reload()" class="il-btn sm mt-3">{{ 'common.tryAgain' | t }}</button>
     </div>
   } @else if (cheatsheet().categories.length === 0) {
     <div class="rounded-2xl border border-dashed p-12 text-center" style="border-color: var(--line);">
       <p style="color: var(--muted);">
-        The cheat sheet is empty. Once this pair has lessons with grammar, press “Update from new lessons”.
+        {{ 'sheet.empty' | t }}
       </p>
     </div>
   } @else {
 
     <!-- Category tabs -->
-    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Grammar categories">
+    <div class="flex flex-wrap gap-2" role="tablist" [attr.aria-label]="'sheet.categoriesAria' | t">
       <button type="button" role="tab"
               [attr.aria-selected]="activeCategory() === null"
               (click)="setCategory(null)"
               class="il-chip" [class.active]="activeCategory() === null">
-        All
+        {{ 'sheet.all' | t }}
         <span class="ml-1 opacity-60 text-xs">{{ totalSections() }}</span>
       </button>
       @for (cat of cheatsheet().categories; track cat.id) {

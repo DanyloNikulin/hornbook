@@ -1,9 +1,9 @@
 <section class="space-y-6">
   <header class="flex items-center justify-between flex-wrap gap-2">
-    <h2 class="font-display text-2xl font-semibold" style="color: var(--ink);">Quiz</h2>
+    <h2 class="font-display text-2xl font-semibold" style="color: var(--ink);">{{ 'quiz.title' | t }}</h2>
     @if (previousBest(); as prev) {
       <span class="text-xs font-mono" style="color: var(--muted);">
-        Best: {{ prev.best_score }}/{{ prev.total }} · attempts: {{ prev.attempts }}
+        {{ 'quiz.best' | t: { score: prev.best_score, total: prev.total, attempts: prev.attempts } }}
       </span>
     }
   </header>
@@ -49,7 +49,7 @@
                    [ngModel]="answers()[i] ?? ''"
                    (ngModelChange)="setAnswer(i, $event)"
                    [disabled]="submitted()"
-                   placeholder="your answer…"
+                   [placeholder]="'quiz.answerPlaceholder' | t"
                    class="w-full px-3 py-2 rounded-xl outline-none transition-colors"
                    [style]="submitted()
                      ? (isCorrect(q, i)
@@ -58,9 +58,9 @@
                      : 'border: 1px solid var(--line); background: var(--paper); color: var(--ink);'" />
             @if (submitted() && !isCorrect(q, i)) {
               <p class="text-xs" style="color: var(--muted);">
-                Answer: <code class="font-mono" style="color: var(--primary-ink);">{{ q.answer }}</code>
+                {{ 'quiz.answer' | t }} <code class="font-mono" style="color: var(--primary-ink);">{{ q.answer }}</code>
                 @if (q.alternatives && q.alternatives.length > 0) {
-                  <span> (or {{ q.alternatives.join(', ') }})</span>
+                  <span> {{ 'quiz.or' | t: { alts: q.alternatives.join(', ') } }}</span>
                 }
               </p>
             }
@@ -73,27 +73,27 @@
                       (ngModelChange)="setAnswer(i, $event)"
                       [disabled]="submitted()"
                       rows="2"
-                      placeholder="your translation…"
+                      [placeholder]="'quiz.translationPlaceholder' | t"
                       class="w-full px-3 py-2 rounded-xl outline-none transition-colors"
                       style="border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-family: var(--font-body); resize: vertical;"></textarea>
 
             @if (!revealed()[i] && !submitted()) {
               <button type="button" (click)="reveal(i)"
                       class="text-xs hover:underline" style="color: var(--primary);">
-                Show model answer
+                {{ 'quiz.showModel' | t }}
               </button>
             } @else {
               <div class="space-y-2">
                 <p class="text-sm italic" style="color: var(--ink-2);">
                   → <span class="font-medium" style="color: var(--ink);">{{ q.answer_target }}</span>
                   @if (q.alternatives && q.alternatives.length > 0) {
-                    <span class="text-xs" style="color: var(--muted);"> (or: {{ q.alternatives.join(' · ') }})</span>
+                    <span class="text-xs" style="color: var(--muted);"> {{ 'quiz.orAlt' | t: { alts: q.alternatives.join(' · ') } }}</span>
                   }
                 </p>
                 @if (!submitted()) {
                   @if (q.auto_check && translateAutoCorrect(q, i)) {
                     <p class="text-xs font-medium" style="color: var(--success);">
-                      ✓ Matches the model answer — counted automatically
+                      {{ 'quiz.matchesAuto' | t }}
                     </p>
                   } @else {
                     <div class="flex gap-2 text-xs">
@@ -102,14 +102,14 @@
                               [style]="selfGrades()[i] === 'right'
                                 ? 'background: var(--success); color: var(--paper); outline: 2px solid var(--success); outline-offset: 2px;'
                                 : 'background: rgba(107,142,78,0.12); color: var(--success);'">
-                        ✓ Close enough
+                        {{ 'quiz.closeEnough' | t }}
                       </button>
                       <button type="button" (click)="selfGrade(i, 'wrong')"
                               class="px-3 py-1.5 rounded-full transition-colors"
                               [style]="selfGrades()[i] === 'wrong'
                                 ? 'background: var(--primary); color: var(--paper); outline: 2px solid var(--primary); outline-offset: 2px;'
                                 : 'background: rgba(192,101,63,0.08); color: var(--primary);'">
-                        ✘ Not this time
+                        {{ 'quiz.notThisTime' | t }}
                       </button>
                     </div>
                   }
@@ -125,9 +125,9 @@
   @if (!submitted()) {
     <button type="button" (click)="submit()" class="il-btn"
             [disabled]="!canSubmit()"
-            [title]="canSubmit() ? '' : 'Grade your translations first'"
+            [title]="canSubmit() ? '' : ('quiz.gradeFirst' | t)"
             style="width: 100%; border-radius: 16px;">
-      Check
+      {{ 'quiz.check' | t }}
     </button>
   } @else {
     <div class="rounded-2xl p-5 flex items-center justify-between flex-wrap gap-3"
@@ -137,12 +137,12 @@
           {{ score() }} / {{ questions().length }}
         </p>
         <p class="text-sm" style="color: var(--ink-2);">
-          @if (score() === questions().length) { 🎉 perfect }
-          @else if (score() >= questions().length * 0.8) { 👍 solid }
-          @else { ↻ worth another pass }
+          @if (score() === questions().length) { {{ 'quiz.perfect' | t }} }
+          @else if (score() >= questions().length * 0.8) { {{ 'quiz.solid' | t }} }
+          @else { {{ 'quiz.retryHint' | t }} }
         </p>
       </div>
-      <button type="button" (click)="retry()" class="il-btn ghost sm">Again</button>
+      <button type="button" (click)="retry()" class="il-btn ghost sm">{{ 'quiz.again' | t }}</button>
     </div>
   }
 </section>

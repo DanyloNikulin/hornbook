@@ -120,3 +120,19 @@ describe('API — theme round trip', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('API — pipeline probe', () => {
+  it('rejects a body without a job', async () => {
+    const res = await api('/api/settings/probe', post({ driver: 'openai', model: 'gpt-4o' }));
+    expect(res.status).toBe(400);
+  });
+
+  it('fails a whisper check when no binary is configured', async () => {
+    const body = await json<{ ok: boolean; detail: string }>(
+      '/api/settings/probe',
+      post({ job: 'transcribe', driver: 'whisper-cli', model: 'ggml-base.bin' }),
+    );
+    expect(body.ok).toBe(false);
+    expect(body.detail).toMatch(/binary/i);
+  });
+});

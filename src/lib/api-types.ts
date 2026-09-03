@@ -96,3 +96,18 @@ export interface SettingsUpdate {
   /** A string stores the value, null clears it, omitted keys stay. */
   connections?: Partial<Record<ConnectionKey, string | null>>;
 }
+
+export interface ProbeRequest {
+  job: 'transcribe' | 'extract';
+  driver: string;
+  model: string;
+  /** Typed-but-unsaved values; merged over secrets.json for this check only. */
+  connections?: Partial<Record<ConnectionKey, string>>;
+}
+
+export interface ProbeResult {
+  ok: boolean;
+  detail: string;
+  /** Live inventory from this connection (Ollama tags, or the API's model list). Never a Hornbook catalog. */
+  models?: string[];
+}

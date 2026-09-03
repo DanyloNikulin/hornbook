@@ -26,8 +26,15 @@ import {
   type SectionConfigT,
 } from '../src/lib/journal-config.ts';
 import { languageFlag } from '../src/lib/languages.ts';
-import { CONNECTION_KEYS, type SectionSummary, type ConfigView, type SettingsView } from '../src/lib/api-types.ts';
+import {
+  CONNECTION_KEYS,
+  type SectionSummary,
+  type ConfigView,
+  type SettingsView,
+  type ProbeResult,
+} from '../src/lib/api-types.ts';
 import { connectionViews, updateSecrets } from './secrets.ts';
+import { parseProbeInput, probePipeline } from './probe.ts';
 import * as journal from '../scripts/lib/journal.ts';
 import { lessonToMarkdown } from '../scripts/lib/markdown.ts';
 import { z } from 'zod';
@@ -49,7 +56,7 @@ export type DerivedKind = 'vocab' | 'cards' | 'search-index';
 const DEFAULT_CONFIG: JournalConfigT = {
   brand: { name: 'Hornbook', tagline: 'conspects from your lessons' },
   providers: {
-    transcribe: { driver: 'whisper-cli', model: 'base' },
+    transcribe: { driver: 'skip', model: '-' },
     extract: { driver: 'ollama', model: 'llama3.1' },
   },
   sections: [],
@@ -370,6 +377,14 @@ export class FolderStore {
       updateSecrets(journal.journalDir(), parsed.data.connections);
     }
     return this.settings();
+  }
+
+  async probe(input: unknown): Promise<ProbeResult> {
+    try {
+      return await probePipeline(parseProbeInput(input), journal.journalDir());
+    } catch (err) {
+      throw new HttpError(400, (err as Error).message);
+    }
   }
 
   /** Files of a section dir, for diagnostics. */

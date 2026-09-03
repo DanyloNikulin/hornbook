@@ -3,13 +3,14 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs/operators';
 import { REPO_URL } from './constants';
+import { TPipe } from './i18n.pipe';
 import { JournalService } from './journal.service';
 import { SectionService } from './section.service';
 import { ThemeService } from './theme.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, TPipe],
   templateUrl: './app.html',
 })
 export class AppComponent {
@@ -37,7 +38,7 @@ export class AppComponent {
   // Section pages show the section nav; home and setup show only the brand.
   protected readonly inSection = computed(() => {
     const path = this.url().split('?')[0];
-    return this.section.current() !== null && path !== '/' && !path.startsWith('/setup');
+    return this.section.current() !== null && path !== '/' && !path.startsWith('/setup') && path !== '/settings';
   });
 
   protected readonly isCheatsheet = computed(() => this.url().split('?')[0].endsWith('/cheatsheet'));

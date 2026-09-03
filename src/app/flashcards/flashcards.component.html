@@ -1,30 +1,32 @@
 <section class="max-w-2xl mx-auto px-6 py-10 space-y-6" style="background: var(--paper); min-height: 100vh;">
   <header class="space-y-3">
     <a [routerLink]="sec.home()" class="inline-flex items-center gap-1.5 text-sm transition-colors hover:text-[var(--primary)]" style="color: var(--muted);">
-      ← all lessons
+      {{ 'common.allLessons' | t }}
     </a>
     <div class="flex items-baseline justify-between gap-3 flex-wrap">
       <h1 class="font-display text-4xl font-semibold" style="color: var(--ink);">
-        Flashcards
+        {{ 'cards.title' | t }}
       </h1>
       <span class="text-sm font-mono" style="color: var(--ink-2);">
         @if (isMini()) {
-          <span style="color: var(--primary);">{{ miniDone() }}</span>/{{ miniLimit() }} mini
+          {{ 'cards.miniCount' | t: { done: miniDone(), limit: miniLimit() ?? 0 } }}
         } @else if (mode() === 'type') {
-          <span style="color: var(--primary);">{{ dailyDone() }}</span>/{{ DAILY_LIMIT }} today
+          {{ 'cards.todayCount' | t: { done: dailyDone(), limit: DAILY_LIMIT } }}
         } @else {
-          <span style="color: var(--primary);">{{ pairsDone() }}</span>/{{ PAIRS_LIMIT }} rounds
+          {{ 'cards.roundsCount' | t: { done: pairsDone(), limit: PAIRS_LIMIT } }}
         }
       </span>
     </div>
     @if (lessonFilter(); as slug) {
       <p class="text-xs" style="color: var(--muted);">
         @if (isMini()) {
-          Mini session from <a [routerLink]="sec.link('lesson', slug)" class="hover:underline" style="color: var(--primary-ink);">{{ slug }}</a>
-          — {{ miniLimit() }} cards, not counted in the daily limit.
+          {{ 'cards.miniFromLead' | t }}
+          <a [routerLink]="sec.link('lesson', slug)" class="hover:underline" style="color: var(--primary-ink);">{{ slug }}</a>
+          {{ 'cards.miniFromTail' | t: { n: miniLimit() ?? 0 } }}
         } @else {
-          Only lesson <a [routerLink]="sec.link('lesson', slug)" class="hover:underline" style="color: var(--primary-ink);">{{ slug }}</a> ·
-          <a [routerLink]="sec.link('flashcards')" class="hover:underline" style="color: var(--muted);">show all</a>
+          {{ 'cards.onlyLessonLead' | t }}
+          <a [routerLink]="sec.link('lesson', slug)" class="hover:underline" style="color: var(--primary-ink);">{{ slug }}</a> ·
+          <a [routerLink]="sec.link('flashcards')" class="hover:underline" style="color: var(--muted);">{{ 'cards.showAll' | t }}</a>
         }
       </p>
     }
@@ -33,10 +35,10 @@
   <!-- Mode + direction toggles -->
   <div class="flex flex-wrap items-center gap-1 text-xs">
     <button type="button" (click)="mode.set('type')" class="il-chip" [class.active]="mode() === 'type'">
-      Type
+      {{ 'cards.type' | t }}
     </button>
     <button type="button" (click)="mode.set('pairs')" class="il-chip" [class.active]="mode() === 'pairs'">
-      Pairs
+      {{ 'cards.pairs' | t }}
     </button>
 
     @if (mode() === 'type') {
@@ -52,8 +54,8 @@
 
       @for (lvl of levels; track lvl) {
         <button type="button" (click)="level.set(lvl)" class="il-chip" [class.active]="level() === lvl"
-                [title]="lvl === 'all' ? 'All CEFR levels' : 'Only level ' + lvl">
-          {{ lvl === 'all' ? 'All' : lvl }}
+                [title]="lvl === 'all' ? ('cards.allLevelsTitle' | t) : ('cards.levelTitle' | t: { level: lvl })">
+          {{ lvl === 'all' ? ('cards.all' | t) : lvl }}
         </button>
       }
     }
@@ -61,12 +63,12 @@
 
   @if (cardsLoading() && cardsValue().length === 0) {
     <div class="rounded-3xl p-12 text-center border border-dashed" style="border-color: var(--line); color: var(--muted);">
-      Loading cards…
+      {{ 'cards.loading' | t }}
     </div>
   } @else if (cardsError()) {
     <div class="rounded-3xl p-12 text-center border border-dashed" style="border-color: var(--line); color: var(--muted);">
-      <p>Could not load cards.</p>
-      <button type="button" (click)="reloadCards()" class="il-btn sm mt-3">Try again</button>
+      <p>{{ 'cards.loadFailed' | t }}</p>
+      <button type="button" (click)="reloadCards()" class="il-btn sm mt-3">{{ 'common.tryAgain' | t }}</button>
     </div>
   } @else {
 
@@ -84,7 +86,7 @@
           </div>
           @if (card.direction === 'target-learner') {
             <button type="button" (click)="speakFront()"
-                    aria-label="Listen"
+                    [attr.aria-label]="'cards.listen' | t"
                     class="text-xl shrink-0 mt-1 transition-colors hover:text-[var(--primary)]"
                     style="color: var(--muted); background: none; border: none; cursor: pointer;">
               🔊
@@ -97,7 +99,7 @@
                  type="text"
                  [ngModel]="typed()"
                  (ngModelChange)="typed.set($event)"
-                 placeholder="your answer…"
+                 [placeholder]="'cards.answerPlaceholder' | t"
                  autocomplete="off"
                  autocapitalize="off"
                  autocorrect="off"
@@ -105,27 +107,27 @@
                  class="w-full px-4 py-3 rounded-xl text-lg outline-none transition-colors"
                  style="border: 2px solid var(--line); background: var(--paper); color: var(--ink); font-family: var(--font-body);" />
           <button type="button" (click)="submitTyped()" class="il-btn" style="width: 100%; border-radius: 16px;">
-            Check <kbd class="ml-1.5 px-1.5 py-0.5 rounded font-mono text-xs" style="background: rgba(255,255,255,0.2);">Enter</kbd>
+            {{ 'cards.check' | t }} <kbd class="ml-1.5 px-1.5 py-0.5 rounded font-mono text-xs" style="background: rgba(255,255,255,0.2);">{{ 'cards.enter' | t }}</kbd>
           </button>
         } @else {
           <div class="pt-2 space-y-2" style="border-top: 1px solid var(--line);">
             <div class="text-center">
               @if (typedResult() === 'exact') {
-                <p class="text-sm" style="color: var(--success);">✓ Exact</p>
+                <p class="text-sm" style="color: var(--success);">{{ 'cards.exact' | t }}</p>
               } @else if (typedResult() === 'close') {
-                <p class="text-sm" style="color: var(--accent);">~ Close (ignoring accents/case)</p>
+                <p class="text-sm" style="color: var(--accent);">{{ 'cards.close' | t }}</p>
               } @else {
-                <p class="text-sm" style="color: var(--primary);">✘ Wrong</p>
+                <p class="text-sm" style="color: var(--primary);">{{ 'cards.wrong' | t }}</p>
               }
             </div>
             @if (typed()) {
               <div class="text-center">
-                <span class="text-xs" style="color: var(--muted);">You: </span>
+                <span class="text-xs" style="color: var(--muted);">{{ 'cards.you' | t }} </span>
                 <span class="font-mono" style="color: var(--ink-2);">{{ typed() }}</span>
               </div>
             }
             <div class="text-center">
-              <span class="text-xs" style="color: var(--muted);">Correct: </span>
+              <span class="text-xs" style="color: var(--muted);">{{ 'cards.correct' | t }} </span>
               <span class="font-mono" style="color: var(--primary-ink);">{{ card.expected ?? card.back }}</span>
             </div>
             @if (card.back !== (card.expected ?? card.back)) {
@@ -134,12 +136,12 @@
           </div>
           <div class="flex gap-2">
             <button type="button" (click)="nextCard()" class="il-btn ghost" style="flex: 1; border-radius: 16px;">
-              Next <kbd class="ml-1.5 px-1.5 py-0.5 rounded font-mono text-xs" style="background: rgba(42,37,32,0.08);">Enter</kbd>
+              {{ 'cards.next' | t }} <kbd class="ml-1.5 px-1.5 py-0.5 rounded font-mono text-xs" style="background: rgba(42,37,32,0.08);">{{ 'cards.enter' | t }}</kbd>
             </button>
             <button type="button" (click)="resetCurrent()"
-                    title="Reset progress for this card"
+                    [title]="'cards.resetTitle' | t"
                     class="il-chip px-3 py-3 text-xs">
-              ↺ reset
+              {{ 'cards.reset' | t }}
             </button>
           </div>
         }
@@ -147,7 +149,7 @@
 
       @if (card.lessons.length > 0) {
         <p class="text-xs text-center" style="color: var(--muted);">
-          from lesson:
+          {{ 'cards.fromLesson' | t }}
           @for (slug of card.lessons; track slug; let last = $last) {
             <a [routerLink]="sec.link('lesson', slug)" class="hover:underline" style="color: var(--primary-ink);">{{ slug }}</a>@if (!last) {<span>, </span>}
           }
@@ -156,31 +158,29 @@
     } @else {
       <div class="rounded-3xl p-12 text-center space-y-4 border border-dashed" style="border-color: var(--line);">
         @if (isMini() && miniDone() >= (miniLimit() ?? 0)) {
-          <p class="text-2xl font-display" style="color: var(--ink);">🎉 Mini session done</p>
-          <p class="text-sm" style="color: var(--ink-2);">{{ miniDone() }}/{{ miniLimit() }} cards reviewed.</p>
+          <p class="text-2xl font-display" style="color: var(--ink);">{{ 'cards.miniDone' | t }}</p>
+          <p class="text-sm" style="color: var(--ink-2);">{{ 'cards.miniDoneSub' | t: { done: miniDone(), limit: miniLimit() ?? 0 } }}</p>
           @if (lessonFilter(); as slug) {
-            <a [routerLink]="sec.link('lesson', slug)" class="il-btn sm inline-block mt-2">← Back to lesson</a>
+            <a [routerLink]="sec.link('lesson', slug)" class="il-btn sm inline-block mt-2">{{ 'cards.backToLesson' | t }}</a>
           }
         } @else if (dailyRemaining() === 0) {
-          <p class="text-2xl font-display" style="color: var(--ink);">🎉 Done for today</p>
+          <p class="text-2xl font-display" style="color: var(--ink);">{{ 'cards.doneToday' | t }}</p>
           <p class="text-sm" style="color: var(--ink-2);">
-            {{ DAILY_LIMIT }}/{{ DAILY_LIMIT }} cards in
-            @if (direction() === 'target-learner') { {{ pairFwd }} } @else { {{ pairRev }} }
-            done. Switch direction, try pairs, or come back tomorrow.
+            {{ 'cards.doneTodayType' | t: { limit: DAILY_LIMIT, dir: direction() === 'target-learner' ? pairFwd : pairRev } }}
           </p>
         } @else if (poolSize() === 0) {
           <p style="color: var(--muted);">
             @if (lessonFilter()) {
-              This lesson has no cards in this direction{{ level() !== 'all' ? ' at level ' + level() : '' }}.
+              {{ level() !== 'all' ? ('cards.noCardsLessonLevel' | t: { level: level() }) : ('cards.noCardsLesson' | t) }}
             } @else if (level() !== 'all') {
-              No {{ level() }} cards in this direction.
+              {{ 'cards.noCardsLevel' | t: { level: level() } }}
             } @else {
-              No cards in this direction yet — add a lesson.
+              {{ 'cards.noCards' | t }}
             }
           </p>
         } @else {
-          <p class="text-2xl font-display" style="color: var(--ink);">🎉 All cards reviewed</p>
-          <p class="text-sm" style="color: var(--ink-2);">The daily limit is not used up, but every card in this direction is waiting until tomorrow.</p>
+          <p class="text-2xl font-display" style="color: var(--ink);">{{ 'cards.allReviewed' | t }}</p>
+          <p class="text-sm" style="color: var(--ink-2);">{{ 'cards.allReviewedSub' | t }}</p>
         }
       </div>
     }
@@ -190,23 +190,22 @@
   @if (mode() === 'pairs') {
     @if (pairsRemaining() === 0 && !pairsRoundActive()) {
       <div class="rounded-3xl p-12 text-center space-y-3 border border-dashed" style="border-color: var(--line);">
-        <p class="text-2xl font-display" style="color: var(--ink);">🎉 Done for today</p>
-        <p class="text-sm" style="color: var(--ink-2);">{{ PAIRS_LIMIT }}/{{ PAIRS_LIMIT }} rounds done. Come back tomorrow.</p>
+        <p class="text-2xl font-display" style="color: var(--ink);">{{ 'cards.doneToday' | t }}</p>
+        <p class="text-sm" style="color: var(--ink-2);">{{ 'cards.doneTodayPairs' | t: { limit: PAIRS_LIMIT } }}</p>
       </div>
     } @else if (!pairsPossible()) {
       <div class="rounded-3xl p-12 text-center space-y-4 border border-dashed" style="border-color: var(--line);">
-        <p class="text-lg font-display" style="color: var(--ink);">Not enough words for pairs</p>
+        <p class="text-lg font-display" style="color: var(--ink);">{{ 'cards.notEnough' | t }}</p>
         <p class="text-sm" style="color: var(--ink-2);">
-          A round needs {{ PAIRS_PER_ROUND }} glossary cards; this set has {{ pairsEligible() }}.
-          Clear the lesson filter or pick another lesson.
+          {{ 'cards.notEnoughSub' | t: { need: PAIRS_PER_ROUND, have: pairsEligible() } }}
         </p>
-        <a [routerLink]="sec.link('flashcards')" class="il-btn sm mt-2 inline-block">All cards</a>
+        <a [routerLink]="sec.link('flashcards')" class="il-btn sm mt-2 inline-block">{{ 'cards.allCards' | t }}</a>
       </div>
     } @else if (!pairsRoundActive()) {
       <div class="rounded-3xl p-12 text-center space-y-4 border border-dashed" style="border-color: var(--line);">
-        <p class="text-lg font-display" style="color: var(--ink);">Round {{ pairsDone() + 1 }} of {{ PAIRS_LIMIT }}</p>
-        <p class="text-sm" style="color: var(--ink-2);">{{ PAIRS_PER_ROUND }} {{ targetName }} + {{ PAIRS_PER_ROUND }} {{ learnerName }} words. Match every pair.</p>
-        <button type="button" (click)="startPairsRound()" class="il-btn sm mt-2">Start</button>
+        <p class="text-lg font-display" style="color: var(--ink);">{{ 'cards.roundOf' | t: { n: pairsDone() + 1, total: PAIRS_LIMIT } }}</p>
+        <p class="text-sm" style="color: var(--ink-2);">{{ 'cards.roundHint' | t: { n: PAIRS_PER_ROUND, target: targetName, learner: learnerName } }}</p>
+        <button type="button" (click)="startPairsRound()" class="il-btn sm mt-2">{{ 'cards.start' | t }}</button>
       </div>
     } @else {
       <div class="grid grid-cols-2 gap-2 sm:gap-3">
@@ -250,22 +249,22 @@
 
       @if (pairsRoundComplete()) {
         <div class="rounded-2xl p-5 text-center space-y-3" style="background: rgba(107,142,78,0.1); border: 1px solid rgba(107,142,78,0.3);">
-          <p class="text-xl font-display" style="color: var(--success);">🎉 Round complete</p>
+          <p class="text-xl font-display" style="color: var(--success);">{{ 'cards.roundComplete' | t }}</p>
           @if (pairsRemaining() > 0) {
             <button type="button" (click)="startPairsRound()" class="il-btn sm">
-              Next round ({{ pairsRemaining() }} left)
+              {{ 'cards.nextRound' | t: { n: pairsRemaining() } }}
             </button>
           } @else {
-            <p class="text-sm" style="color: var(--ink-2);">That was the last round for today.</p>
+            <p class="text-sm" style="color: var(--ink-2);">{{ 'cards.lastRound' | t }}</p>
           }
         </div>
       } @else {
         <p class="text-xs text-center" style="color: var(--muted);">
-          Matched {{ pairsMatched().size }}/{{ pairsLeft().length }} ·
+          {{ 'cards.matched' | t: { done: pairsMatched().size, total: pairsLeft().length } }}
           @if (pairsSelectedLeft()) {
-            now pick the match on the right
+            {{ 'cards.pickRight' | t }}
           } @else {
-            tap a {{ targetName }} word on the left
+            {{ 'cards.tapLeft' | t: { target: targetName } }}
           }
         </p>
       }

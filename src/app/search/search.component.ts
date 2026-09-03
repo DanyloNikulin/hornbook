@@ -4,6 +4,8 @@ import { toObservable, toSignal, takeUntilDestroyed } from '@angular/core/rxjs-i
 import { debounceTime } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { TPipe } from '../i18n.pipe';
+import { I18nService } from '../i18n.service';
 import { SearchService, type SearchHit } from '../search.service';
 
 const DEBOUNCE_MS = 200;
@@ -11,12 +13,13 @@ const EXAMPLES = ['hola', 'grammar', 'greetings', 'pronoun'];
 
 @Component({
   selector: 'app-search',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, TPipe],
   templateUrl: './search.component.html',
 })
 export class SearchComponent {
   protected readonly sec = inject(SectionService);
   private readonly search = inject(SearchService);
+  private readonly i18n = inject(I18nService);
   private readonly route = inject(ActivatedRoute);
 
   protected readonly examples = EXAMPLES;
@@ -41,15 +44,9 @@ export class SearchComponent {
   );
 
   protected sectionLabel(section: string): string {
-    return (
-      {
-        article: 'article',
-        vocab: 'glossary',
-        grammar: 'grammar',
-        quote: 'quote',
-        slide: 'slide',
-      }[section] ?? section
-    );
+    const key = `search.section.${section}`;
+    const translated = this.i18n.t(key);
+    return translated === key ? section : translated;
   }
 
   protected setQuery(q: string): void {

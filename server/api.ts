@@ -107,6 +107,7 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
   // Settings: journal-level provider defaults + connection values.
   on('GET', '/api/settings', () => store.settings());
   on('PUT', '/api/settings', async (_r, _s, _p, body) => store.updateSettings(await body()));
+  on('POST', '/api/settings/probe', async (_r, _s, _p, body) => store.probe(await body()));
 
   // Jobs: the pipeline scripts run as child processes, one at a time.
   on('POST', '/api/sections/:id/jobs', async (_r, _s, p, body) => {

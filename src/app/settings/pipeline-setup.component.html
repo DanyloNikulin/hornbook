@@ -1,0 +1,89 @@
+<div class="il-pipe">
+  <h3 class="il-pipe-title">{{ ('pipeline.' + job() + 'Title') | t }}</h3>
+  <p class="il-section-sub">{{ ('pipeline.' + job() + 'Blurb') | t }}</p>
+
+  <p class="il-pipe-step">{{ 'pipeline.where' | t }}</p>
+  <div class="il-locale-picks" role="radiogroup" [attr.aria-label]="'pipeline.where' | t">
+    @for (p of places(); track p) {
+      <button type="button" class="il-chip" [class.active]="place() === p"
+              role="radio" [attr.aria-checked]="place() === p"
+              (click)="setPlace(p)">
+        {{ ('pipeline.place.' + p) | t }}
+      </button>
+    }
+  </div>
+  <p class="il-settings-help">{{ ('pipeline.place.' + place() + 'Note') | t }}</p>
+
+  @if (path(); as path) {
+    @if (path.driver !== 'skip') {
+    <p class="il-pipe-step">{{ 'pipeline.then' | t }}</p>
+    @if (unifiedCloud()) {
+      <label class="il-settings-row il-settings-row--stack">
+        <span>
+          {{ 'pipeline.field.API_KEY' | t }}
+          <span class="il-settings-help">
+            {{ 'pipeline.help.API_KEY' | t }}
+            @if (cloudKeySet()) { · {{ 'settings.replacePlaceholder' | t }} }
+          </span>
+        </span>
+        <input type="password" [ngModel]="cloudKey()" (ngModelChange)="onCloudKey($event)"
+               [placeholder]="cloudKeySet() ? ('settings.replacePlaceholder' | t) : ('pipeline.ph.API_KEY' | t)"
+               autocomplete="off" />
+      </label>
+    } @else if (showConnections()) {
+      @for (key of path.connections; track key) {
+        <label class="il-settings-row il-settings-row--stack">
+          <span>
+            {{ ('pipeline.field.' + key) | t }}
+            <span class="il-settings-help">
+              {{ ('pipeline.help.' + key) | t }}
+              @if (connView(key); as v) {
+                @if (v.set) { · {{ 'settings.set' | t: { source: v.source ?? '', hint: v.hint } }} }
+                @else if (!optional(key)) { · {{ 'settings.notSet' | t }} }
+              }
+            </span>
+          </span>
+          <span class="il-settings-conn-input">
+            <input [type]="key.endsWith('_KEY') ? 'password' : 'text'"
+                   [ngModel]="draft()[key]"
+                   (ngModelChange)="onDraft(key, $event)"
+                   [placeholder]="connView(key)?.set ? ('settings.replacePlaceholder' | t) : (('pipeline.ph.' + key) | t)"
+                   autocomplete="off" />
+          </span>
+        </label>
+      }
+    }
+
+    <label class="il-settings-row il-settings-row--stack">
+      <span>
+        {{ (path.modelKind === 'file' ? 'pipeline.modelFile' : 'pipeline.modelName') | t }}
+        <span class="il-settings-help">{{ modelHelp() | t }}</span>
+      </span>
+      @if (listedModels().length) {
+        <span class="il-pipe-step">{{ listedLabel() | t }}</span>
+        <span class="il-locale-picks il-pipe-models" role="radiogroup" [attr.aria-label]="listedLabel() | t">
+          @for (m of listedModels(); track m) {
+            <button type="button" class="il-chip" [class.active]="selectedModel() === m"
+                    role="radio" [attr.aria-checked]="selectedModel() === m"
+                    (click)="pickModel(m)">{{ m }}</button>
+          }
+        </span>
+      }
+      <input type="text" [ngModel]="selectedModel()" (ngModelChange)="onModelInput($event)"
+             [placeholder]="'pipeline.orType' | t" />
+    </label>
+    }
+  }
+
+  <div class="il-pipe-check">
+    <button type="button" class="il-btn ghost sm" [disabled]="checking()" (click)="check()">
+      {{ checking() ? ('pipeline.checking' | t) : ((listsFromConnection() && listedModels().length === 0) ? ('pipeline.findModels' | t) : ('pipeline.check' | t)) }}
+    </button>
+    @if (probe(); as r) {
+      <p class="il-pipe-result" [class.il-pipe-result--ok]="r.ok" [class.il-pipe-result--bad]="!r.ok" role="status">
+        {{ r.ok ? ('pipeline.ok' | t) : ('pipeline.bad' | t) }}
+        {{ r.detail }}
+      </p>
+    }
+  </div>
+</div>

@@ -1,5 +1,6 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TPipe } from '../i18n.pipe';
 import { QuizResultsService } from '../quiz-results.service';
 import { normalizeAnswer } from '../cards.service';
 import type { QuizQuestionT } from '../../lib/schema';
@@ -9,7 +10,7 @@ type SelfGradeMap = Record<number, 'right' | 'wrong' | undefined>;
 
 @Component({
   selector: 'app-quiz',
-  imports: [FormsModule],
+  imports: [FormsModule, TPipe],
   templateUrl: './quiz.component.html',
 })
 export class QuizComponent {

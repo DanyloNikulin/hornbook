@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { TPipe } from '../i18n.pipe';
 import { JournalService } from '../journal.service';
 import { SectionService } from '../section.service';
 
@@ -9,17 +10,17 @@ import { SectionService } from '../section.service';
  */
 @Component({
   selector: 'app-sections',
-  imports: [RouterLink],
+  imports: [RouterLink, TPipe],
   template: `
     <section class="il-panel" style="padding-top: 2rem;">
       <div class="il-panel-inner" style="max-width: 860px; margin: 0 auto;">
-        <h1 class="il-section-title">Language pairs</h1>
-        <p class="il-section-sub">Each pair keeps its own lessons, glossary, cards, cheat sheet and progress.</p>
+        <h1 class="il-section-title">{{ 'pairs.title' | t }}</h1>
+        <p class="il-section-sub">{{ 'pairs.sub' | t }}</p>
 
         @if (sections().length === 0) {
           <div class="il-card" style="margin-top: 1.5rem; padding: 1.5rem;">
-            <p style="color: var(--ink-2); margin-bottom: 1rem;">No pairs yet. Pick the language you study and the language of your notes.</p>
-            <a routerLink="/setup" class="il-btn">Create the first pair</a>
+            <p style="color: var(--ink-2); margin-bottom: 1rem;">{{ 'pairs.empty' | t }}</p>
+            <a routerLink="/setup" class="il-btn">{{ 'pairs.createFirst' | t }}</a>
           </div>
         } @else {
           <div class="il-section-grid">
@@ -27,13 +28,13 @@ import { SectionService } from '../section.service';
               <a [routerLink]="['/', s.id]" class="il-card il-section-card">
                 <div class="il-section-flags" aria-hidden="true">{{ s.flags.target }} <span class="il-section-arrow">→</span> {{ s.flags.learner }}</div>
                 <div class="il-section-label">{{ s.label }}</div>
-                <div class="il-stat-sub">{{ s.lessonCount }} {{ s.lessonCount === 1 ? 'lesson' : 'lessons' }} · {{ s.id }}</div>
+                <div class="il-stat-sub">{{ 'count.lessons' | t: { n: s.lessonCount } }} · {{ s.id }}</div>
               </a>
             }
             <a routerLink="/setup" class="il-card il-section-card il-section-card--new">
               <div class="il-section-flags" aria-hidden="true">＋</div>
-              <div class="il-section-label">New pair</div>
-              <div class="il-stat-sub">any target, any notes language</div>
+              <div class="il-section-label">{{ 'pairs.new' | t }}</div>
+              <div class="il-stat-sub">{{ 'pairs.newSub' | t }}</div>
             </a>
           </div>
         }

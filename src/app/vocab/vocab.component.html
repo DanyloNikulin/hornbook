@@ -1,13 +1,13 @@
 <section class="max-w-5xl mx-auto px-6 py-10 space-y-8" style="background: var(--paper); min-height: 100vh;">
   <header class="space-y-3">
     <a [routerLink]="sec.home()" class="inline-flex items-center gap-1.5 text-sm hover:text-[var(--primary)] transition-colors" style="color: var(--muted);">
-      ← all lessons
+      {{ 'common.allLessons' | t }}
     </a>
     <h1 class="font-display text-4xl font-semibold" style="color: var(--ink);">
-      Glossary
+      {{ 'vocab.title' | t }}
     </h1>
     <p style="color: var(--ink-2);">
-      Every word from every lesson. Duplicates are merged; each entry lists the lessons it appeared in.
+      {{ 'vocab.sub' | t }}
     </p>
   </header>
 
@@ -16,7 +16,7 @@
       type="search"
       [ngModel]="query()"
       (ngModelChange)="setQuery($event)"
-      placeholder="Search target, learner language, or example"
+      [placeholder]="'vocab.searchPlaceholder' | t"
       class="flex-1 min-w-[200px] px-4 py-2 rounded-full outline-none transition-colors"
       style="background: var(--paper-2); border: 1px solid var(--line); color: var(--ink); font-family: var(--font-body);"
     />
@@ -26,28 +26,28 @@
       class="px-4 py-2 rounded-full outline-none"
       style="background: var(--paper-2); border: 1px solid var(--line); color: var(--ink); font-family: var(--font-body);"
     >
-      <option value="all">All levels</option>
+      <option value="all">{{ 'vocab.allLevels' | t }}</option>
       @for (lvl of levels; track lvl) {
         <option [value]="lvl">{{ lvl }}</option>
       }
     </select>
     <span class="text-xs ml-auto" style="color: var(--muted);">
-      {{ filtered().length }} / {{ vocab().length }} words
+      {{ 'vocab.shown' | t: { shown: filtered().length, total: vocab().length } }}
     </span>
   </div>
 
   @if (loading() && vocab().length === 0) {
     <div class="rounded-2xl p-12 text-center border border-dashed" style="border-color: var(--line); color: var(--muted);">
-      Loading glossary…
+      {{ 'vocab.loading' | t }}
     </div>
   } @else if (error()) {
     <div class="rounded-2xl p-12 text-center border border-dashed" style="border-color: var(--line); color: var(--muted);">
-      <p>Could not load the glossary.</p>
-      <button type="button" (click)="reload()" class="il-btn sm mt-3">Try again</button>
+      <p>{{ 'vocab.loadFailed' | t }}</p>
+      <button type="button" (click)="reload()" class="il-btn sm mt-3">{{ 'common.tryAgain' | t }}</button>
     </div>
   } @else if (filtered().length === 0) {
     <div class="rounded-2xl p-12 text-center border border-dashed" style="border-color: var(--line); color: var(--muted);">
-      Nothing matches these filters.
+      {{ 'vocab.empty' | t }}
     </div>
   } @else {
     <div class="overflow-x-auto rounded-2xl" style="border: 1px solid var(--line);">
@@ -56,8 +56,8 @@
           <tr class="text-left text-xs uppercase tracking-wider" style="color: var(--muted);">
             <th class="px-4 py-3">{{ targetName }}</th>
             <th class="px-4 py-3">{{ learnerName }}</th>
-            <th class="px-4 py-3">Level</th>
-            <th class="px-4 py-3">Example</th>
+            <th class="px-4 py-3">{{ 'vocab.level' | t }}</th>
+            <th class="px-4 py-3">{{ 'vocab.example' | t }}</th>
           </tr>
         </thead>
         <tbody>
@@ -69,8 +69,8 @@
                   (click)="speak(v.target)"
                   class="inline-flex items-center gap-1.5 font-medium transition-colors hover:text-[var(--primary)]"
                   style="color: var(--ink); font-family: var(--font-body); background: none; border: none; cursor: pointer; padding: 0;"
-                  [attr.aria-label]="'Listen: ' + v.target"
-                  title="Listen"
+                  [attr.aria-label]="'vocab.listenAria' | t: { word: v.target }"
+                  [title]="'vocab.listen' | t"
                 >
                   <span>{{ v.target }}</span>
                   <span class="text-xs transition-transform"
@@ -107,7 +107,7 @@
     @if (totalPages() > 1) {
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <span class="text-xs" style="color: var(--muted);">
-          {{ pageStart() }}–{{ pageEnd() }} of {{ filtered().length }} words
+          {{ 'vocab.pageOf' | t: { start: pageStart(), end: pageEnd(), total: filtered().length } }}
         </span>
         <div class="flex items-center gap-1.5 flex-wrap">
           <button type="button"
@@ -115,7 +115,7 @@
                   [disabled]="page() === 0"
                   class="il-btn ghost sm"
                   [style.opacity]="page() === 0 ? '0.4' : '1'">
-            ← Back
+            {{ 'common.back' | t }}
           </button>
           @for (p of pageNumbers(); track $index) {
             @if (p === null) {
@@ -135,7 +135,7 @@
                   [disabled]="page() === totalPages() - 1"
                   class="il-btn ghost sm"
                   [style.opacity]="page() === totalPages() - 1 ? '0.4' : '1'">
-            Next →
+            {{ 'common.next' | t }}
           </button>
         </div>
       </div>

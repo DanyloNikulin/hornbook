@@ -5,13 +5,14 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { LessonsService, type RelatedByTopicsMeta } from '../lessons.service';
+import { TPipe } from '../i18n.pipe';
 import { QuizComponent } from '../quiz/quiz.component';
 import { REPO_URL } from '../constants';
 import type { LessonT, LessonMetaT } from '../../lib/schema';
 
 @Component({
   selector: 'app-lesson-detail',
-  imports: [RouterLink, QuizComponent],
+  imports: [RouterLink, QuizComponent, TPipe],
   templateUrl: './lesson-detail.component.html',
 })
 export class LessonDetailComponent {

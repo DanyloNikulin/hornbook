@@ -1,15 +1,16 @@
 <section class="il-panel" style="padding-top: 2rem;">
   <div class="il-panel-inner" style="max-width: 760px; margin: 0 auto;">
-    <p><a [routerLink]="sec.home()" class="il-lesson-bc-link">← Lessons</a></p>
-    <h1 class="il-section-title">Settings · {{ sec.label() }}</h1>
-    <p class="il-section-sub">Which models turn recordings into conspects, and how to reach them. Everything is stored in your journal folder.</p>
+    <p><a [routerLink]="sec.home()" class="il-lesson-bc-link">{{ 'common.backToLessons' | t }}</a></p>
+    <h1 class="il-section-title">{{ 'settings.pairTitle' | t: { pair: sec.label() } }}</h1>
+    <p class="il-section-sub">{{ 'settings.pairSub' | t }}</p>
+    <app-settings-nav />
 
     @if (loading()) {
-      <p class="il-stat-sub">Loading…</p>
+      <p class="il-stat-sub">{{ 'common.loading' | t }}</p>
     } @else {
 
-      <h2 class="il-compose-h">Look</h2>
-      <p class="il-section-sub">Give this pair its own atmosphere. Every preset works in both day and night mode; the choice applies as soon as you click it, and is kept when you save.</p>
+      <h2 class="il-compose-h">{{ 'settings.look' | t }}</h2>
+      <p class="il-section-sub">{{ 'settings.lookSub' | t }}</p>
       <div class="il-preset-grid">
         @for (p of presets; track p.id) {
           <button type="button" class="il-preset" [class.selected]="preset() === p.id"
@@ -20,146 +21,82 @@
               <span [style.background]="p.day.accent"></span>
               <span [style.background]="p.night.primary"></span>
             </span>
-            <span class="il-preset-name">{{ p.name }}</span>
-            <span class="il-settings-help">{{ p.note }}</span>
+            <span class="il-preset-name">{{ ('theme.' + p.id + '.name') | t }}</span>
+            <span class="il-settings-help">{{ ('theme.' + p.id + '.note') | t }}</span>
           </button>
         }
       </div>
 
       <div class="il-settings-card" style="margin-top: 12px;">
         <label class="il-settings-row">
-          <span>Display font</span>
+          <span>{{ 'settings.displayFont' | t }}</span>
           <select [ngModel]="displayFont()" (ngModelChange)="previewFont($event)" name="displayFont">
-            <option value="">Default (Cormorant Garamond)</option>
+            <option value="">{{ 'settings.fontDefault' | t }}</option>
             @for (f of displayFonts; track f.id) { <option [value]="f.id">{{ f.name }}</option> }
           </select>
         </label>
         <div class="il-settings-row il-settings-row--conn">
           <span>
-            <span>Backdrop photo</span>
-            <span class="il-settings-help">Optional. Stored in this pair's folder and served by your own server — nothing is uploaded anywhere.</span>
+            <span>{{ 'settings.backdrop' | t }}</span>
+            <span class="il-settings-help">{{ 'settings.backdropHelp' | t }}</span>
           </span>
           <span class="il-settings-conn-input">
             @if (backdrop()) {
-              <img class="il-backdrop-thumb" [src]="backdropUrl()" alt="Current backdrop" />
-              <button type="button" class="il-btn ghost sm" [disabled]="backdropBusy()" (click)="removeBackdrop()">Remove</button>
+              <img class="il-backdrop-thumb" [src]="backdropUrl()" [alt]="'settings.currentBackdrop' | t" />
+              <button type="button" class="il-btn ghost sm" [disabled]="backdropBusy()" (click)="removeBackdrop()">{{ 'settings.remove' | t }}</button>
             } @else {
-              <input type="file" accept="image/*" [disabled]="backdropBusy()" (change)="uploadBackdrop($event)" />
+              <label class="il-file">
+                <input class="il-file-native" type="file" accept="image/*" [disabled]="backdropBusy()" (change)="uploadBackdrop($event)" />
+                <span class="il-btn ghost sm">{{ 'file.choose' | t }}</span>
+                <span class="il-file-name">{{ 'file.none' | t }}</span>
+              </label>
             }
           </span>
         </div>
       </div>
 
-      <h2 class="il-compose-h" style="margin-top: 24px;">Providers</h2>
-      <p class="il-section-sub">Journal defaults apply to every pair. Tick “override” to give this pair its own.</p>
+      <h2 class="il-compose-h" style="margin-top: 24px;">{{ 'settings.providers' | t }}</h2>
+      <p class="il-section-sub">{{ 'settings.providersPairSub' | t }}</p>
 
-      <div class="il-settings-grid">
-        <div class="il-settings-card">
-          <h3>Transcribe <span class="il-stat-sub">(audio → text)</span></h3>
-          <label class="il-settings-row">
-            <span>Default driver</span>
-            <select [(ngModel)]="defaults.transcribe.driver">
-              @for (d of transcribeDrivers; track d) { <option [value]="d">{{ d }}</option> }
-            </select>
-          </label>
-          <label class="il-settings-row">
-            <span>Default model</span>
-            <input type="text" [(ngModel)]="defaults.transcribe.model" placeholder="whisper model or gpt-4o-transcribe" />
-          </label>
+      <div class="il-pipe-grid">
+        <div>
           <label class="il-settings-check">
-            <input type="checkbox" [(ngModel)]="override.transcribe" /> Override for this pair
+            <input type="checkbox" [(ngModel)]="override.transcribe" /> {{ 'settings.override' | t }}
           </label>
           @if (override.transcribe) {
-            <label class="il-settings-row">
-              <span>Driver</span>
-              <select [(ngModel)]="overrides.transcribe.driver">
-                @for (d of transcribeDrivers; track d) { <option [value]="d">{{ d }}</option> }
-              </select>
-            </label>
-            <label class="il-settings-row">
-              <span>Model</span>
-              <input type="text" [(ngModel)]="overrides.transcribe.model" />
-            </label>
+            <app-pipeline-setup job="transcribe" [config]="overrides.transcribe" [showConnections]="false" />
+          } @else {
+            <p class="il-stat-sub">{{ 'settings.inEffect' | t: { driver: effective('transcribe').driver, model: effective('transcribe').model } }}</p>
           }
-          <p class="il-stat-sub">In effect: {{ effective('transcribe').driver }} · {{ effective('transcribe').model }}</p>
         </div>
-
-        <div class="il-settings-card">
-          <h3>Extract <span class="il-stat-sub">(text → conspect)</span></h3>
-          <label class="il-settings-row">
-            <span>Default driver</span>
-            <select [(ngModel)]="defaults.extract.driver">
-              @for (d of extractDrivers; track d) { <option [value]="d">{{ d }}</option> }
-            </select>
-          </label>
-          <label class="il-settings-row">
-            <span>Default model</span>
-            <input type="text" [(ngModel)]="defaults.extract.model" placeholder="llama3.1, claude-sonnet-4-6, gpt-4o" />
-          </label>
+        <div>
           <label class="il-settings-check">
-            <input type="checkbox" [(ngModel)]="override.extract" /> Override for this pair
+            <input type="checkbox" [(ngModel)]="override.extract" /> {{ 'settings.override' | t }}
           </label>
           @if (override.extract) {
-            <label class="il-settings-row">
-              <span>Driver</span>
-              <select [(ngModel)]="overrides.extract.driver">
-                @for (d of extractDrivers; track d) { <option [value]="d">{{ d }}</option> }
-              </select>
-            </label>
-            <label class="il-settings-row">
-              <span>Model</span>
-              <input type="text" [(ngModel)]="overrides.extract.model" />
-            </label>
+            <app-pipeline-setup job="extract" [config]="overrides.extract" [showConnections]="false" />
+          } @else {
+            <p class="il-stat-sub">{{ 'settings.inEffect' | t: { driver: effective('extract').driver, model: effective('extract').model } }}</p>
           }
-          <p class="il-stat-sub">In effect: {{ effective('extract').driver }} · {{ effective('extract').model }}</p>
         </div>
       </div>
 
-      <h2 class="il-compose-h" style="margin-top: 24px;">Connections</h2>
-      <p class="il-section-sub">Keys and endpoints, shared by all pairs. Stored in <code>secrets.json</code> inside the journal folder, which git ignores. Leave a field empty to keep its value.</p>
-      @if (settings(); as s) {
-        <div class="il-settings-card">
-          @for (key of connectionKeys; track key) {
-            <div class="il-settings-row il-settings-row--conn">
-              <span>
-                <code>{{ key }}</code>
-                <span class="il-stat-sub">
-                  @if (s.connections[key].set) {
-                    set ({{ s.connections[key].source }}) · {{ s.connections[key].hint }}
-                  } @else {
-                    not set
-                  }
-                </span>
-                <span class="il-settings-help">{{ help[key] }}</span>
-              </span>
-              <span class="il-settings-conn-input">
-                <input [type]="isSecret(key) ? 'password' : 'text'" [(ngModel)]="connectionInput[key]"
-                       [placeholder]="s.connections[key].set ? 'replace…' : 'value'" autocomplete="off" />
-                @if (s.connections[key].set && s.connections[key].source === 'journal') {
-                  <label class="il-settings-check"><input type="checkbox" [(ngModel)]="clearConnection[key]" /> clear</label>
-                }
-              </span>
-            </div>
-          }
-        </div>
-      }
-
       <div style="display:flex; gap:8px; align-items:center; margin: 16px 0 28px;">
-        <button type="button" class="il-btn" [disabled]="saving()" (click)="save()">{{ saving() ? 'Saving…' : 'Save settings' }}</button>
+        <button type="button" class="il-btn" [disabled]="saving()" (click)="save()">{{ saving() ? ('settings.saving' | t) : ('settings.save' | t) }}</button>
         @if (saved()) { <span style="color: var(--success);">{{ saved() }}</span> }
       </div>
 
-      <h2 class="il-compose-h">Maintenance</h2>
-      <p class="il-section-sub">Topic review reads this pair's lessons and proposes new topic tags for the whole journal. It needs an Anthropic key and at least ten lessons.</p>
-      <button type="button" class="il-btn ghost" [disabled]="jobRunning()" (click)="reviewTopics()">{{ jobRunning() ? 'Running…' : 'Review topics' }}</button>
+      <h2 class="il-compose-h">{{ 'settings.maintenance' | t }}</h2>
+      <p class="il-section-sub">{{ 'settings.maintenanceSub' | t }}</p>
+      <button type="button" class="il-btn ghost" [disabled]="jobRunning()" (click)="reviewTopics()">{{ jobRunning() ? ('settings.running' | t) : ('settings.review' | t) }}</button>
 
       @if (job(); as j) {
         <div class="il-job" [class.il-job--failed]="j.status === 'failed'" [class.il-job--done]="j.status === 'done'">
           <div class="il-job-head">
-            <span class="il-job-status">{{ j.status }}</span>
+            <span class="il-job-status">{{ ('job.' + j.status) | t }}</span>
             <span>{{ j.label }}</span>
           </div>
-          <pre class="il-log">{{ j.log || '(waiting for output)' }}</pre>
+          <pre class="il-log">{{ j.log || ('job.waiting' | t) }}</pre>
         </div>
       }
     }
