@@ -118,7 +118,7 @@ export class QuizComponent {
 // Sentence-level normalization on top of the shared flashcard normalizer:
 // also drops sentence punctuation (period, comma, ?, !, quotes, brackets…) so
 // a typed "…regola" matches a model answer "…regola." Apostrophes are NOT
-// stripped — they're meaningful in Italian (l', c'è, dell'). Punctuation is
+// stripped — they're meaningful in many targets (Italian l', c'è; French l'). Punctuation is
 // replaced with a space (not removed) so "sì,certo" still splits into words,
 // then normalizeAnswer collapses the whitespace.
 const SENTENCE_PUNCT = /[.,;:!?¿¡…"«»“”()[\]{}]/g;

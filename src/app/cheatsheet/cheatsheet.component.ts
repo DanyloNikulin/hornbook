@@ -1,4 +1,5 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
+import { SectionService } from '../section.service';
 import { RouterLink } from '@angular/router';
 import { CheatsheetService } from '../cheatsheet.service';
 import type { CheatsheetCategoryT, CheatsheetT } from '../../lib/schema';
@@ -11,6 +12,7 @@ const EMPTY: CheatsheetT = { processed_lessons: [], categories: [] };
   templateUrl: './cheatsheet.component.html',
 })
 export class CheatsheetComponent {
+  protected readonly sec = inject(SectionService);
   private readonly svc = inject(CheatsheetService);
 
   // Lazy fetch — the cheat sheet ships as /cheatsheet.json via the assets

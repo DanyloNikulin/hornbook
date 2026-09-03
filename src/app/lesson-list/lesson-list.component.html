@@ -18,7 +18,11 @@
     @if (lessons().length === 0 && !activeTopic()) {
       <div style="text-align:center; padding: 80px 0; color: var(--muted);">
         <p style="font-family: var(--font-display); font-size: 22px; margin-bottom: 12px;">No lessons yet</p>
-        <p style="font-size: 14px;">Add a conspect on <a routerLink="/compose">/compose</a> or run <code style="font-family: var(--font-mono); background: var(--paper-2); padding: 2px 8px; border-radius: 6px;">npm run lesson:new</code>.</p>
+        @if (loadError()) {
+          <p style="font-size: 14px;" role="alert">Could not load this pair: {{ loadError() }}</p>
+        } @else {
+          <p style="font-size: 14px;"><a [routerLink]="sec.link('compose')" class="il-btn sm">Add the first conspect</a></p>
+        }
       </div>
     } @else {
 
@@ -107,7 +111,7 @@
       @if (lessons().length > 0) {
         <div class="il-grid">
           @for (lesson of paginated(); track lesson.slug; let i = $index) {
-            <a [routerLink]="['/lesson', lesson.slug]" class="il-card">
+            <a [routerLink]="sec.link('lesson', lesson.slug)" class="il-card">
               <div class="il-card-body">
 
                 <!-- Meta row -->

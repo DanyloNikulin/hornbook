@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, resource } from '@angular/core';
+import { SectionService } from '../section.service';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
@@ -14,6 +15,7 @@ import type { LessonT, LessonMetaT } from '../../lib/schema';
   templateUrl: './lesson-detail.component.html',
 })
 export class LessonDetailComponent {
+  protected readonly sec = inject(SectionService);
   private readonly lessons = inject(LessonsService);
   private readonly sanitizer = inject(DomSanitizer);
 
@@ -95,7 +97,7 @@ export class LessonDetailComponent {
     if (!title) return REPO_URL;
     const issueTitle = `Lesson mistake: ${title} (${slug})`;
     const body =
-      `**Lesson:** [${title}](/lesson/${slug})\n` +
+      `**Lesson:** [${title}](/${this.sec.id()}/lesson/${slug})\n` +
       `**Date:** ${date}\n\n` +
       `**What's wrong (be specific):**\n\n` +
       `**Suggested correction:**\n\n`;

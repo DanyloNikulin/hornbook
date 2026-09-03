@@ -1,10 +1,10 @@
 // Cloudflare Worker that consumes R2 Event Notifications from the
-// your-journal-audio bucket via a Queue, and fires a GitHub
+// hornbook-audio bucket via a Queue, and fires a GitHub
 // repository_dispatch event so process-lesson.yml runs in CI.
 //
 // Body shape from R2 EN: see https://developers.cloudflare.com/r2/buckets/event-notifications/
 //
-// Idempotency (issue #54): every upload event is reduced to a stable identity
+// Idempotency: every upload event is reduced to a stable identity
 // (bucket + key + eTag/eventTime) and deduplicated through a Durable Object,
 // so R2's at-least-once delivery and queue redeliveries can never start a
 // second process-lesson.yml run for the same object version. The /replay
@@ -28,7 +28,7 @@ interface Env {
   GITHUB_TOKEN: string;
   // Optional allowlist: when set, events from any other bucket are dropped.
   // Anything later attached to the same queue can otherwise trigger lesson
-  // runs (issue #71).
+  // runs.
   R2_BUCKET?: string;
   // Durable Object namespace holding one dedup record per upload identity.
   UPLOAD_DEDUP: DurableObjectNamespace;
@@ -82,7 +82,7 @@ export class GitHubDispatchError extends Error {
 //     private repo the token cannot see). Retrying will not fix it either,
 //     but *dropping* it loses the upload with nothing but a tail log line.
 //     Retrying is bounded by max_retries and leaves the message in the DLQ
-//     as a durable, replayable record for the operator (issue #71).
+//     as a durable, replayable record for the operator.
 //   • other 4xx (400, 422, …) — a malformed request, i.e. a bug in this
 //     worker; drop and log.
 export function isRetryableStatus(status: number): boolean {
@@ -98,7 +98,7 @@ async function dispatchToGitHub(env: Env, r2Key: string): Promise<void> {
     headers: {
       Authorization: `Bearer ${env.GITHUB_TOKEN}`,
       Accept: 'application/vnd.github+json',
-      'User-Agent': 'lesson-journal-dispatcher',
+      'User-Agent': 'hornbook-dispatcher',
       'X-GitHub-Api-Version': '2022-11-28',
       'Content-Type': 'application/json',
     },
@@ -119,7 +119,7 @@ async function dispatchToGitHub(env: Env, r2Key: string): Promise<void> {
 }
 
 // -----------------------------------------------------------------------------
-// Idempotency (issue #54)
+// Idempotency
 // -----------------------------------------------------------------------------
 
 // Stable identity for one uploaded object version. The eTag is R2's content
@@ -232,7 +232,7 @@ export type EventOutcome =
 
 // Runs one R2 event through validation, dedup, and the GitHub dispatch.
 // Shared by the queue handler and the operator /replay endpoint so a replayed
-// DLQ message is exactly as safe as a normal delivery (issue #54).
+// DLQ message is exactly as safe as a normal delivery.
 async function processEvent(event: R2EventBody, env: Env): Promise<EventOutcome> {
   // Shape check — malformed bodies should drop, not retry-loop into the DLQ.
   if (typeof event?.action !== 'string' || typeof event?.object?.key !== 'string') {
@@ -333,7 +333,7 @@ export default {
     }
   },
 
-  // Operator endpoints for the dead-letter queue (issue #54). Both are gated
+  // Operator endpoints for the dead-letter queue. Both are gated
   // behind REPLAY_TOKEN; when the secret is not configured the worker answers
   // 404 for every route so the endpoints simply do not exist.
   async fetch(request: Request, env: Env): Promise<Response> {

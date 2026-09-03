@@ -1,8 +1,8 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
+import { SectionService } from '../section.service';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { VocabService } from '../vocab.service';
-import { JournalService } from '../journal.service';
 import type { DerivedVocabT, LevelT } from '../../lib/schema';
 
 const LEVELS: readonly LevelT[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
@@ -14,8 +14,9 @@ const PAGE_SIZE = 15;
   templateUrl: './vocab.component.html',
 })
 export class VocabComponent {
+  protected readonly sec = inject(SectionService);
   private readonly vocabSvc = inject(VocabService);
-  private readonly journal = inject(JournalService);
+  private readonly journal = this.sec;
   protected readonly targetName = this.journal.targetName();
   protected readonly learnerName = this.journal.learnerName();
   protected readonly speechLang = this.journal.speechLang();

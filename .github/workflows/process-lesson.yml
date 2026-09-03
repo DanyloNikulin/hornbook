@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       r2_key:
-        description: 'R2 object key (e.g. 2026-05-25-imperfetto.m4a)'
+        description: 'R2 object key (e.g. 2026-05-25-greetings.m4a)'
         required: true
         type: string
       date:
@@ -72,7 +72,7 @@ jobs:
           # Unicode letters, spaces, commas etc. are fine — the workflow
           # quotes "$R2_KEY" everywhere it's used.
           # -i: the worker's allowlist is case-insensitive (`Lezione.MP4` from
-          # an iPhone export dispatches), so accept the same here (issue #71).
+          # an iPhone export dispatches), so accept the same here.
           if ! printf '%s' "$r2_key" | grep -Piq '^[^"$`\\\r\n\x00]+\.(mp4|m4a|mp3|wav|opus|ogg|webm|mov)$'; then
             echo "::error::r2_key failed allowlist: $r2_key"; exit 1
           fi
@@ -167,7 +167,7 @@ jobs:
       # The lesson is the expensive artefact (transcription + extraction). It
       # is committed and pushed BEFORE the cheatsheet step so a cheatsheet
       # failure — or a rebase conflict — can never discard paid work
-      # (issue #64). The cheatsheet lands in a second commit below.
+      #. The cheatsheet lands in a second commit below.
       - name: Commit + push lesson to main
         env:
           R2_KEY: ${{ steps.input.outputs.r2_key }}
@@ -175,8 +175,8 @@ jobs:
           DATE: ${{ steps.meta.outputs.date }}
         run: |
           set -e
-          git config user.name "lesson-journal-bot"
-          git config user.email "bot@lesson-journal.pages.dev"
+          git config user.name "hornbook-bot"
+          git config user.email "bot@hornbook.pages.dev"
 
           # Ensure we're on main (we should be, since this trigger checks out
           # the default branch, but being explicit avoids surprises).
@@ -194,7 +194,6 @@ jobs:
             echo "Generated from R2 key: $R2_KEY"
             echo "Lesson date: $DATE"
             echo
-            echo "Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
           } > /tmp/commit-msg.txt
           git commit -F /tmp/commit-msg.txt
 
@@ -209,8 +208,9 @@ jobs:
           git push origin main
 
       # Last-resort checkpoint: even if the push above somehow failed, the
-      # generated lesson survives as an artifact for a few days. The repo is
-      # private, so the artifact is too.
+      # generated lesson survives as an artifact for a few days. Artifacts
+      # inherit the repository's visibility — keep the repo private if your
+      # lessons are.
       - name: Upload generated lesson (always)
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

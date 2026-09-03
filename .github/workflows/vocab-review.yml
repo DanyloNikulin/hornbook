@@ -67,8 +67,8 @@ jobs:
           set -e
           DATE=$(date -u +%Y-%m-%d)
 
-          git config user.name "lesson-journal-bot"
-          git config user.email "bot@lesson-journal.pages.dev"
+          git config user.name "hornbook-bot"
+          git config user.email "bot@hornbook.pages.dev"
 
           # Report + any source edits review-vocab.ts auto-applied
           # (TOPIC_VOCAB / PATTERNS / TOPIC_TO_CATEGORIES additions).

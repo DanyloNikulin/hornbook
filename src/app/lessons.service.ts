@@ -1,149 +1,155 @@
-import { Injectable } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Lesson, LessonMeta, type LessonT, type LessonMetaT, type TopicT } from '../lib/schema';
-import lessonsMetaRaw from './_data/lessons-meta.json';
+import { ApiService } from './api.service';
 
 // How many topic-overlap candidates we surface in "See also".
-// Keeps the list scannable; the AI-picked `related[]` already covers
-// hand-curated picks, so this is the breadth knob, not depth.
 const RELATED_BY_TOPICS_CAP = 5;
 
 export interface RelatedByTopicsMeta {
   readonly meta: LessonMetaT;
   // Topic IDs shared with the source lesson, in vocab declaration order.
-  // Length doubles as the overlap-count badge.
   readonly sharedTopics: readonly TopicT[];
 }
 
 /**
- * Two-tier lesson API after #19's lazy-load refactor:
+ * Lessons of the current section.
  *
+ *   • `load(sectionId)` — called by the section guard; fetches the compact
+ *     metadata manifest so the synchronous API below works for every page
+ *     inside the section.
  *   • `allMeta()`, `getMetaBySlug()`, `indexBySlug()`, `neighborsMeta()`,
- *     `pickRandomMeta()`, `relatedByTopicsForMeta()` — synchronous, served
- *     from a bundled metadata manifest (~80–120 B/lesson). These cover the
- *     home page, sidebar nav, and topic-overlap suggestions without dragging
- *     full lesson content into the initial JS chunk.
- *
- *   • `bySlug(slug)` — asynchronous, fetches `/lessons/<slug>.json` on
- *     demand. Promises are cached per slug for the lifetime of the session
- *     so concurrent navigations (e.g. user mashes the next-lesson button)
- *     share one in-flight request, but we don't cache resolved values —
- *     the HTTP layer (CF Pages `Cache-Control: max-age=3600`) handles that.
+ *     `pickRandomMeta()`, `byTopicMeta()`, `relatedByTopicsForMeta()` —
+ *     synchronous, from the manifest.
+ *   • `bySlug(slug)` — asynchronous, fetches one full lesson; promises are
+ *     cached per section + slug so concurrent navigations share a request.
  */
 @Injectable({ providedIn: 'root' })
 export class LessonsService {
-  private readonly metas: readonly LessonMetaT[];
+  private readonly api = inject(ApiService);
 
-  // In-flight + completed fetches. Promise per slug → next caller awaits the
-  // same one. Rejections are auto-evicted so resource.reload() performs a
-  // fresh request after a transient network, HTTP, or parse failure.
+  readonly sectionId = signal<string | null>(null);
+  readonly metas = signal<readonly LessonMetaT[]>([]);
+  readonly loadError = signal<string | null>(null);
+  readonly count = computed(() => this.metas().length);
+
   private readonly cache = new Map<string, Promise<LessonT>>();
 
-  constructor() {
-    // Fail-isolate: a single malformed meta must not crash the whole app.
-    // Log and skip — the rest of the catalog stays usable.
-    this.metas = (lessonsMetaRaw as unknown[]).flatMap((raw, idx) => {
-      const result = LessonMeta.safeParse(raw);
-      if (!result.success) {
-        // eslint-disable-next-line no-console
-        console.error(`Skipping invalid lesson meta at index ${idx}:`, result.error.format());
-        return [];
-      }
-      return [result.data];
-    });
+  async load(sectionId: string): Promise<void> {
+    this.sectionId.set(sectionId);
+    this.metas.set([]);
+    try {
+      const raw = await this.api.get<unknown[]>(`${this.base(sectionId)}/lessons`);
+      if (this.sectionId() !== sectionId) return;
+      this.metas.set(
+        raw.flatMap((entry, idx) => {
+          const result = LessonMeta.safeParse(entry);
+          if (!result.success) {
+            // eslint-disable-next-line no-console
+            console.error(`Skipping invalid lesson meta at index ${idx}:`, result.error.format());
+            return [];
+          }
+          return [result.data];
+        }),
+      );
+      this.loadError.set(null);
+    } catch (err) {
+      this.loadError.set((err as Error).message);
+    }
   }
 
-  // ── Synchronous metadata API (bundled manifest) ──────────────────────────
+  /** Re-fetch the manifest after a save in the same section. */
+  async reload(): Promise<void> {
+    const id = this.sectionId();
+    if (id) {
+      this.cache.clear();
+      await this.load(id);
+    }
+  }
+
+  private base(sectionId: string): string {
+    return `/api/sections/${encodeURIComponent(sectionId)}`;
+  }
+
+  // ── Synchronous metadata API ─────────────────────────────────────────────
 
   allMeta(): readonly LessonMetaT[] {
-    return this.metas;
+    return this.metas();
   }
 
   getMetaBySlug(slug: string): LessonMetaT | undefined {
-    return this.metas.find((m) => m.slug === slug);
+    return this.metas().find((m) => m.slug === slug);
   }
 
   indexBySlug(slug: string): number {
-    return this.metas.findIndex((m) => m.slug === slug);
+    return this.metas().findIndex((m) => m.slug === slug);
   }
 
   neighborsMeta(slug: string): { prev: LessonMetaT | null; next: LessonMetaT | null } {
+    const metas = this.metas();
     const idx = this.indexBySlug(slug);
     if (idx === -1) return { prev: null, next: null };
     return {
-      prev: idx > 0 ? this.metas[idx - 1] : null,
-      next: idx < this.metas.length - 1 ? this.metas[idx + 1] : null,
+      prev: idx > 0 ? metas[idx - 1] : null,
+      next: idx < metas.length - 1 ? metas[idx + 1] : null,
     };
   }
 
-  // Pick a uniformly random meta, optionally excluding one slug so callers
-  // navigating away from the current page never land on the same lesson.
   pickRandomMeta(excludeSlug?: string): LessonMetaT | null {
-    const pool = excludeSlug ? this.metas.filter((m) => m.slug !== excludeSlug) : this.metas;
+    const metas = this.metas();
+    const pool = excludeSlug ? metas.filter((m) => m.slug !== excludeSlug) : metas;
     if (pool.length === 0) return null;
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
-  // Lessons matching a topic id, returned as metas (sync). Order preserved
-  // from the catalog (date desc). Empty array if topic is unknown or nothing
-  // matches.
   byTopicMeta(topicId: TopicT): readonly LessonMetaT[] {
-    return filterMetasByTopic(this.metas, topicId);
+    return filterMetasByTopic(this.metas(), topicId);
   }
 
-  // Suggest "related" lessons by counting shared topics with the source meta.
-  // Sorted by overlap count desc, then by catalog order (date desc) for
-  // stable ties. Excludes the source meta and any meta with zero overlap.
-  // Capped at RELATED_BY_TOPICS_CAP.
   relatedByTopicsForMeta(current: LessonMetaT): readonly RelatedByTopicsMeta[] {
-    return computeRelatedByTopicsMeta(current, this.metas, RELATED_BY_TOPICS_CAP);
+    return computeRelatedByTopicsMeta(current, this.metas(), RELATED_BY_TOPICS_CAP);
   }
 
-  // ── Asynchronous full-content API (lazy-fetched static asset) ────────────
+  // ── Asynchronous full-content API ────────────────────────────────────────
 
   async bySlug(slug: string): Promise<LessonT | undefined> {
-    // Short-circuit unknown slugs without an HTTP roundtrip — the manifest is
-    // the source of truth for what exists, so 404-by-design is wasteful.
-    const meta = this.getMetaBySlug(slug);
-    if (!meta) return undefined;
+    const sectionId = this.sectionId();
+    if (!sectionId) return undefined;
+    // The manifest is the source of truth for what exists.
+    if (!this.getMetaBySlug(slug)) return undefined;
 
-    const cached = this.cache.get(slug);
+    const key = `${sectionId}/${slug}`;
+    const cached = this.cache.get(key);
     if (cached) return cached;
 
-    const promise = this.fetchAndValidate(meta).catch((error: unknown) => {
-      // Never retain a rejected promise: resource.reload() must perform a
-      // fresh request after a transient HTTP/network failure.
-      this.cache.delete(slug);
-      throw error;
-    });
-
-    this.cache.set(slug, promise);
+    const promise = this.api
+      .get<unknown>(`${this.base(sectionId)}/lessons/${encodeURIComponent(slug)}`)
+      .then((raw) => {
+        const result = Lesson.safeParse(raw);
+        if (!result.success) {
+          throw new Error(`LessonsService.bySlug(${slug}): schema validation failed`, { cause: result.error });
+        }
+        return result.data;
+      })
+      .catch((error: unknown) => {
+        // Never retain a rejected promise: resource.reload() must retry.
+        this.cache.delete(key);
+        throw error;
+      });
+    this.cache.set(key, promise);
     return promise;
   }
 
-  private async fetchAndValidate(meta: LessonMetaT): Promise<LessonT> {
-    // Lesson files on disk are named `<date>-<slug>.json` per the commit
-    // convention (lesson.id == stem). The assets glob in angular.json
-    // copies them verbatim, so the fetch URL must reconstruct the stem
-    // from meta — fetching by bare slug would 404 for every lesson.
-    const stem = `${meta.date}-${meta.slug}`;
-    const url = `lessons/${encodeURIComponent(stem)}.json`;
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (!res.ok) {
-      throw new Error(`LessonsService.bySlug(${meta.slug}): HTTP ${res.status} fetching ${url}`);
-    }
-    const raw = (await res.json()) as unknown;
-    const result = Lesson.safeParse(raw);
-    if (!result.success) {
-      throw new Error(`LessonsService.bySlug(${meta.slug}): schema validation failed`, {
-        cause: result.error,
-      });
-    }
-    return result.data;
+  /** Create or replace a lesson in the current section and refresh the manifest. */
+  async save(lesson: LessonT): Promise<LessonT> {
+    const sectionId = this.sectionId();
+    if (!sectionId) throw new Error('No section selected');
+    const saved = await this.api.post<LessonT>(`${this.base(sectionId)}/lessons`, lesson);
+    await this.reload();
+    return saved;
   }
 }
 
-// Pure helpers, exported for tests. Kept outside the @Injectable so they can
-// be exercised without spinning up the whole catalog from the manifest.
+// Pure helpers, exported for tests.
 
 export function filterMetasByTopic(
   metas: readonly LessonMetaT[],
@@ -164,17 +170,10 @@ export function computeRelatedByTopicsMeta(
   for (const other of pool) {
     if (other.slug === current.slug) continue;
     if (other.topics.length === 0) continue;
-    // Preserve the candidate's topic order in the badge so the inline
-    // "#a, #b, #c" reads identically regardless of which lesson is the
-    // source — the user's eye is comparing across rows.
     const sharedTopics = other.topics.filter((t) => currentTopics.has(t));
     if (sharedTopics.length === 0) continue;
     scored.push({ meta: other, sharedTopics });
   }
-
-  // Stable sort by overlap count desc — Array.prototype.sort is stable in
-  // V8 / modern JS, so equal-overlap rows keep their pool-order (catalog
-  // order = date desc) as the natural tie-breaker.
   scored.sort((a, b) => b.sharedTopics.length - a.sharedTopics.length);
   return scored.slice(0, cap);
 }

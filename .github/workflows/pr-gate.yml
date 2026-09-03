@@ -1,6 +1,6 @@
 name: PR gate
 
-# The single required quality gate for pull requests into main (issue #53).
+# The single required quality gate for pull requests into main.
 # Everything runs in ONE job so branch protection only needs to require the
 # "gate" check context. Covers: reproducible installs, app lint/test/build,
 # pipeline-script typecheck + tests, worker tests + typecheck, freshness of
@@ -78,7 +78,7 @@ jobs:
             exit 1
           fi
 
-      # scripts/ is outside the Angular test + tsconfig graph (issue #63) —
+      # scripts/ is outside the Angular test + tsconfig graph —
       # keep the scripts/lib specs and the Record<TopicT, …> exhaustiveness
       # check inside the gate.
       - name: Typecheck pipeline scripts

@@ -1,6 +1,6 @@
 <section class="max-w-3xl mx-auto px-6 py-10 space-y-8" style="background: var(--paper); min-height: 100vh;">
   <header class="space-y-3">
-    <a routerLink="/" class="inline-flex items-center gap-1.5 text-sm transition-colors hover:text-[var(--primary)]" style="color: var(--muted);">
+    <a [routerLink]="sec.home()" class="inline-flex items-center gap-1.5 text-sm transition-colors hover:text-[var(--primary)]" style="color: var(--muted);">
       ← all lessons
     </a>
     <h1 class="font-display text-4xl font-semibold" style="color: var(--ink);">
@@ -50,7 +50,7 @@
     <ul class="space-y-3">
       @for (h of hits(); track $index) {
         <li>
-          <a [routerLink]="['/lesson', h.doc.lesson_slug]"
+          <a [routerLink]="sec.link('lesson', h.doc.lesson_slug)"
              class="il-result-card block rounded-2xl p-4 transition-colors">
             <div class="flex items-baseline justify-between gap-3 flex-wrap mb-1">
               <div class="flex items-center gap-2">

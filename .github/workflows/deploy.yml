@@ -13,7 +13,7 @@ on:
   # GITHUB_TOKEN pushes (from process-lesson committing a new lesson, or
   # vocab-review committing schema.ts) do NOT re-trigger workflows by design —
   # chain explicitly so those changes go live without manual intervention
-  # (issue #69 for the vocab-review leg).
+  # (the vocab-review leg).
   workflow_run:
     workflows: ['Process lesson', 'Vocab review']
     types: [completed]
@@ -57,7 +57,7 @@ jobs:
       # scripts/ is outside the Angular test + tsconfig graph: ng test only
       # picks up src/**/*.spec.ts and no tsconfig included scripts/, so the
       # Record<TopicT, …> exhaustiveness check in topic-to-category.ts and the
-      # five scripts/lib specs never ran in CI (issue #63). Run them here.
+      # five scripts/lib specs never ran in CI. Run them here.
       - name: Typecheck pipeline scripts
         run: npm run typecheck:scripts
 
@@ -73,11 +73,11 @@ jobs:
         # missing. Avoids the perpetual red-X on this step.
         run: |
           set -e
-          if npx --yes wrangler@4 pages project list 2>/dev/null | grep -qF "lesson-journal"; then
+          if npx --yes wrangler@4 pages project list 2>/dev/null | grep -qF "hornbook"; then
             echo "✓ Pages project already exists"
           else
             echo "Pages project missing — creating"
-            npx --yes wrangler@4 pages project create lesson-journal --production-branch=main
+            npx --yes wrangler@4 pages project create hornbook --production-branch=main
           fi
 
       - name: Deploy to Cloudflare Pages
@@ -86,4 +86,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4'
-          command: pages deploy dist/lesson-journal/browser --project-name=lesson-journal --branch=main --commit-dirty=true
+          command: pages deploy dist/hornbook/browser --project-name=hornbook --branch=main --commit-dirty=true

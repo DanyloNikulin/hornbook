@@ -3,7 +3,7 @@
 
     <!-- Breadcrumb -->
     <nav class="il-lesson-breadcrumb" aria-label="Breadcrumb">
-      <a routerLink="/" class="il-lesson-bc-link">Lessons</a>
+      <a [routerLink]="sec.home()" class="il-lesson-bc-link">Lessons</a>
       <span class="il-lesson-bc-sep" aria-hidden="true">›</span>
       <span class="il-lesson-bc-active">{{ l.title }}</span>
     </nav>
@@ -43,7 +43,7 @@
           @for (topic of l.topics; track topic) {
             <a
               role="listitem"
-              [routerLink]="['/']"
+              [routerLink]="sec.home()"
               [queryParams]="{ topic: topic }"
               class="il-topic-chip"
               [attr.aria-label]="'Show lessons tagged ' + topic"
@@ -53,7 +53,7 @@
       }
 
       <div class="il-lesson-actions">
-        <a [routerLink]="['/flashcards']"
+        <a [routerLink]="sec.link('flashcards')"
            [queryParams]="{ lesson: l.slug, mini: 5 }"
            class="il-btn"
            aria-label="Start a 5-card mini session from this lesson">
@@ -195,7 +195,7 @@
           <ul class="il-lesson-related-list">
             @for (r of relatedByTopics(); track r.meta.slug) {
               <li>
-                <a [routerLink]="['/lesson', r.meta.slug]" class="il-lesson-related-link">
+                <a [routerLink]="sec.link('lesson', r.meta.slug)" class="il-lesson-related-link">
                   <span class="il-lesson-related-title">{{ r.meta.title }}</span>
                   <span class="il-lesson-related-overlap">
                     <span class="il-lesson-related-badge" [attr.aria-label]="r.sharedTopics.length + ' shared topics'">
@@ -217,7 +217,7 @@
           <ul class="il-lesson-related-list">
             @for (meta of aiRelatedFallback(); track meta.slug) {
               <li>
-                <a [routerLink]="['/lesson', meta.slug]" class="il-lesson-related-link">
+                <a [routerLink]="sec.link('lesson', meta.slug)" class="il-lesson-related-link">
                   <span class="il-lesson-related-title">{{ meta.title }}</span>
                 </a>
               </li>
@@ -230,7 +230,7 @@
     <!-- Prev / Next navigation -->
     <nav class="il-lesson-nav" aria-label="Lesson navigation">
       @if (neighbors().prev; as prev) {
-        <a [routerLink]="['/lesson', prev.slug]" class="il-lesson-nav-card">
+        <a [routerLink]="sec.link('lesson', prev.slug)" class="il-lesson-nav-card">
           <div class="il-lesson-nav-label">← previous</div>
           <div class="il-lesson-nav-title">{{ prev.title }}</div>
         </a>
@@ -238,7 +238,7 @@
         <div></div>
       }
       @if (neighbors().next; as next) {
-        <a [routerLink]="['/lesson', next.slug]" class="il-lesson-nav-card il-lesson-nav-card--right">
+        <a [routerLink]="sec.link('lesson', next.slug)" class="il-lesson-nav-card il-lesson-nav-card--right">
           <div class="il-lesson-nav-label">next →</div>
           <div class="il-lesson-nav-title">{{ next.title }}</div>
         </a>
@@ -253,7 +253,7 @@
        chrome reads as "real" even before the body is fetched. -->
   <div class="il-lesson-page" aria-busy="true">
     <nav class="il-lesson-breadcrumb" aria-label="Breadcrumb">
-      <a routerLink="/" class="il-lesson-bc-link">Lessons</a>
+      <a [routerLink]="sec.home()" class="il-lesson-bc-link">Lessons</a>
       <span class="il-lesson-bc-sep" aria-hidden="true">›</span>
       <span class="il-lesson-bc-active">{{ meta()?.title ?? 'Loading…' }}</span>
     </nav>
@@ -287,7 +287,7 @@
     </p>
     <div class="flex gap-3 justify-center">
       <button type="button" (click)="reload()" class="il-btn sm">Try again</button>
-      <a routerLink="/" class="il-btn ghost sm">← home</a>
+      <a [routerLink]="sec.home()" class="il-btn ghost sm">← home</a>
     </div>
   </section>
 } @else {
@@ -296,6 +296,6 @@
     <p style="color: var(--ink-2);">
       slug <code class="font-mono text-sm px-1.5 py-0.5 rounded" style="background: var(--paper-2);">{{ slug() }}</code> does not exist.
     </p>
-    <a routerLink="/" class="il-btn sm inline-block">← home</a>
+    <a [routerLink]="sec.home()" class="il-btn sm inline-block">← home</a>
   </section>
 }

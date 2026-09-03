@@ -1,19 +1,19 @@
-name = "lesson-journal-dispatcher"
+name = "hornbook-dispatcher"
 main = "src/index.ts"
 compatibility_date = "2026-05-01"
 
 [vars]
 GITHUB_OWNER = "YOUR_GITHUB_USER"
-GITHUB_REPO = "lesson-journal"
+GITHUB_REPO = "hornbook"
 # Only events from this bucket are dispatched; see index.ts.
-R2_BUCKET = "your-journal-audio"
+R2_BUCKET = "hornbook-audio"
 
 [[queues.consumers]]
-queue = "your-journal-uploads"
+queue = "hornbook-uploads"
 max_batch_size = 5
 max_batch_timeout = 5
 max_retries = 3
-dead_letter_queue = "your-journal-uploads-dlq"
+dead_letter_queue = "hornbook-uploads-dlq"
 
 # One Durable Object per upload identity deduplicates R2's at-least-once
 # event delivery, so a duplicate or redelivered event can never start a

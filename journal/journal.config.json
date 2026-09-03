@@ -1,0 +1,28 @@
+{
+  "brand": {
+    "name": "Hornbook",
+    "tagline": "conspects from your lessons"
+  },
+  "providers": {
+    "transcribe": {
+      "driver": "openai",
+      "model": "gpt-4o-transcribe"
+    },
+    "extract": {
+      "driver": "anthropic",
+      "model": "claude-sonnet-4-6"
+    }
+  },
+  "sections": [
+    {
+      "id": "es-en",
+      "target": "es",
+      "learner": "en"
+    },
+    {
+      "id": "it-en",
+      "target": "it",
+      "learner": "en"
+    }
+  ]
+}

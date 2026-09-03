@@ -1,39 +1,72 @@
-import { Injectable } from '@angular/core';
-import {
-  JournalConfig,
-  languageName,
-  pairLabel,
-  speechLocale,
-  type JournalConfigT,
-} from '../lib/journal-config';
-import raw from '../lib/journal.config.json';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import type { ConfigView, SectionSummary } from '../lib/api-types';
+import { ApiService } from './api.service';
 
+const PLACEHOLDER: ConfigView = {
+  brand: { name: 'Hornbook', tagline: 'conspects from your lessons' },
+  providers: {
+    transcribe: { driver: 'whisper-cli', model: 'base' },
+    extract: { driver: 'ollama', model: 'llama3.1' },
+  },
+  sections: [],
+};
+
+/**
+ * Journal-level configuration (brand, providers, the list of sections),
+ * loaded once from the API at startup and refreshed after a section is
+ * created or changed.
+ */
 @Injectable({ providedIn: 'root' })
 export class JournalService {
-  readonly config: JournalConfigT = JournalConfig.parse(raw);
+  private readonly api = inject(ApiService);
 
-  targetCode(): string {
-    return this.config.pair.target;
+  readonly config = signal<ConfigView>(PLACEHOLDER);
+  readonly loaded = signal(false);
+  readonly loadError = signal<string | null>(null);
+
+  readonly sections = computed(() => this.config().sections);
+
+  private inflight: Promise<void> | null = null;
+
+  /** Fetch the config; concurrent callers share one request. */
+  load(): Promise<void> {
+    if (this.inflight) return this.inflight;
+    this.inflight = this.api
+      .get<ConfigView>('/api/config')
+      .then((c) => {
+        this.config.set(c);
+        this.loaded.set(true);
+        this.loadError.set(null);
+      })
+      .catch((err: unknown) => {
+        this.loadError.set((err as Error).message);
+        this.loaded.set(true);
+      })
+      .finally(() => {
+        this.inflight = null;
+      });
+    return this.inflight;
   }
-  learnerCode(): string {
-    return this.config.pair.learner;
+
+  async ensureLoaded(): Promise<void> {
+    if (!this.loaded()) await this.load();
   }
-  targetName(): string {
-    return languageName(this.config.pair.target);
+
+  /** Re-fetch after a write (new section, renamed section). */
+  async refresh(): Promise<void> {
+    this.loaded.set(false);
+    await this.load();
   }
-  learnerName(): string {
-    return languageName(this.config.pair.learner);
+
+  section(id: string): SectionSummary | undefined {
+    return this.sections().find((s) => s.id === id);
   }
-  labels(): { fwd: string; rev: string } {
-    return pairLabel(this.config.pair.target, this.config.pair.learner);
-  }
+
   brandName(): string {
-    return this.config.brand.name;
+    return this.config().brand.name;
   }
+
   tagline(): string {
-    return this.config.brand.tagline;
-  }
-  speechLang(): string {
-    return speechLocale(this.config.pair.target);
+    return this.config().brand.tagline;
   }
 }

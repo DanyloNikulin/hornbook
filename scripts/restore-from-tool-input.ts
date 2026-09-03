@@ -7,20 +7,17 @@
 //   gh run download <run-id> --name pipeline-logs-<stem> --dir /tmp/restore
 //   tsx scripts/restore-from-tool-input.ts /tmp/restore/logs/tool-input.json
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { Lesson } from '../src/lib/schema.ts';
-import { lessonToMarkdown } from './lib/markdown.ts';
+import { resolveSectionArg } from './lib/journal.ts';
+import { writeLesson } from './process.ts';
 
-const repoRoot = fileURLToPath(new URL('..', import.meta.url));
-const lessonsDir = join(repoRoot, 'lessons');
-
-const inputPath = process.argv[2];
+const inputPath = process.argv.slice(2).find((a, i, arr) => !a.startsWith('--') && arr[i - 1] !== '--section');
 if (!inputPath) {
-  console.error('Usage: tsx scripts/restore-from-tool-input.ts <path-to-tool-input.json>');
+  console.error('Usage: tsx scripts/restore-from-tool-input.ts <path-to-tool-input.json> [--section id]');
   process.exit(1);
 }
+const section = resolveSectionArg(process.argv);
 
 const raw = readFileSync(inputPath, 'utf8');
 const parsed = Lesson.safeParse(JSON.parse(raw));
@@ -37,12 +34,7 @@ if (lesson.id !== stem) {
   lesson.id = stem;
 }
 
-mkdirSync(lessonsDir, { recursive: true });
-const jsonPath = join(lessonsDir, `${stem}.json`);
-const mdPath = join(lessonsDir, `${stem}.md`);
-
-writeFileSync(jsonPath, JSON.stringify(lesson, null, 2), 'utf8');
-writeFileSync(mdPath, lessonToMarkdown(lesson), 'utf8');
+const { jsonPath, mdPath } = writeLesson(section.id, lesson);
 
 console.log(`✓ ${jsonPath}`);
 console.log(`✓ ${mdPath}`);

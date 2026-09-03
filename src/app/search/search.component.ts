@@ -1,4 +1,5 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
+import { SectionService } from '../section.service';
 import { toObservable, toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
@@ -14,6 +15,7 @@ const EXAMPLES = ['hola', 'grammar', 'greetings', 'pronoun'];
   templateUrl: './search.component.html',
 })
 export class SearchComponent {
+  protected readonly sec = inject(SectionService);
   private readonly search = inject(SearchService);
   private readonly route = inject(ActivatedRoute);
 

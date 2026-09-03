@@ -3,7 +3,7 @@
 // The slug is model-generated in extract.ts and only regex-validated. The SPA
 // routes `/lesson/:slug`, the manifest lookup takes the first match, and
 // cheatsheet.json keys processed lessons by slug — so two lessons sharing a
-// slug silently shadow each other (issue #65). This picks a free slug before
+// slug silently shadow each other. This picks a free slug before
 // the lesson is written.
 
 /**

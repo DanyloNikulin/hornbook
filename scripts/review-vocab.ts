@@ -19,9 +19,9 @@ import type { Message, Tool, ToolUseBlock } from '@anthropic-ai/sdk/resources/me
 import { computeVocabStats, renderStatsForAI } from './lib/vocab-stats.ts';
 import { addToVocabSource, addToPatternsSource, addToCategoryMapSource } from './lib/vocab-apply.ts';
 import { learnerLanguageName, targetLanguageName } from './lib/config.ts';
+import { currentSection, resolveSectionArg, sectionDir } from './lib/journal.ts';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
-const lessonsDir = join(repoRoot, 'lessons');
 const reviewsDir = join(repoRoot, 'docs', 'vocab-reviews');
 const SCHEMA_PATH = join(repoRoot, 'src/lib/schema.ts');
 const TOPICS_PATH = join(repoRoot, 'scripts/lib/topics.ts');
@@ -65,7 +65,7 @@ function countLessonsSinceLastReview(): { count: number; lastReview: string | nu
     // --diff-filter=A: additions only. Renames show as R (not A) with git's
     // default rename detection, so a repaired slug does not count either.
     const diff = execSync(
-      `git diff --name-only --diff-filter=A ${sha} HEAD -- "lessons/*.json" ":(exclude)lessons/_*.json"`,
+      `git diff --name-only --diff-filter=A ${sha} HEAD -- "journal/${currentSection().id}/*.json" ":(exclude)journal/${currentSection().id}/_*.json"`,
       { cwd: repoRoot, encoding: 'utf8' },
     ).trim();
     const count = diff ? diff.split('\n').length : 0;
@@ -181,10 +181,10 @@ const REVIEW_TOOL = {
   },
 };
 
+const systemPrompt = (): string => {
 const TARGET = targetLanguageName();
 const LEARNER = learnerLanguageName();
-
-const SYSTEM_PROMPT = `You are auditing the topic vocabulary of a language-lesson catalog.
+return `You are auditing the topic vocabulary of a language-lesson catalog.
 
 The catalog uses a controlled vocabulary (TOPIC_VOCAB) — a finite list of grammar / theme topic IDs assigned to each lesson. Topics power "related lesson" candidate filtering during AI extraction. Quality of the vocab directly affects recommendation quality.
 
@@ -228,11 +228,14 @@ HARD RULES:
 
 YOU MUST call propose_vocab_changes exactly once with all five arrays
 populated (use empty arrays where nothing applies).`;
+};
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const stats = computeVocabStats(lessonsDir);
+  const section = resolveSectionArg(process.argv);
+  console.log(`Section: ${section.id}`);
+  const stats = computeVocabStats(sectionDir(section.id));
   console.log(`Computed stats for ${stats.total_lessons} lesson(s), vocab size ${stats.vocab_size}.`);
 
   if (dry) {
@@ -280,7 +283,7 @@ async function main(): Promise<void> {
   const resp: Message = await client.messages.create({
     model: MODEL,
     max_tokens: 4000,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt(),
     tools,
     tool_choice: { type: 'tool', name: REVIEW_TOOL.name },
     messages: [{ role: 'user', content: userPayload }],
@@ -353,7 +356,7 @@ function applyProposal(p: VocabProposal): ApplyResult {
     try {
       // All three edits are computed before any is kept: if the category
       // map anchor is missing we must NOT leave the topic half-added (that is
-      // exactly the state that crashed build-cheatsheet — see issue #63).
+      // exactly the state that crashed build-cheatsheet).
       const nextSchema = addToVocabSource(schemaSrc, a.id, a.category);
       const nextTopics = addToPatternsSource(topicsSrc, a.id, a.category, a.regex_patterns);
       const nextCategoryMap = addToCategoryMapSource(categoryMapSrc, a.id, a.category);

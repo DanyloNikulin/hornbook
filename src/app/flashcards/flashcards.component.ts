@@ -9,6 +9,7 @@ import {
   resource,
   signal,
 } from '@angular/core';
+import { SectionService } from '../section.service';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -24,7 +25,6 @@ import {
   checkTypedAnswer,
 } from '../cards.service';
 import type { Rating } from '../../lib/sm2';
-import { JournalService } from '../journal.service';
 
 type Mode = 'type' | 'pairs';
 type LevelFilter = 'all' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
@@ -40,7 +40,8 @@ const MISMATCH_FLASH_MS = 600;
   templateUrl: './flashcards.component.html',
 })
 export class FlashcardsComponent {
-  private readonly journal = inject(JournalService);
+  protected readonly sec = inject(SectionService);
+  private readonly journal = this.sec;
   protected readonly pairFwd = this.journal.labels().fwd;
   protected readonly pairRev = this.journal.labels().rev;
   protected readonly targetName = this.journal.targetName();
@@ -143,7 +144,7 @@ export class FlashcardsComponent {
   protected readonly pairsRemaining = computed(() => this.cards.dailyPairsRemaining());
   protected readonly pairsRoundActive = computed(() => this.pairsLeft().length > 0);
   // A round needs PAIRS_PER_ROUND vocab cards; a narrow ?lesson= filter can
-  // have fewer, in which case "Start" would silently do nothing (issue #73).
+  // have fewer, in which case "Start" would silently do nothing.
   protected readonly pairsEligible = computed(() => this.cards.pairsEligibleCount(this.cardsValue()));
   protected readonly pairsPossible = computed(() => this.pairsEligible() >= PAIRS_PER_ROUND);
   protected readonly pairsRoundComplete = computed(
@@ -199,7 +200,7 @@ export class FlashcardsComponent {
     const card = this.current();
     if (!card) return;
     const expected = card.expected ?? card.back;
-    this.typedResult.set(checkTypedAnswer(this.typed(), expected));
+    this.typedResult.set(checkTypedAnswer(this.typed(), expected, this.journal.targetCode()));
     this.revealed.set(true);
   }
 

@@ -1,4 +1,5 @@
 import { Component, computed, effect, inject, resource, signal } from '@angular/core';
+import { SectionService } from '../section.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
@@ -19,6 +20,7 @@ const PAGE_SIZE = 12;
   templateUrl: './lesson-list.component.html',
 })
 export class LessonListComponent {
+  protected readonly sec = inject(SectionService);
   private readonly journal = inject(JournalService);
   protected readonly brandName = this.journal.brandName();
   protected readonly tagline = this.journal.tagline();
@@ -31,8 +33,9 @@ export class LessonListComponent {
 
   protected readonly PAGE_SIZE = PAGE_SIZE;
 
-  // Manifest is sync — no waiting on a fetch for the home page to render.
-  private readonly allMetas = this.lessonsSvc.allMeta();
+  // Manifest was loaded by the section guard; a signal so a save refreshes it.
+  private readonly allMetas = computed(() => this.lessonsSvc.metas());
+  protected readonly loadError = computed(() => this.lessonsSvc.loadError());
 
   // Word of day pulls from the lazy-loaded vocab. The page renders without
   // it on cold visits; the cell pops in once the fetch resolves.
@@ -58,8 +61,8 @@ export class LessonListComponent {
 
   protected readonly lessons = computed<readonly LessonMetaT[]>(() => {
     const topic = this.activeTopic();
-    if (!topic) return this.allMetas;
-    return this.allMetas.filter((l) => l.topics.includes(topic));
+    if (!topic) return this.allMetas();
+    return this.allMetas().filter((l) => l.topics.includes(topic));
   });
 
   // ---- pagination ----
@@ -127,12 +130,12 @@ export class LessonListComponent {
 
   protected goSearch(value: string): void {
     const q = value.trim();
-    this.router.navigate(['/search'], q ? { queryParams: { q } } : {});
+    this.router.navigate(this.sec.link('search'), q ? { queryParams: { q } } : {});
   }
 
   protected goRandom(): void {
     const next = this.lessonsSvc.pickRandomMeta();
-    if (next) this.router.navigate(['/lesson', next.slug]);
+    if (next) this.router.navigate(this.sec.link('lesson', next.slug));
   }
 
   protected clearTopic(): void {

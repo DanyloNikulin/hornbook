@@ -3,11 +3,11 @@
 //
 // Lives in its own file (served from /theme-init.js) rather than inline in
 // index.html because public/_headers ships `script-src 'self'` with no
-// nonce/hash — an inline script is blocked by that CSP (issue #67).
+// nonce/hash — an inline script is blocked by that CSP.
 // AppComponent re-reads the same localStorage key and takes over from here.
 (function () {
   try {
-    var saved = localStorage.getItem('lj-theme');
+    var saved = localStorage.getItem('hornbook-theme');
     var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     var theme = saved === 'night' || saved === 'day' ? saved : prefersDark ? 'night' : 'day';
     document.documentElement.setAttribute('data-theme', theme);

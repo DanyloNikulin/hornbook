@@ -1,0 +1,85 @@
+{
+  "id": "2026-01-15-saluti",
+  "date": "2026-01-15",
+  "slug": "saluti",
+  "title": "Saluti e presentazioni",
+  "summary": "A fictional first lesson: greeting people, introducing yourself, and asking how someone is. Demo content only — not a real class.",
+  "article_md": "## Takeaway\n\n**Ciao** works with friends at any hour. **Buongiorno / buonasera** are the polite versions and follow the clock.\n\n## Rules\n\n**Tu vs Lei.** Friends and classmates take *tu*. Strangers, shops and offices take *Lei*.\n\n- Ciao, come stai? (informal)\n- Buongiorno, come sta? (formal)\n\n## Useful chunks\n\n- Mi chiamo Alex.\n- Piacere.\n- Anche a me.\n",
+  "duration_min": 45,
+  "vocabulary": [
+    {
+      "target": "ciao",
+      "learner": "hi / bye",
+      "level": "A1",
+      "example_target": "Ciao, mi chiamo Alex.",
+      "example_learner": "Hi, my name is Alex."
+    },
+    {
+      "target": "buongiorno",
+      "learner": "good morning",
+      "level": "A1",
+      "example_target": "Buongiorno, come sta?",
+      "example_learner": "Good morning, how are you?"
+    },
+    {
+      "target": "piacere",
+      "learner": "nice to meet you",
+      "level": "A1",
+      "example_target": "Piacere, sono Alex.",
+      "example_learner": "Nice to meet you, I am Alex."
+    },
+    {
+      "target": "la lezione",
+      "learner": "the lesson",
+      "level": "A1",
+      "example_target": "La lezione comincia alle nove.",
+      "example_learner": "The lesson starts at nine."
+    }
+  ],
+  "grammar": [
+    {
+      "rule": "Tu is informal; Lei is formal and takes the third-person verb form.",
+      "examples": ["Come stai?", "Come sta?"]
+    }
+  ],
+  "quotes": [
+    {
+      "speaker": "teacher",
+      "text": "Ciao non è mai sbagliato tra amici.",
+      "gloss": "Ciao is never wrong among friends.",
+      "ts": "03:40"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "mc",
+      "q": "Which greeting is formal?",
+      "options": ["Ciao, come stai?", "Buongiorno, come sta?", "Ehi!"],
+      "answer": 1
+    },
+    {
+      "type": "fill",
+      "q": "Complete: Mi _____ Alex.",
+      "answer": "chiamo",
+      "alternatives": []
+    },
+    {
+      "type": "translate",
+      "q": "Nice to meet you",
+      "answer_target": "Piacere",
+      "alternatives": ["Molto piacere"],
+      "auto_check": false
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "ciao",
+      "back": "hi / bye",
+      "type": "word",
+      "tags": ["A1"]
+    }
+  ],
+  "slides": [],
+  "related": [],
+  "topics": ["vocabulary", "conversation"]
+}

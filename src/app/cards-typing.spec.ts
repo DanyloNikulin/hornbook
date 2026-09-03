@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeAnswer, checkTypedAnswer, deriveExpectedFromBack } from './cards.service';
+import { normalizeAnswer, checkTypedAnswer as checkTypedAnswerFor, deriveExpectedFromBack } from './cards.service';
+
+// The historical cases below were written for an Italian target; article
+// handling is per language, so pin it explicitly. Other languages are covered
+// in the 'per-language articles' block at the end.
+const checkTypedAnswer = (typed: string, expected: string) => checkTypedAnswerFor(typed, expected, 'it');
 
 describe('normalizeAnswer', () => {
   it('lowercases', () => {
@@ -10,7 +15,7 @@ describe('normalizeAnswer', () => {
     expect(normalizeAnswer('  ciao  amico  ')).toBe('ciao amico');
   });
 
-  it('strips italian diacritics', () => {
+  it('strips diacritics', () => {
     expect(normalizeAnswer('è')).toBe('e');
     expect(normalizeAnswer('caffè')).toBe('caffe');
     expect(normalizeAnswer('perché')).toBe('perche');
@@ -298,5 +303,32 @@ describe('checkTypedAnswer — combinations', () => {
     // expected has two meanings with different articles; user adds an article
     // that matches one of them, even though the bare word is shared semantics.
     expect(checkTypedAnswer('il vagone', 'il treno, il vagone')).toBe('exact');
+  });
+});
+
+describe('checkTypedAnswer — per-language articles', () => {
+  it('Spanish: forgives a dropped article, flags a wrong one', () => {
+    expect(checkTypedAnswerFor('casa', 'la casa', 'es')).toBe('exact');
+    expect(checkTypedAnswerFor('el casa', 'la casa', 'es')).toBe('close');
+    expect(checkTypedAnswerFor('unos libros', 'libros', 'es')).toBe('exact');
+  });
+
+  it('French: elided article is handled', () => {
+    expect(checkTypedAnswerFor('ami', "l'ami", 'fr')).toBe('exact');
+    expect(checkTypedAnswerFor('le ami', "l'ami", 'fr')).toBe('close');
+  });
+
+  it('German: case forms are distinct articles', () => {
+    expect(checkTypedAnswerFor('Haus', 'das Haus', 'de')).toBe('exact');
+    expect(checkTypedAnswerFor('der Haus', 'das Haus', 'de')).toBe('close');
+  });
+
+  it('a language without an article table never strips anything', () => {
+    expect(checkTypedAnswerFor('ragazza', 'la ragazza', 'ja')).toBe('wrong');
+    expect(checkTypedAnswerFor('ragazza', 'la ragazza')).toBe('wrong');
+  });
+
+  it('Italian articles are not applied to a Spanish target', () => {
+    expect(checkTypedAnswerFor('zaino', 'lo zaino', 'es')).toBe('wrong');
   });
 });

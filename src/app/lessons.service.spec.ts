@@ -1,4 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
+import { TestBed } from '@angular/core/testing';
 import { LessonsService, computeRelatedByTopicsMeta, filterMetasByTopic } from './lessons.service';
 import type { LessonMetaT, TopicT } from '../lib/schema';
 
@@ -122,26 +123,63 @@ describe('computeRelatedByTopicsMeta', () => {
   });
 });
 
-describe('LessonsService — load failures', () => {
+describe('LessonsService — load and fetch', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('rejects HTTP failures and evicts them so a retry performs another fetch', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 503 } as Response);
-    vi.stubGlobal('fetch', fetchMock);
-    const service = new LessonsService();
-    const slug = service.allMeta()[0].slug;
+  function service(): LessonsService {
+    TestBed.resetTestingModule();
+    const svc = TestBed.inject(LessonsService);
+    svc.sectionId.set('es-en');
+    svc.metas.set([meta('greetings', ['grammar'])]);
+    return svc;
+  }
 
-    await expect(service.bySlug(slug)).rejects.toThrow('HTTP 503');
-    await expect(service.bySlug(slug)).rejects.toThrow('HTTP 503');
+  it('rejects HTTP failures and evicts them so a retry performs another fetch', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      statusText: 'Service Unavailable',
+      json: async () => ({ error: 'down' }),
+    } as unknown as Response);
+    vi.stubGlobal('fetch', fetchMock);
+    const svc = service();
+
+    await expect(svc.bySlug('greetings')).rejects.toThrow('HTTP 503');
+    await expect(svc.bySlug('greetings')).rejects.toThrow('HTTP 503');
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0][0])).toBe('/api/sections/es-en/lessons/greetings');
   });
 
   it('still resolves unknown slugs as not found without making a request', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    const service = new LessonsService();
+    const svc = service();
 
-    await expect(service.bySlug('definitely-not-a-real-lesson')).resolves.toBeUndefined();
+    await expect(svc.bySlug('definitely-not-a-real-lesson')).resolves.toBeUndefined();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('load() fills the manifest for a section and records failures', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        // The fixture's empty summary fails the schema, like `{ bad }` — both
+        // must be skipped, not crash the load. 'a' carries a valid summary.
+        json: async () => [{ ...meta('a', []), summary: 'A lesson.' }, meta('bad-summary', []), { bad: true }],
+      } as unknown as Response)
+      .mockResolvedValueOnce({ ok: false, status: 500, statusText: 'x', json: async () => ({ error: 'boom' }) } as unknown as Response);
+    vi.stubGlobal('fetch', fetchMock);
+    TestBed.resetTestingModule();
+    const svc = TestBed.inject(LessonsService);
+
+    await svc.load('es-en');
+    expect(svc.allMeta().map((m) => m.slug)).toEqual(['a']);
+    expect(svc.loadError()).toBeNull();
+
+    await svc.load('it-en');
+    expect(svc.allMeta()).toEqual([]);
+    expect(svc.loadError()).toContain('500');
   });
 });

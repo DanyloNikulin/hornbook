@@ -2,7 +2,7 @@
 
   <!-- Header -->
   <header class="space-y-3">
-    <a routerLink="/" class="inline-flex items-center gap-1.5 text-sm transition-colors hover:text-[var(--primary)]" style="color: var(--muted);">
+    <a [routerLink]="sec.home()" class="inline-flex items-center gap-1.5 text-sm transition-colors hover:text-[var(--primary)]" style="color: var(--muted);">
       ← all lessons
     </a>
     <div class="flex items-start justify-between gap-3 flex-wrap">
@@ -76,7 +76,7 @@
               @if (section.source_lessons.length > 0) {
                 <div class="flex flex-wrap gap-1.5">
                   @for (slug of section.source_lessons; track slug) {
-                    <a [routerLink]="['/lesson', slug]"
+                    <a [routerLink]="sec.link('lesson', slug)"
                        class="il-slug-chip text-xs px-2 py-0.5 rounded-full font-mono transition-colors">
                       {{ slug }}
                     </a>

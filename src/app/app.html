@@ -9,28 +9,41 @@
 
     <!-- Main row: brand + desktop links + mobile controls -->
     <div class="il-nav-row">
-      <a routerLink="/" class="il-brand" [attr.aria-label]="brandName + ' — home'">
-        <span class="il-brand-mark" aria-hidden="true">lj</span>
+      <a routerLink="/" class="il-brand" [attr.aria-label]="brandName() + ' — home'">
+        <span class="il-brand-mark" aria-hidden="true">hb</span>
         <span>
-          <div class="il-brand-name">{{ brandName }}</div>
-          <div class="il-brand-sub">{{ tagline }}</div>
+          <div class="il-brand-name">{{ brandName() }}</div>
+          <div class="il-brand-sub">{{ inSection() ? section.label() : tagline() }}</div>
         </span>
       </a>
 
       <!-- Desktop links (hidden on mobile) -->
       <div class="il-nav-links">
-        <a routerLink="/"
-           routerLinkActive="active"
-           [routerLinkActiveOptions]="{ exact: true }"
-           class="il-nav-link">
-          Lessons
-        </a>
-        <a routerLink="/vocab" routerLinkActive="active" class="il-nav-link">Glossary</a>
-        <a routerLink="/flashcards" routerLinkActive="active" class="il-nav-link">Cards</a>
-        <a routerLink="/cheatsheet" routerLinkActive="active" class="il-nav-link">Sheet</a>
-        <a routerLink="/search" routerLinkActive="active" class="il-nav-link">Search</a>
-        <a routerLink="/compose" routerLinkActive="active" class="il-nav-link">Add</a>
-        <a routerLink="/setup" routerLinkActive="active" class="il-nav-link">Pair</a>
+        @if (inSection()) {
+          @if (sections().length > 1) {
+            <select class="il-section-switch"
+                    aria-label="Language pair"
+                    (change)="switchSection($any($event.target).value)">
+              @for (s of sections(); track s.id) {
+                <option [value]="s.id" [selected]="s.id === section.id()">{{ s.flags.target }} {{ s.label }}</option>
+              }
+            </select>
+          }
+          <a [routerLink]="section.home()"
+             routerLinkActive="active"
+             [routerLinkActiveOptions]="{ exact: true }"
+             class="il-nav-link">
+            Lessons
+          </a>
+          <a [routerLink]="section.link('vocab')" routerLinkActive="active" class="il-nav-link">Glossary</a>
+          <a [routerLink]="section.link('flashcards')" routerLinkActive="active" class="il-nav-link">Cards</a>
+          <a [routerLink]="section.link('cheatsheet')" routerLinkActive="active" class="il-nav-link">Sheet</a>
+          <a [routerLink]="section.link('search')" routerLinkActive="active" class="il-nav-link">Search</a>
+          <a [routerLink]="section.link('compose')" routerLinkActive="active" class="il-nav-link">Add</a>
+        } @else {
+          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="il-nav-link">Pairs</a>
+          <a routerLink="/setup" routerLinkActive="active" class="il-nav-link">New pair</a>
+        }
         <button type="button" (click)="toggleTheme()"
                 class="il-theme-btn"
                 [attr.aria-label]="theme() === 'night' ? 'Switch to day mode' : 'Switch to night mode'">
@@ -76,16 +89,24 @@
     <!-- Mobile dropdown menu (rendered only when open) -->
     @if (menuOpen()) {
       <div class="il-mobile-menu" role="navigation" aria-label="Mobile menu">
-        <a routerLink="/"
-           routerLinkActive="active"
-           [routerLinkActiveOptions]="{ exact: true }"
-           class="il-mobile-link">Lessons</a>
-        <a routerLink="/vocab" routerLinkActive="active" class="il-mobile-link">Glossary</a>
-        <a routerLink="/flashcards" routerLinkActive="active" class="il-mobile-link">Cards</a>
-        <a routerLink="/cheatsheet" routerLinkActive="active" class="il-mobile-link">Sheet</a>
-        <a routerLink="/search" routerLinkActive="active" class="il-mobile-link">Search</a>
-        <a routerLink="/compose" routerLinkActive="active" class="il-mobile-link">Add</a>
-        <a routerLink="/setup" routerLinkActive="active" class="il-mobile-link">Pair</a>
+        @if (inSection()) {
+          @for (s of sections(); track s.id) {
+            @if (s.id !== section.id()) {
+              <a [routerLink]="['/', s.id]" class="il-mobile-link">{{ s.flags.target }} {{ s.label }}</a>
+            }
+          }
+          <a [routerLink]="section.home()"
+             routerLinkActive="active"
+             [routerLinkActiveOptions]="{ exact: true }"
+             class="il-mobile-link">Lessons</a>
+          <a [routerLink]="section.link('vocab')" routerLinkActive="active" class="il-mobile-link">Glossary</a>
+          <a [routerLink]="section.link('flashcards')" routerLinkActive="active" class="il-mobile-link">Cards</a>
+          <a [routerLink]="section.link('cheatsheet')" routerLinkActive="active" class="il-mobile-link">Sheet</a>
+          <a [routerLink]="section.link('search')" routerLinkActive="active" class="il-mobile-link">Search</a>
+          <a [routerLink]="section.link('compose')" routerLinkActive="active" class="il-mobile-link">Add</a>
+        }
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="il-mobile-link">Pairs</a>
+        <a routerLink="/setup" routerLinkActive="active" class="il-mobile-link">New pair</a>
       </div>
     }
 
@@ -93,12 +114,17 @@
 
   <!-- Page content -->
   <main>
+    @if (serverError()) {
+      <p class="il-server-error" role="alert">
+        Cannot reach the Hornbook server ({{ serverError() }}). Start it with <code>npm start</code> and reload.
+      </p>
+    }
     <router-outlet />
   </main>
 
   <!-- Footer -->
   <footer class="il-footer">
-    <span>Conspects from your lessons · JSON is free, recordings are optional</span>
+    <span>Conspects from your lessons · your folder is the database</span>
     @if (repoUrl) {
       <a [href]="repoUrl" target="_blank" rel="noopener noreferrer">source ↗</a>
     }
@@ -106,9 +132,9 @@
 
 </div>
 
-<!-- Floating cheatsheet button (hidden on cheatsheet page) -->
-@if (!isCheatsheet) {
-  <a routerLink="/cheatsheet" class="il-fab" aria-label="Cheatsheet">
+<!-- Floating cheatsheet button (inside a section, hidden on the cheatsheet page) -->
+@if (inSection() && !isCheatsheet()) {
+  <a [routerLink]="section.link('cheatsheet')" class="il-fab" aria-label="Cheatsheet">
     <span class="il-fab-icon" aria-hidden="true">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 3v4a1 1 0 0 0 1 1h4"/>

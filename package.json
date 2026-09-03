@@ -1,30 +1,32 @@
 {
-  "name": "lesson-journal",
+  "name": "hornbook",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
     "prestart": "tsx scripts/backfill-topics.ts --auto && tsx scripts/build-derived.ts",
-    "start": "ng serve",
+    "start": "concurrently -k -n server,ui -c blue,green \"tsx watch server/main.ts --no-static\" \"ng serve\"",
     "prebuild": "tsx scripts/backfill-topics.ts --auto && tsx scripts/build-derived.ts",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "pretest": "tsx scripts/build-derived.ts",
     "test": "ng test",
-    "test:scripts": "vitest run scripts",
+    "test:scripts": "vitest run scripts server",
     "typecheck:scripts": "tsc -p tsconfig.scripts.json",
     "lint": "ng lint",
     "format": "prettier --write \"src/**/*.{ts,html,scss,json}\"",
     "build-data": "tsx scripts/build-derived.ts",
     "process": "tsx scripts/process.ts",
     "lesson:new": "tsx scripts/lesson-new.ts",
-    "ingest": "tsx scripts/ingest-server.ts",
     "regenerate": "tsx scripts/regenerate.ts",
     "cheatsheet": "tsx scripts/build-cheatsheet.ts",
     "cheatsheet:rebuild": "tsx scripts/build-cheatsheet.ts --force",
     "backfill-topics": "tsx scripts/backfill-topics.ts",
     "backfill-topics:dry": "tsx scripts/backfill-topics.ts --dry-run",
     "vocab-review": "tsx scripts/review-vocab.ts",
-    "vocab-review:dry": "tsx scripts/review-vocab.ts --dry"
+    "vocab-review:dry": "tsx scripts/review-vocab.ts --dry",
+    "serve": "tsx server/main.ts",
+    "server": "tsx watch server/main.ts --no-static",
+    "migrate": "tsx scripts/migrate-journal.ts"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
@@ -38,7 +40,6 @@
     "@anthropic-ai/sdk": "^0.98.0",
     "dompurify": "^3.4.14",
     "fuse.js": "^7.3.0",
-    "idb-keyval": "^6.2.4",
     "marked": "^18.0.4",
     "openai": "^6.39.0",
     "rxjs": "~7.8.0",
@@ -60,7 +61,6 @@
     "@types/node": "^22.20.1",
     "autoprefixer": "^10.5.0",
     "eslint": "^10.4.0",
-    "fake-indexeddb": "^6.2.5",
     "jsdom": "^28.0.0",
     "postcss": "^8.5.15",
     "prettier": "^3.8.1",
@@ -68,6 +68,7 @@
     "tsx": "^4.22.3",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.59.4",
-    "vitest": "^4.0.8"
+    "vitest": "^4.0.8",
+    "concurrently": "^9.2.1"
   }
 }

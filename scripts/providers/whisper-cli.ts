@@ -12,7 +12,7 @@ export class WhisperCliTranscriber implements Transcriber {
   async transcribe(audioPath: string, _hint: string): Promise<string> {
     const bin = process.env['WHISPER_BIN'] ?? 'whisper-cli';
     const modelPath = process.env['WHISPER_MODEL'] ?? this.model;
-    const outDir = mkdtempSync(join(tmpdir(), 'lj-whisper-'));
+    const outDir = mkdtempSync(join(tmpdir(), 'hornbook-whisper-'));
     const args = ['-m', modelPath, '-f', audioPath, '-otxt', '-of', join(outDir, 'out')];
 
     await new Promise<void>((resolve, reject) => {

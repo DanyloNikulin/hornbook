@@ -11,6 +11,13 @@ export const CHEATSHEET_CATEGORY_IDS = [
 
 export type CheatsheetCategoryId = (typeof CHEATSHEET_CATEGORY_IDS)[number];
 
+// With the default topic vocabulary every topic maps 1:1 onto a category.
+// When vocab-review adds finer topics (say `subjunctive`), map them here onto
+// the category whose cheat-sheet section they should update.
+//
+// The `// ──` section comments are INSERTION ANCHORS for vocab-review
+// (scripts/lib/vocab-apply.ts) and mirror the sections in schema.ts. Keep
+// their text and order exactly as-is.
 export const TOPIC_TO_CATEGORIES: Record<TopicT, readonly CheatsheetCategoryId[]> = {
   // ── Tenses
   grammar: ['grammar'],

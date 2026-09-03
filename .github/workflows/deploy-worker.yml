@@ -41,7 +41,7 @@ jobs:
 
       # Idempotent list-then-create. The previous "create + continue-on-error"
       # steps went green when the token lacked Queues/R2 permissions, leaving
-      # the worker deployed but never triggered (issue #72). Now a missing
+      # the worker deployed but never triggered. Now a missing
       # resource is created and a failure to create it fails the job.
       - name: Ensure queues exist
         working-directory: worker
@@ -50,13 +50,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          # Match the name as a whole token so "lesson-journal-uploads"
-          # does not match "lesson-journal-uploads-dlq".
+          # Match the name as a whole token so "hornbook-uploads"
+          # does not match "hornbook-uploads-dlq".
           # Capture first, grep second: with pipefail, grep -q closing the pipe
           # early can make wrangler exit non-zero and mask a real match.
           queues=$(npx wrangler queues list)
           has_queue() { grep -qE "(^|[^a-z0-9-])$1([^a-z0-9-]|$)" <<<"$queues"; }
-          for q in lesson-journal-uploads-dlq lesson-journal-uploads; do
+          for q in hornbook-uploads-dlq hornbook-uploads; do
             if has_queue "$q"; then
               echo "✓ queue $q exists"
             else
@@ -79,7 +79,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.WORKER_GH_TOKEN }}
 
       # REPLAY_TOKEN gates the /replay and /status operator endpoints
-      # (issue #54). Synced separately from the deploy above so a missing
+      #. Synced separately from the deploy above so a missing
       # GH secret cannot fail the deploy — without it the endpoints stay
       # disabled (the worker answers 404) and dedup keeps working.
       - name: Sync REPLAY_TOKEN secret (if configured)
@@ -105,8 +105,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          bucket=lesson-journal-audio
-          queue=lesson-journal-uploads
+          bucket=hornbook-audio
+          queue=hornbook-uploads
           has_rule() {
             local rules
             rules=$(npx wrangler r2 bucket notification list "$bucket")

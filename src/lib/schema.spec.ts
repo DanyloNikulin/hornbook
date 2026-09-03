@@ -3,20 +3,23 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Lesson, DerivedCard, DerivedVocab, LessonMeta, QuizMC } from './schema';
 
-// All committed lesson JSONs must satisfy the SPA schema. We read them
-// straight from the repo's /lessons directory (the source of truth) since
-// after #19 lesson content is no longer bundled into _data/. The metadata
-// manifest and the deduplicated vocab list are still derived artifacts;
-// we load them from their build outputs.
+// Every lesson of the demo journal must satisfy the schema, and the derived
+// files the server writes for it must too. The first section of the demo
+// journal is used; `npm run build-data` (the pretest hook) regenerates
+// `_derived/` before this runs.
 
 // `ng test` bundles specs and serves them, so `import.meta.url` is an http
 // URL here, not a file:// one. Vitest roots itself at the workspace, so cwd
 // is the reliable way back to the repo.
 const repoRoot = process.cwd();
-const LESSONS_DIR = join(repoRoot, 'lessons');
-const META_PATH = join(repoRoot, 'src', 'app', '_data', 'lessons-meta.json');
-const VOCAB_PATH = join(repoRoot, 'lessons', '_vocab.json');
-const CARDS_PATH = join(repoRoot, 'lessons', '_cards.json');
+const JOURNAL_DIR = join(repoRoot, 'journal');
+const SECTION_ID = (JSON.parse(readFileSync(join(JOURNAL_DIR, 'journal.config.json'), 'utf8')) as {
+  sections: { id: string }[];
+}).sections[0].id;
+const LESSONS_DIR = join(JOURNAL_DIR, SECTION_ID);
+const META_PATH = join(LESSONS_DIR, '_derived', 'meta.json');
+const VOCAB_PATH = join(LESSONS_DIR, '_derived', 'vocab.json');
+const CARDS_PATH = join(LESSONS_DIR, '_derived', 'cards.json');
 
 function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -116,7 +119,7 @@ describe('schema — multiple-choice questions', () => {
 
 describe('schema — committed lesson meta manifest', () => {
   const raw = readJson(META_PATH);
-  if (!Array.isArray(raw)) throw new Error('lessons-meta.json must be an array');
+  if (!Array.isArray(raw)) throw new Error('_derived/meta.json must be an array');
 
   it('manifest is non-empty', () => {
     expect(raw.length).toBeGreaterThan(0);

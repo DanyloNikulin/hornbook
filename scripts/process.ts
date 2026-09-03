@@ -1,23 +1,23 @@
 #!/usr/bin/env node
-// Orchestrator: input → lessons/<date>-<slug>.json + .md
+// Orchestrator: input → <journal>/<section>/<date>-<slug>.json + .md
 //
 //   --from video      transcribe + frames + extract (default for .mp4)
 //   --from audio      transcribe + extract, no frames
 //   --from transcript skip ffmpeg; input is a .txt transcript
 //   --from json       validate and copy an existing lesson JSON
 //
-// Usage: tsx scripts/process.ts <input> --date YYYY-MM-DD [--from video|audio|transcript|json]
+// Usage: tsx scripts/process.ts <input> --date YYYY-MM-DD [--section es-en]
+//        [--from video|audio|transcript|json] [--workdir dir]
 
 import { writeFileSync, mkdirSync, rmSync, existsSync, readFileSync, copyFileSync } from 'node:fs';
 import { join, basename, extname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { transcribe } from './transcribe.ts';
 import { extractFrames } from './extract-frames.ts';
 import { extract } from './extract.ts';
 import { lessonToMarkdown } from './lib/markdown.ts';
-import { Lesson } from '../src/lib/schema.ts';
-
-const repoRoot = fileURLToPath(new URL('..', import.meta.url));
+import { Lesson, type LessonT } from '../src/lib/schema.ts';
+import { repoRootDir, resolveSectionArg, sectionDir, writeDerived, lessonFileStem } from './lib/journal.ts';
+import { isMain } from './lib/is-main.ts';
 
 type From = 'video' | 'audio' | 'transcript' | 'json';
 
@@ -37,22 +37,23 @@ function inferFrom(path: string): From {
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: {
-    input: string | null;
-    date: string | null;
-    workdir: string | null;
-    from: From | null;
-  } = { input: null, date: null, workdir: null, from: null };
+  const args: { input: string | null; date: string | null; workdir: string | null; from: From | null } = {
+    input: null,
+    date: null,
+    workdir: null,
+    from: null,
+  };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--date') args.date = argv[++i] ?? null;
     else if (a === '--workdir') args.workdir = argv[++i] ?? null;
     else if (a === '--from') args.from = argv[++i] as From;
+    else if (a === '--section') i++;
     else if (!a.startsWith('--')) args.input = a;
   }
   if (!args.input) {
     console.error(
-      'Usage: tsx scripts/process.ts <input> --date YYYY-MM-DD [--from video|audio|transcript|json]',
+      'Usage: tsx scripts/process.ts <input> --date YYYY-MM-DD [--section id] [--from video|audio|transcript|json]',
     );
     process.exit(1);
   }
@@ -69,25 +70,26 @@ function parseArgs(argv: string[]): Args {
     input: args.input,
     date: args.date,
     from,
-    workdir: args.workdir ?? join(repoRoot, 'work', basename(args.input, extname(args.input))),
+    workdir: args.workdir ?? join(repoRootDir(), 'work', basename(args.input, extname(args.input))),
   };
 }
 
-function writeLesson(lesson: ReturnType<typeof Lesson.parse>, workdir: string): void {
-  const lessonsDir = join(repoRoot, 'lessons');
-  mkdirSync(lessonsDir, { recursive: true });
-  const stem = `${lesson.date}-${lesson.slug}`;
+/** Write a lesson into a section and refresh that section's derived data. */
+export function writeLesson(sectionId: string, lesson: LessonT): { jsonPath: string; mdPath: string } {
+  const dir = sectionDir(sectionId);
+  mkdirSync(dir, { recursive: true });
+  const stem = lessonFileStem(lesson);
   if (lesson.id !== stem) lesson.id = stem;
-  const jsonPath = join(lessonsDir, `${stem}.json`);
-  const mdPath = join(lessonsDir, `${stem}.md`);
-  writeFileSync(jsonPath, JSON.stringify(lesson, null, 2), 'utf8');
+  const jsonPath = join(dir, `${stem}.json`);
+  const mdPath = join(dir, `${stem}.md`);
+  writeFileSync(jsonPath, JSON.stringify(lesson, null, 2) + '\n', 'utf8');
   writeFileSync(mdPath, lessonToMarkdown(lesson), 'utf8');
-  console.log(`✓ ${jsonPath}`);
-  console.log(`✓ ${mdPath}`);
-  console.log(`Workdir kept at ${workdir}`);
+  writeDerived(sectionId);
+  return { jsonPath, mdPath };
 }
 
 async function main(): Promise<void> {
+  const section = resolveSectionArg(process.argv);
   const args = parseArgs(process.argv);
   const { input, date, workdir, from } = args;
 
@@ -95,6 +97,7 @@ async function main(): Promise<void> {
     console.error(`Input not found: ${input}`);
     process.exit(1);
   }
+  console.log(`Section: ${section.id} (${section.target} → ${section.learner})`);
 
   if (from === 'json') {
     const parsed = Lesson.safeParse(JSON.parse(readFileSync(input, 'utf8')));
@@ -102,8 +105,8 @@ async function main(): Promise<void> {
       console.error(JSON.stringify(parsed.error.format(), null, 2));
       process.exit(1);
     }
-    mkdirSync(workdir, { recursive: true });
-    writeLesson(parsed.data, workdir);
+    const out = writeLesson(section.id, parsed.data);
+    console.log(`✓ ${out.jsonPath}`);
     return;
   }
 
@@ -131,13 +134,18 @@ async function main(): Promise<void> {
   console.log(`\n=== Extract structured lesson ===`);
   const lesson = await extract(workdir, date);
   console.log(`\n=== Writing lesson files ===`);
-  writeLesson(lesson, workdir);
+  const out = writeLesson(section.id, lesson);
+  console.log(`✓ ${out.jsonPath}`);
+  console.log(`✓ ${out.mdPath}`);
+  console.log(`Workdir kept at ${workdir}`);
   console.log('\nDone.');
 }
 
-main().catch((err: unknown) => {
-  const e = err as Error;
-  console.error('\n✘', e.message);
-  if (e.stack) console.error(e.stack);
-  process.exit(1);
-});
+if (isMain(import.meta.url)) {
+  main().catch((err: unknown) => {
+    const e = err as Error;
+    console.error('\n✘', e.message);
+    if (e.stack) console.error(e.stack);
+    process.exit(1);
+  });
+}

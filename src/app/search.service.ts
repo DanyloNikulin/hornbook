@@ -1,5 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import Fuse from 'fuse.js';
+import { ApiService } from './api.service';
+import { SectionService } from './section.service';
 
 export type SearchSection = 'article' | 'vocab' | 'grammar' | 'quote' | 'slide';
 
@@ -21,18 +23,15 @@ export interface SearchHit {
 const SNIPPET_LEN = 160;
 
 /**
- * Lazy-loaded full-text search. After #19 the Fuse index is built from a
- * pre-baked document list at `/lessons/_search-index.json` (emitted by
- * scripts/build-derived.ts). The first call to `search()` fetches the index,
- * constructs Fuse once, and caches both for the rest of the session.
- *
- * Concurrent calls share the same in-flight initialization via the `ready`
- * promise — no double-fetch even if the user mashes Enter. Rejections
- * auto-evict from `ready`, so a retry triggers a fresh fetch.
+ * Full-text search over the current section. The first call fetches the
+ * pre-baked document list from the API, builds one Fuse index, and caches it
+ * per section. Rejections evict the entry so a retry fetches again.
  */
 @Injectable({ providedIn: 'root' })
 export class SearchService {
-  private ready: Promise<Fuse<SearchDoc>> | null = null;
+  private readonly api = inject(ApiService);
+  private readonly section = inject(SectionService);
+  private readonly cache = new Map<string, Promise<Fuse<SearchDoc>>>();
 
   async search(query: string, max = 40): Promise<SearchHit[]> {
     const q = query.trim();
@@ -45,26 +44,28 @@ export class SearchService {
     }));
   }
 
+  /** Drop the cached index (after a lesson was saved). */
+  invalidate(): void {
+    this.cache.delete(this.section.id());
+  }
+
   private async ensureReady(): Promise<Fuse<SearchDoc>> {
-    if (this.ready) return this.ready;
-    const promise = this.buildIndex().catch((error: unknown) => {
-      this.ready = null;
+    const id = this.section.id();
+    const cached = this.cache.get(id);
+    if (cached) return cached;
+    const promise = this.buildIndex(id).catch((error: unknown) => {
+      this.cache.delete(id);
       throw error;
     });
-    this.ready = promise;
+    this.cache.set(id, promise);
     return promise;
   }
 
-  private async buildIndex(): Promise<Fuse<SearchDoc>> {
-    const res = await fetch('lessons/_search-index.json', {
-      headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) throw new Error(`SearchService: HTTP ${res.status}`);
-    const raw = (await res.json()) as unknown;
+  private async buildIndex(sectionId: string): Promise<Fuse<SearchDoc>> {
+    const raw = await this.api.get<unknown>(`/api/sections/${encodeURIComponent(sectionId)}/search-index`);
     if (!Array.isArray(raw)) throw new Error('SearchService: payload is not an array');
-    // The producer (build-derived.ts) is type-checked against the same
-    // SearchDoc shape, so no runtime validation per doc — trusting the
-    // build step here keeps the lazy-load fast.
+    // The producer (scripts/lib/derived.ts) is type-checked against the same
+    // SearchDoc shape, so no runtime validation per doc.
     return new Fuse(raw as SearchDoc[], {
       keys: ['text'],
       threshold: 0.35,

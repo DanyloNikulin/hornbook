@@ -1,8 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { Lesson } from '../../lib/schema';
-import { JournalService } from '../journal.service';
+import { Router, RouterLink } from '@angular/router';
+import { Lesson, type LessonT } from '../../lib/schema';
+import type { ProcessResult } from '../../lib/api-types';
+import { ApiService } from '../api.service';
+import { LessonsService } from '../lessons.service';
+import { VocabService } from '../vocab.service';
+import { CardsService } from '../cards.service';
+import { SectionService } from '../section.service';
+
+type From = 'video' | 'audio' | 'transcript' | 'json';
 
 @Component({
   selector: 'app-compose',
@@ -10,84 +17,75 @@ import { JournalService } from '../journal.service';
   templateUrl: './compose.component.html',
 })
 export class ComposeComponent {
-  private readonly journal = inject(JournalService);
-  protected readonly brand = this.journal.brandName();
+  protected readonly sec = inject(SectionService);
+  private readonly api = inject(ApiService);
+  private readonly lessons = inject(LessonsService);
+  private readonly vocab = inject(VocabService);
+  private readonly cards = inject(CardsService);
+  private readonly router = inject(Router);
 
   protected title = '';
   protected date = new Date().toISOString().slice(0, 10);
   protected summary = '';
   protected article = '';
-  protected error = signal<string | null>(null);
-  protected ok = signal<string | null>(null);
-  protected ingestUp = signal(false);
+  protected readonly error = signal<string | null>(null);
+  protected readonly ok = signal<string | null>(null);
+  protected readonly busy = signal(false);
+  protected readonly log = signal<string | null>(null);
 
-  constructor() {
-    void fetch('http://127.0.0.1:8787/ingest', { method: 'OPTIONS' })
-      .then(() => this.ingestUp.set(true))
-      .catch(() => this.ingestUp.set(false));
-  }
-
-  protected downloadJson(): void {
-    this.error.set(null);
-    const slug = this.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '') || 'lesson';
-    const draft = {
+  private draft(): LessonT | null {
+    const slug =
+      this.title
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || 'lesson';
+    const parsed = Lesson.safeParse({
       id: `${this.date}-${slug}`,
       date: this.date,
       slug,
-      title: this.title || 'Untitled',
-      summary: this.summary || 'Summary',
-      article_md: this.article || '## Takeaway\n\n',
-    };
-    const parsed = Lesson.safeParse(draft);
+      title: this.title.trim() || 'Untitled',
+      summary: this.summary.trim() || 'Summary',
+      article_md: this.article.trim() || '## Takeaway\n\n',
+    });
     if (!parsed.success) {
-      this.error.set('Lesson is not valid yet. Add a title, date, and summary.');
-      return;
+      this.error.set('Lesson is not valid yet. Add a title, a date and a summary.');
+      return null;
     }
-    const blob = new Blob([JSON.stringify(parsed.data, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${parsed.data.id}.json`;
-    a.click();
-    this.ok.set(`Downloaded ${a.download}. Put it in lessons/ and run npm start.`);
+    return parsed.data;
   }
 
-  protected async saveLocal(): Promise<void> {
+  /** Write the lesson into the section folder and open it. */
+  protected async save(): Promise<void> {
     this.error.set(null);
     this.ok.set(null);
-    const slug = this.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '') || 'lesson';
-    const draft = {
-      id: `${this.date}-${slug}`,
-      date: this.date,
-      slug,
-      title: this.title || 'Untitled',
-      summary: this.summary || 'Summary',
-      article_md: this.article || '## Takeaway\n\n',
-    };
-    const parsed = Lesson.safeParse(draft);
-    if (!parsed.success) {
-      this.error.set('Lesson is not valid yet.');
-      return;
-    }
+    const lesson = this.draft();
+    if (!lesson) return;
+    this.busy.set(true);
     try {
-      const res = await fetch('http://127.0.0.1:8787/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'json', date: this.date, lesson: parsed.data }),
-      });
-      const body = (await res.json()) as { ok?: boolean; error?: string; path?: string };
-      if (!res.ok) throw new Error(body.error ?? res.statusText);
-      this.ok.set(`Saved ${body.path}. Restart or refresh after prestart rebuilds.`);
-    } catch (e) {
-      this.error.set(
-        `${(e as Error).message}. Start ingest with npm run ingest, or use Download JSON.`,
-      );
+      const saved = await this.lessons.save(lesson);
+      this.vocab.invalidate();
+      this.cards.invalidate();
+      await this.router.navigate(this.sec.link('lesson', saved.slug));
+    } catch (err) {
+      this.error.set((err as Error).message);
+    } finally {
+      this.busy.set(false);
     }
+  }
+
+  /** Keep a copy outside the journal (share it, or add it elsewhere). */
+  protected downloadJson(): void {
+    this.error.set(null);
+    const lesson = this.draft();
+    if (!lesson) return;
+    const blob = new Blob([JSON.stringify(lesson, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${lesson.id}.json`;
+    a.click();
+    this.ok.set(`Downloaded ${a.download}.`);
   }
 
   protected async onFile(ev: Event): Promise<void> {
@@ -96,34 +94,48 @@ export class ComposeComponent {
     if (!file) return;
     this.error.set(null);
     this.ok.set(null);
-    const buf = await file.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let binary = '';
-    for (const b of bytes) binary += String.fromCharCode(b);
-    const base64 = btoa(binary);
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-    const from = ['txt', 'vtt', 'srt'].includes(ext)
-      ? 'transcript'
-      : ['m4a', 'mp3', 'wav', 'ogg'].includes(ext)
-        ? 'audio'
-        : 'video';
+    this.log.set(null);
+    this.busy.set(true);
     try {
-      const res = await fetch('http://127.0.0.1:8787/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kind: 'file',
-          date: this.date,
-          filename: file.name,
-          base64,
-          from,
-        }),
+      const base64 = await toBase64(file);
+      const from = inferFrom(file.name);
+      const result = await this.api.post<ProcessResult>(`${this.sec.apiBase()}/process`, {
+        filename: file.name,
+        base64,
+        date: this.date,
+        from,
       });
-      const body = (await res.json()) as { ok?: boolean; error?: string; log?: string };
-      if (!res.ok) throw new Error(body.error ?? body.log ?? res.statusText);
-      this.ok.set('Processed. Refresh after the derived build.');
-    } catch (e) {
-      this.error.set(`${(e as Error).message}. Run npm run ingest on this machine.`);
+      this.log.set(result.log);
+      if (!result.ok) {
+        this.error.set('Processing failed — see the log below.');
+        return;
+      }
+      await this.lessons.reload();
+      this.vocab.invalidate();
+      this.cards.invalidate();
+      this.ok.set('Lesson added to this pair.');
+    } catch (err) {
+      this.error.set((err as Error).message);
+    } finally {
+      this.busy.set(false);
+      input.value = '';
     }
   }
+}
+
+function inferFrom(name: string): From {
+  const ext = name.toLowerCase().slice(name.lastIndexOf('.'));
+  if (['.txt', '.vtt', '.srt'].includes(ext)) return 'transcript';
+  if (ext === '.json') return 'json';
+  if (['.m4a', '.mp3', '.wav', '.ogg', '.opus', '.aac'].includes(ext)) return 'audio';
+  return 'video';
+}
+
+function toBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }

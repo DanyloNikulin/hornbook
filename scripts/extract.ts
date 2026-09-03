@@ -5,10 +5,9 @@
 //
 // Usage: tsx scripts/extract.ts <work_dir> <date_hint>
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { ensureUniqueSlug } from './lib/slug.ts';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Lesson, TOPIC_VOCAB, type LessonT, type TopicT } from '../src/lib/schema.ts';
 import {
   buildLessonTool,
@@ -20,10 +19,11 @@ import { detectTopics, formatTopics } from './lib/topics.ts';
 import { coerceStringifiedFields } from './lib/tool-input-repair.ts';
 import { getExtractor } from './providers/index.ts';
 import type { ExtractMessagePart } from './providers/types.ts';
+import { currentSection, existingSlugs, readSectionLessons, resolveSectionArg, sectionDir } from './lib/journal.ts';
+import { isMain } from './lib/is-main.ts';
 
-const repoRoot = fileURLToPath(new URL('..', import.meta.url));
-const lessonsDir = join(repoRoot, 'lessons');
-const SUGGESTIONS_PATH = join(lessonsDir, '_topics-suggestions.json');
+// Everything below reads the section the CLI/server selected (journal.ts).
+const suggestionsPath = (): string => join(sectionDir(currentSection().id), '_topics-suggestions.json');
 
 // Accumulated AI-side suggestions for vocab gaps. Each suggested topic ID is
 // keyed; we track count + lesson slugs to make Tier 2 vocab-review able to
@@ -42,11 +42,11 @@ interface SuggestionsFile {
 }
 
 function loadSuggestions(): SuggestionsFile {
-  if (!existsSync(SUGGESTIONS_PATH)) {
+  if (!existsSync(suggestionsPath())) {
     return { schema_version: 1, topics: {} };
   }
   try {
-    const raw = JSON.parse(readFileSync(SUGGESTIONS_PATH, 'utf8'));
+    const raw = JSON.parse(readFileSync(suggestionsPath(), 'utf8'));
     if (raw?.schema_version === 1 && raw.topics && typeof raw.topics === 'object') {
       return raw as SuggestionsFile;
     }
@@ -78,7 +78,7 @@ function recordSuggestions(
       entry.lessons.push(lessonSlug);
     }
   }
-  writeFileSync(SUGGESTIONS_PATH, JSON.stringify(file, null, 2) + '\n', 'utf8');
+  writeFileSync(suggestionsPath(), JSON.stringify(file, null, 2) + '\n', 'utf8');
 }
 
 // Number of most-recent lessons to use as a safety-net candidate set when
@@ -87,24 +87,19 @@ function recordSuggestions(
 const FALLBACK_RECENT_LESSONS = 10;
 
 function loadExistingLessons(filterTopics: readonly TopicT[]): ExistingLessonRef[] {
-  if (!existsSync(lessonsDir)) return [];
-  const files = readdirSync(lessonsDir).filter((f) => f.endsWith('.json'));
-  const refs: ExistingLessonRef[] = [];
-  for (const f of files) {
-    try {
-      const raw = readFileSync(join(lessonsDir, f), 'utf8');
-      const parsed = Lesson.safeParse(JSON.parse(raw));
-      if (!parsed.success) continue;
-      refs.push({
-        slug: parsed.data.slug,
-        date: parsed.data.date,
-        title: parsed.data.title,
-        summary: parsed.data.summary,
-        topics: parsed.data.topics,
-      });
-    } catch {
-      // skip malformed
-    }
+  let refs: ExistingLessonRef[] = [];
+  try {
+    refs = readSectionLessons(currentSection().id).map(({ lesson }) => ({
+      slug: lesson.slug,
+      date: lesson.date,
+      title: lesson.title,
+      summary: lesson.summary,
+      topics: lesson.topics,
+    }));
+  } catch (err) {
+    // A malformed sibling lesson must not block a new extraction; it is
+    // reported by build-derived and the server on its own.
+    console.warn(`⚠ Could not read all existing lessons: ${(err as Error).message.split('\n')[0]}`);
   }
   // Newest first — most likely to be similar in style/topic.
   refs.sort((a, b) => (a.date < b.date ? 1 : -1));
@@ -126,22 +121,11 @@ function loadExistingLessons(filterTopics: readonly TopicT[]): ExistingLessonRef
   return overlap;
 }
 
-// slug → file name for EVERY committed lesson, regardless of topic overlap.
-// loadExistingLessons() above is filtered to related-candidates; slug
-// uniqueness must be checked against the whole catalog (issue #65).
+// slug → file name for EVERY lesson of the section, regardless of topic
+// overlap. loadExistingLessons() above is filtered to related-candidates;
+// slug uniqueness must be checked against the whole catalog.
 function loadExistingSlugs(): Map<string, string> {
-  const out = new Map<string, string>();
-  if (!existsSync(lessonsDir)) return out;
-  const files = readdirSync(lessonsDir).filter((f) => f.endsWith('.json') && !f.startsWith('_'));
-  for (const f of files) {
-    try {
-      const raw = JSON.parse(readFileSync(join(lessonsDir, f), 'utf8')) as { slug?: unknown };
-      if (typeof raw.slug === 'string') out.set(raw.slug, f);
-    } catch {
-      // Malformed lesson file — build-derived reports it; not our concern here.
-    }
-  }
-  return out;
+  return existingSlugs(currentSection().id);
 }
 
 export async function extract(workDir: string, dateHint: string): Promise<LessonT> {
@@ -231,7 +215,7 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
 
   // The slug is model-generated. The site routes by slug alone and
   // cheatsheet.json keys processed lessons by slug, so a collision with an
-  // existing lesson silently shadows one of them (issue #65). Re-processing
+  // existing lesson silently shadows one of them. Re-processing
   // the same lesson (same date + slug) is allowed — process.ts overwrites it.
   const uniqueSlug = ensureUniqueSlug(result.data.slug, result.data.date, loadExistingSlugs());
   if (uniqueSlug !== result.data.slug) {
@@ -299,15 +283,17 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
 }
 
 async function cli(): Promise<void> {
-  const [, , workDir, dateHint] = process.argv;
+  const positional = process.argv.slice(2).filter((a, i, arr) => !a.startsWith('--') && arr[i - 1] !== '--section');
+  const [workDir, dateHint] = positional;
   if (!workDir || !dateHint) {
-    console.error('Usage: tsx scripts/extract.ts <work_dir> <YYYY-MM-DD>');
+    console.error('Usage: tsx scripts/extract.ts <work_dir> <YYYY-MM-DD> [--section id]');
     process.exit(1);
   }
+  resolveSectionArg(process.argv);
   await extract(workDir, dateHint);
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replaceAll('\\', '/')}`) {
+if (isMain(import.meta.url)) {
   cli().catch((err: unknown) => {
     console.error(err);
     process.exit(1);

@@ -1,64 +1,121 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { SETUP_LANGUAGE_CODES, languageName, type JournalConfigT } from '../../lib/journal-config';
+import { Router, RouterLink } from '@angular/router';
+import { LANGUAGES, languageInfo, type LanguageInfo } from '../../lib/languages';
+import { sectionIdFor } from '../../lib/journal-config';
+import type { SectionSummary } from '../../lib/api-types';
+import { ApiService } from '../api.service';
 import { JournalService } from '../journal.service';
+import { SectionService } from '../section.service';
 
+/** Create a language pair. Pick once; the pair becomes a section of the journal. */
 @Component({
   selector: 'app-setup',
   imports: [FormsModule, RouterLink],
   template: `
     <section class="il-panel" style="padding-top: 2rem;">
-      <div class="il-panel-inner" style="max-width: 640px; margin: 0 auto;">
-        <p><a routerLink="/" class="il-lesson-bc-link">← Lessons</a></p>
-        <h1 class="il-section-title">Language pair</h1>
+      <div class="il-panel-inner" style="max-width: 720px; margin: 0 auto;">
+        <p><a routerLink="/" class="il-lesson-bc-link">← Pairs</a></p>
+        <h1 class="il-section-title">New language pair</h1>
         <p class="il-section-sub">
-          One journal, one pair. Target is what you study; learner is the language of notes.
-          This page downloads a new <code>journal.config.json</code> — replace the file in the repo root and in
-          <code>src/lib/journal.config.json</code>, then restart.
+          Target is the language you study. Learner is the language your notes are written in.
         </p>
-        <p class="il-stat-sub">Current: {{ journal.targetName() }} → {{ journal.learnerName() }}</p>
+
+        <div class="il-pair-pick">
+          <label class="il-pair-col">
+            <span class="il-pair-head">Target</span>
+            <div class="il-lang-list" role="listbox" aria-label="Target language">
+              @for (l of languages; track l.code) {
+                <button type="button" class="il-lang-option" [class.selected]="target() === l.code"
+                        role="option" [attr.aria-selected]="target() === l.code"
+                        (click)="target.set(l.code)">
+                  <span class="il-lang-flag" aria-hidden="true">{{ l.flag }}</span>
+                  <span class="il-lang-native">{{ l.native }}</span>
+                  <span class="il-lang-name">{{ l.name }}</span>
+                </button>
+              }
+            </div>
+          </label>
+          <label class="il-pair-col">
+            <span class="il-pair-head">Learner</span>
+            <div class="il-lang-list" role="listbox" aria-label="Learner language">
+              @for (l of languages; track l.code) {
+                <button type="button" class="il-lang-option" [class.selected]="learner() === l.code"
+                        role="option" [attr.aria-selected]="learner() === l.code"
+                        (click)="learner.set(l.code)">
+                  <span class="il-lang-flag" aria-hidden="true">{{ l.flag }}</span>
+                  <span class="il-lang-native">{{ l.native }}</span>
+                  <span class="il-lang-name">{{ l.name }}</span>
+                </button>
+              }
+            </div>
+          </label>
+        </div>
+
+        <div class="il-pair-preview">
+          <span aria-hidden="true">{{ targetInfo()?.flag }} → {{ learnerInfo()?.flag }}</span>
+          <strong>{{ targetInfo()?.name }} → {{ learnerInfo()?.name }}</strong>
+          <span class="il-stat-sub">folder <code>{{ id() }}</code></span>
+        </div>
 
         <label style="display:block; margin: 1rem 0;">
-          Target (taught)
-          <select [(ngModel)]="target" style="display:block; margin-top: 6px; width: 100%;">
-            @for (c of codes; track c) {
-              <option [value]="c">{{ name(c) }} ({{ c }})</option>
-            }
-          </select>
+          Title (optional)
+          <input type="text" [(ngModel)]="title" placeholder="e.g. Italian with Marta" style="display:block; margin-top:6px; width:100%;" />
         </label>
-        <label style="display:block; margin: 1rem 0;">
-          Learner (notes)
-          <select [(ngModel)]="learner" style="display:block; margin-top: 6px; width: 100%;">
-            @for (c of codes; track c) {
-              <option [value]="c">{{ name(c) }} ({{ c }})</option>
-            }
-          </select>
-        </label>
-        <button type="button" class="il-btn" (click)="download()">Download journal.config.json</button>
+
+        @if (exists()) {
+          <p style="color: var(--muted);">This pair already exists — <a [routerLink]="['/', id()]" class="hover:underline">open it</a>.</p>
+        }
+        @if (error()) {
+          <p style="color: #a33;" role="alert">{{ error() }}</p>
+        }
+
+        <button type="button" class="il-btn" [disabled]="!valid() || saving()" (click)="create()">
+          {{ saving() ? 'Creating…' : 'Create pair' }}
+        </button>
       </div>
     </section>
   `,
 })
 export class SetupComponent {
-  protected readonly journal = inject(JournalService);
-  protected readonly codes = SETUP_LANGUAGE_CODES;
-  protected target = this.journal.targetCode();
-  protected learner = this.journal.learnerCode();
+  private readonly api = inject(ApiService);
+  private readonly journal = inject(JournalService);
+  private readonly section = inject(SectionService);
+  private readonly router = inject(Router);
 
-  protected name(code: string): string {
-    return languageName(code);
+  protected readonly languages: readonly LanguageInfo[] = LANGUAGES;
+  protected readonly target = signal('es');
+  protected readonly learner = signal('en');
+  protected title = '';
+  protected readonly saving = signal(false);
+  protected readonly error = signal<string | null>(null);
+
+  protected readonly targetInfo = computed(() => languageInfo(this.target()));
+  protected readonly learnerInfo = computed(() => languageInfo(this.learner()));
+  protected readonly id = computed(() => sectionIdFor(this.target(), this.learner()));
+  protected readonly exists = computed(() => this.journal.section(this.id()) !== undefined);
+  protected readonly valid = computed(() => this.target() !== this.learner() && !this.exists());
+
+  constructor() {
+    this.section.set(null);
   }
 
-  protected download(): void {
-    const next: JournalConfigT = {
-      ...this.journal.config,
-      pair: { target: this.target, learner: this.learner },
-    };
-    const blob = new Blob([JSON.stringify(next, null, 2) + '\n'], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'journal.config.json';
-    a.click();
+  protected async create(): Promise<void> {
+    if (!this.valid()) return;
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      const created = await this.api.post<SectionSummary>('/api/sections', {
+        target: this.target(),
+        learner: this.learner(),
+        title: this.title.trim() || undefined,
+      });
+      await this.journal.refresh();
+      await this.router.navigate(['/', created.id]);
+    } catch (err) {
+      this.error.set((err as Error).message);
+    } finally {
+      this.saving.set(false);
+    }
   }
 }

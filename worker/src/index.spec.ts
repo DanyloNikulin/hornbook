@@ -420,7 +420,7 @@ describe('queue handler — successful dispatch', () => {
     const headers = init.headers as Record<string, string>;
     expect(headers.Authorization).toBe('Bearer token-xyz');
     expect(headers.Accept).toBe('application/vnd.github+json');
-    expect(headers['User-Agent']).toBe('lesson-journal-dispatcher');
+    expect(headers['User-Agent']).toBe('hornbook-dispatcher');
     expect(headers['X-GitHub-Api-Version']).toBe('2022-11-28');
     expect(headers['Content-Type']).toBe('application/json');
 
@@ -583,12 +583,12 @@ describe('queue handler — batch processing', () => {
 });
 
 // -----------------------------------------------------------------------------
-// queue handler — bucket check, key shapes, timeout, isolation (issue #71)
+// queue handler — bucket check, key shapes, timeout, isolation
 // -----------------------------------------------------------------------------
 
 describe('queue handler — bucket allowlist (R2_BUCKET var)', () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>;
-  const makeEnvWithBucket = () => makeEnv({ R2_BUCKET: 'your-journal-audio' });
+  const makeEnvWithBucket = () => makeEnv({ R2_BUCKET: 'hornbook-audio' });
 
   beforeEach(() => {
     fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockFetchResponse(200));
@@ -603,7 +603,7 @@ describe('queue handler — bucket allowlist (R2_BUCKET var)', () => {
   it('dispatches when the event bucket matches R2_BUCKET', async () => {
     const msg = makeMessage({
       action: 'PutObject',
-      bucket: 'your-journal-audio',
+      bucket: 'hornbook-audio',
       object: { key: '2026-05-01-topic.mp4' },
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -731,14 +731,14 @@ describe('queue handler — failure isolation within a batch', () => {
 });
 
 // -----------------------------------------------------------------------------
-// Idempotency (issue #54)
+// Idempotency
 // -----------------------------------------------------------------------------
 
 function makeR2Event(overrides: Record<string, unknown> = {}) {
   return {
     account: 'acct',
     action: 'PutObject',
-    bucket: 'your-journal-audio',
+    bucket: 'hornbook-audio',
     object: { key: '2026-05-01-topic.mp4', size: 123, eTag: 'etag-v1' },
     eventTime: '2026-05-01T10:00:00.000Z',
     ...overrides,
@@ -852,7 +852,7 @@ describe('UploadDedup — claim semantics', () => {
   });
 });
 
-describe('queue handler — dedup (issue #54)', () => {
+describe('queue handler — dedup', () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -943,7 +943,7 @@ describe('queue handler — dedup (issue #54)', () => {
   });
 });
 
-describe('fetch handler — operator endpoints (issue #54)', () => {
+describe('fetch handler — operator endpoints', () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>;
   const TOKEN = 'replay-secret';
 

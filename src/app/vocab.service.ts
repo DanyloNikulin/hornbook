@@ -1,36 +1,37 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { DerivedVocab, type DerivedVocabT } from '../lib/schema';
+import { ApiService } from './api.service';
+import { SectionService } from './section.service';
 
 /**
- * Lazy-loaded global vocabulary. After #19 the dedup'd vocab list ships as a
- * static asset at `/lessons/_vocab.json` rather than being bundled into the
- * initial JS chunk — at ~200 entries it's already big enough to dominate the
- * vocab page's chunk, and it scales linearly with lesson count.
- *
- * One in-flight fetch is shared across concurrent callers via the `fetched`
- * promise (idempotent per service instance). HTTP-layer caching (CF Pages
- * `Cache-Control: max-age=3600`) handles cross-session caching. Rejections
- * auto-evict from `fetched`, so a resource reload performs a fresh request.
+ * Deduplicated vocabulary of the current section, fetched from the API on
+ * first use and cached per section for the session. Rejections evict the
+ * cache entry so a retry performs a fresh request.
  */
 @Injectable({ providedIn: 'root' })
 export class VocabService {
-  private fetched: Promise<readonly DerivedVocabT[]> | null = null;
+  private readonly api = inject(ApiService);
+  private readonly section = inject(SectionService);
+  private readonly cache = new Map<string, Promise<readonly DerivedVocabT[]>>();
 
   async all(): Promise<readonly DerivedVocabT[]> {
-    if (this.fetched) return this.fetched;
-    const promise = this.fetchAndValidate().catch((error: unknown) => {
-      this.fetched = null;
+    const id = this.section.id();
+    const cached = this.cache.get(id);
+    if (cached) return cached;
+    const promise = this.fetchAndValidate(id).catch((error: unknown) => {
+      this.cache.delete(id);
       throw error;
     });
-    this.fetched = promise;
+    this.cache.set(id, promise);
     return promise;
   }
 
-  // Deterministic by date — every visitor sees the same word on the same day,
-  // and refreshing doesn't change it. FNV-1a-ish hash of the date string.
-  // Returns null on first call before the fetch completes; the flashcards
-  // dashboard renders the word once `await this.vocab.wordOfDay(today())`
-  // resolves. Callers in templates should use a signal-from-promise pattern.
+  /** Drop the cached list (after a lesson was saved). */
+  invalidate(): void {
+    this.cache.delete(this.section.id());
+  }
+
+  // Deterministic by date — every visitor sees the same word on the same day.
   async wordOfDay(date: string): Promise<DerivedVocabT | null> {
     const vocab = await this.all();
     if (vocab.length === 0) return null;
@@ -42,21 +43,13 @@ export class VocabService {
     return vocab[Math.abs(h >>> 0) % vocab.length];
   }
 
-  private async fetchAndValidate(): Promise<readonly DerivedVocabT[]> {
-    const res = await fetch('lessons/_vocab.json', {
-      headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) {
-      throw new Error(`VocabService.all(): HTTP ${res.status}`);
-    }
-    const raw = (await res.json()) as unknown;
+  private async fetchAndValidate(sectionId: string): Promise<readonly DerivedVocabT[]> {
+    const raw = await this.api.get<unknown>(`/api/sections/${encodeURIComponent(sectionId)}/vocab`);
     if (!Array.isArray(raw)) throw new Error('VocabService.all(): payload is not an array');
     return raw.map((entry, idx) => {
       const parsed = DerivedVocab.safeParse(entry);
       if (!parsed.success) {
-        throw new Error(`VocabService.all(): invalid entry at index ${idx}`, {
-          cause: parsed.error,
-        });
+        throw new Error(`VocabService.all(): invalid entry at index ${idx}`, { cause: parsed.error });
       }
       return parsed.data;
     });

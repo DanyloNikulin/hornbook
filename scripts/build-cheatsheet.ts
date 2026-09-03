@@ -46,10 +46,11 @@ import {
   type PatchOperation,
 } from './lib/cheatsheet-patch.ts';
 import { learnerLanguageName, targetLanguageName } from './lib/config.ts';
+import { cheatsheetPath, currentSection, readSectionLessons, resolveSectionArg } from './lib/journal.ts';
 
-const repoRoot = fileURLToPath(new URL('..', import.meta.url));
-const CHEATSHEET_PATH = join(repoRoot, 'cheatsheet.json');
-const LESSONS_DIR = join(repoRoot, 'lessons');
+// The section is selected once in main() (--section); every path below
+// derives from it.
+const CHEATSHEET_PATH = (): string => cheatsheetPath(currentSection().id);
 
 const MODEL = process.env['CLAUDE_MODEL'] || 'claude-sonnet-4-6';
 
@@ -152,10 +153,10 @@ const PATCHES_TOOL = {
   },
 };
 
+const systemPrompt = (): string => {
 const TARGET = targetLanguageName();
 const LEARNER = learnerLanguageName();
-
-const SYSTEM_PROMPT = `You are maintaining a grammar cheat sheet for a language student. You receive (1) the current state of the categories that the new lessons can affect and (2) the new lessons' grammar + topics. You return a LIST OF PATCHES describing how to update those categories.
+return `You are maintaining a grammar cheat sheet for a language student. You receive (1) the current state of the categories that the new lessons can affect and (2) the new lessons' grammar + topics. You return a LIST OF PATCHES describing how to update those categories.
 
 CATEGORIES (the user message tells you which subset is in scope):
 - id: "grammar",        title: "Grammar"        — verb tenses, articles, agreement, conjugations
@@ -179,14 +180,15 @@ RULES:
 6. Return ONLY patches for categories that actually change. If a lesson adds nothing to a category, do not emit a patch for it.
 7. Titles in ${LEARNER}; table content in ${TARGET} (${LEARNER} glosses in parentheses where helpful).
 8. When updating an existing section, keep its id and merge its source_lessons with the new lesson slug — do not drop prior slugs.`;
+};
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function loadCheatsheet(): CheatsheetT {
-  if (!existsSync(CHEATSHEET_PATH)) {
+  if (!existsSync(CHEATSHEET_PATH())) {
     return { processed_lessons: [], categories: [] };
   }
-  const raw = JSON.parse(readFileSync(CHEATSHEET_PATH, 'utf8'));
+  const raw = JSON.parse(readFileSync(CHEATSHEET_PATH(), 'utf8'));
   const result = Cheatsheet.safeParse(raw);
   if (!result.success) {
     console.warn('⚠ cheatsheet.json failed validation — starting fresh.');
@@ -205,30 +207,24 @@ interface NewLessonInput {
 }
 
 function loadNewLessons(processedSlugs: Set<string>): NewLessonInput[] {
-  if (!existsSync(LESSONS_DIR)) return [];
-  return readdirSync(LESSONS_DIR)
-    .filter((f) => f.endsWith('.json'))
-    .flatMap((f) => {
-      const raw = JSON.parse(readFileSync(join(LESSONS_DIR, f), 'utf8'));
-      const parsed = Lesson.safeParse(raw);
-      if (!parsed.success) return [];
-      if (processedSlugs.has(parsed.data.slug)) return [];
-      const affected = computeAffectedCategories(parsed.data.topics);
-      // Skip lessons that can't affect the cheat sheet at all. A lesson with
-      // no topical hooks AND no grammar rules wouldn't change anything even
-      // if we asked Claude.
-      if (affected.length === 0 && parsed.data.grammar.length === 0) return [];
-      return [
-        {
-          slug: parsed.data.slug,
-          title: parsed.data.title,
-          date: parsed.data.date,
-          grammar: parsed.data.grammar,
-          topics: parsed.data.topics,
-          affectedCategories: affected,
-        },
-      ];
-    });
+  return readSectionLessons(currentSection().id).flatMap(({ lesson }) => {
+    if (processedSlugs.has(lesson.slug)) return [];
+    const affected = computeAffectedCategories(lesson.topics);
+    // Skip lessons that can't affect the cheat sheet at all. A lesson with
+    // no topical hooks AND no grammar rules wouldn't change anything even
+    // if we asked Claude.
+    if (affected.length === 0 && lesson.grammar.length === 0) return [];
+    return [
+      {
+        slug: lesson.slug,
+        title: lesson.title,
+        date: lesson.date,
+        grammar: lesson.grammar,
+        topics: lesson.topics,
+        affectedCategories: affected,
+      },
+    ];
+  });
 }
 
 // Compute the union of categories the whole batch affects. Lessons with no
@@ -353,6 +349,8 @@ function summarisePatches(patches: readonly CheatsheetPatch[]): string {
 // ── Main ───────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
+  const section = resolveSectionArg(process.argv);
+  console.log(`Section: ${section.id}`);
   const force = process.argv.includes('--force');
   const dryRun = process.argv.includes('--dry-run');
 
@@ -402,7 +400,7 @@ async function main(): Promise<void> {
     // affected category, not the whole cheat sheet. With patches, this no
     // longer scales with cheat sheet size, so the previous concern is gone.
     max_tokens: 8000,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt(),
     tools,
     tool_choice: { type: 'tool', name: PATCHES_TOOL.name },
     messages: [{ role: 'user', content: userMessage }],
@@ -435,8 +433,8 @@ async function main(): Promise<void> {
     throw new Error('Updated cheatsheet failed Zod validation.');
   }
 
-  writeFileSync(CHEATSHEET_PATH, JSON.stringify(validation.data, null, 2) + '\n', 'utf8');
-  console.log(`✓ cheatsheet.json updated (${validation.data.categories.length} categories)`);
+  writeFileSync(CHEATSHEET_PATH(), JSON.stringify(validation.data, null, 2) + '\n', 'utf8');
+  console.log(`✓ ${section.id}/_cheatsheet.json updated (${validation.data.categories.length} categories)`);
 }
 
 main().catch((err: unknown) => {

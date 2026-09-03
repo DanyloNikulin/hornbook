@@ -1,35 +1,26 @@
-import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { JournalConfig, languageName, type JournalConfigT } from '../../src/lib/journal-config.ts';
+// Language names and providers for the pipeline scripts, read from the
+// section a script is working on (see journal.ts → useSection /
+// resolveSectionArg). Kept as zero-argument helpers because the prompt
+// builders are called deep inside transcribe/extract.
 
-const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
+import { languageName, providersFor, type ProvidersT } from '../../src/lib/journal-config.ts';
+import { currentSection, loadJournalConfig, repoRootDir } from './journal.ts';
 
-let cached: JournalConfigT | null = null;
-
-export function repoRootDir(): string {
-  return repoRoot;
-}
-
-export function loadJournalConfig(): JournalConfigT {
-  if (cached) return cached;
-  const path = join(repoRoot, 'journal.config.json');
-  if (!existsSync(path)) {
-    throw new Error(`Missing journal.config.json at ${path}`);
-  }
-  const raw = JSON.parse(readFileSync(path, 'utf8'));
-  const parsed = JournalConfig.safeParse(raw);
-  if (!parsed.success) {
-    throw new Error(`Invalid journal.config.json:\n${JSON.stringify(parsed.error.format(), null, 2)}`);
-  }
-  cached = parsed.data;
-  return cached;
-}
+export { loadJournalConfig, repoRootDir };
 
 export function targetLanguageName(): string {
-  return languageName(loadJournalConfig().pair.target);
+  return languageName(currentSection().target);
 }
 
 export function learnerLanguageName(): string {
-  return languageName(loadJournalConfig().pair.learner);
+  return languageName(currentSection().learner);
+}
+
+export function targetLanguageCode(): string {
+  return currentSection().target;
+}
+
+/** Effective providers for the current section (section override over journal default). */
+export function currentProviders(): ProvidersT {
+  return providersFor(loadJournalConfig(), currentSection());
 }

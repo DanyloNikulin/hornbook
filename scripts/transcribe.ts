@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { ffmpeg, durationSeconds } from './lib/ffmpeg.ts';
 import { learnerLanguageName, targetLanguageName } from './lib/config.ts';
 import { getTranscriber } from './providers/index.ts';
+import { isMain } from './lib/is-main.ts';
 
 const CHUNK_SEC = 15 * 60;
 const OVERLAP_SEC = 30;
@@ -91,7 +92,7 @@ async function cli(): Promise<void> {
   console.log(`\n✓ Transcript -> ${transcriptPath} (${text.length} chars)`);
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replaceAll('\\', '/')}`) {
+if (isMain(import.meta.url)) {
   cli().catch((err: unknown) => {
     console.error(err);
     process.exit(1);

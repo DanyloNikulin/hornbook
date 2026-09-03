@@ -5,6 +5,16 @@ export const Level = z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']);
 const DateRegex = /^\d{4}-\d{2}-\d{2}$/;
 const SlugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+// Controlled vocabulary for lesson topics. Deliberately language-neutral: the
+// extraction prompt tags each lesson from this list, the cheat sheet groups by
+// it, and the lesson list filters on it. `npm run vocab-review` proposes
+// additions from your own transcripts once you have a few lessons.
+//
+// The section comments below are INSERTION ANCHORS for vocab-review
+// (scripts/lib/vocab-apply.ts): a proposed topic is appended to the end of
+// the section matching its review category. Keep the comment text and order
+// exactly as-is, even for sections that are still empty in your journal.
+// Renaming an existing topic is a breaking change — write a migration.
 export const TOPIC_VOCAB = [
   // Tenses
   'grammar',
@@ -200,3 +210,40 @@ export type CheatsheetExceptionTableT = z.infer<typeof CheatsheetExceptionTable>
 export type CheatsheetSectionT = z.infer<typeof CheatsheetSection>;
 export type CheatsheetCategoryT = z.infer<typeof CheatsheetCategory>;
 export type CheatsheetT = z.infer<typeof Cheatsheet>;
+
+// ── Learner progress (per section, stored in <section>/_progress.json) ──────
+
+export const Sm2StateSchema = z.object({
+  interval: z.number().int().nonnegative(),
+  ef: z.number().min(1.3).max(10),
+  repetitions: z.number().int().nonnegative(),
+  due: z.string().regex(DateRegex),
+});
+
+export const DailyState = z.object({
+  date: z.string().regex(DateRegex),
+  target_learner: z.number().int().nonnegative(),
+  learner_target: z.number().int().nonnegative(),
+  pairs: z.number().int().nonnegative(),
+});
+
+export const QuizResult = z.object({
+  best_score: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative(),
+  attempts: z.number().int().nonnegative(),
+  last_at: z.string().min(1),
+});
+
+export const Progress = z.object({
+  sm2: z.record(z.string(), Sm2StateSchema).default({}),
+  daily: DailyState.nullable().default(null),
+  quiz: z.record(z.string(), QuizResult).default({}),
+  activity: z.record(z.string().regex(DateRegex), z.number().int().nonnegative()).default({}),
+});
+
+export type Sm2StateT = z.infer<typeof Sm2StateSchema>;
+export type DailyStateT = z.infer<typeof DailyState>;
+export type QuizResultT = z.infer<typeof QuizResult>;
+export type ProgressT = z.infer<typeof Progress>;
+
+export const EMPTY_PROGRESS: ProgressT = { sm2: {}, daily: null, quiz: {}, activity: {} };

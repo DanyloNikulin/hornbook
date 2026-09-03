@@ -1,8 +1,0 @@
-{
-  "pair": { "target": "es", "learner": "en" },
-  "brand": { "name": "Lesson journal", "tagline": "conspects from your lessons" },
-  "providers": {
-    "transcribe": { "driver": "openai", "model": "gpt-4o-transcribe" },
-    "extract": { "driver": "anthropic", "model": "claude-sonnet-4-6" }
-  }
-}

@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "lesson-journal": {
+    "hornbook": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -27,22 +27,6 @@
               {
                 "glob": "**/*",
                 "input": "public"
-              },
-              {
-                "glob": "*.json",
-                "input": "lessons",
-                "output": "/lessons",
-                "ignore": ["_topics-version.json", "_topics-suggestions.json"]
-              },
-              {
-                "glob": "cheatsheet.json",
-                "input": ".",
-                "output": "/"
-              },
-              {
-                "glob": "journal.config.json",
-                "input": ".",
-                "output": "/"
               }
             ],
             "styles": [
@@ -85,13 +69,16 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "lesson-journal:build:production"
+              "buildTarget": "hornbook:build:production"
             },
             "development": {
-              "buildTarget": "lesson-journal:build:development"
+              "buildTarget": "hornbook:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          }
         },
         "test": {
           "builder": "@angular/build:unit-test"
@@ -99,7 +86,10 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
           }
         }
       }

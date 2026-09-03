@@ -1,39 +1,35 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Cheatsheet, type CheatsheetT } from '../lib/schema';
+import { ApiService } from './api.service';
+import { SectionService } from './section.service';
 
 /**
- * Lazy-loaded cheat sheet. After #19 the grammar cheat sheet ships from the
- * repo root as `/cheatsheet.json` via the angular.json assets glob — fetched
- * only when the user opens /cheatsheet, not bundled into the initial chunk.
- *
- * Rejections auto-evict from `fetched`, so resource.reload() performs a fresh
- * request and the component can expose a real error state.
+ * Grammar cheat sheet of the current section, fetched on first visit to
+ * /cheatsheet and cached per section. Rejections evict so a reload retries.
  */
 @Injectable({ providedIn: 'root' })
 export class CheatsheetService {
-  private fetched: Promise<CheatsheetT> | null = null;
+  private readonly api = inject(ApiService);
+  private readonly section = inject(SectionService);
+  private readonly cache = new Map<string, Promise<CheatsheetT>>();
 
   async get(): Promise<CheatsheetT> {
-    if (this.fetched) return this.fetched;
-    const promise = this.fetchAndValidate().catch((error: unknown) => {
-      this.fetched = null;
+    const id = this.section.id();
+    const cached = this.cache.get(id);
+    if (cached) return cached;
+    const promise = this.fetchAndValidate(id).catch((error: unknown) => {
+      this.cache.delete(id);
       throw error;
     });
-    this.fetched = promise;
+    this.cache.set(id, promise);
     return promise;
   }
 
-  private async fetchAndValidate(): Promise<CheatsheetT> {
-    const res = await fetch('cheatsheet.json', {
-      headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) throw new Error(`CheatsheetService.get(): HTTP ${res.status}`);
-    const raw = (await res.json()) as unknown;
+  private async fetchAndValidate(sectionId: string): Promise<CheatsheetT> {
+    const raw = await this.api.get<unknown>(`/api/sections/${encodeURIComponent(sectionId)}/cheatsheet`);
     const result = Cheatsheet.safeParse(raw);
     if (!result.success) {
-      throw new Error('CheatsheetService.get(): schema validation failed', {
-        cause: result.error,
-      });
+      throw new Error('CheatsheetService.get(): schema validation failed', { cause: result.error });
     }
     return result.data;
   }

@@ -1,10 +1,11 @@
 import { Component, inject } from '@angular/core';
+import { SectionService } from '../section.service';
 import { Router, RouterLink } from '@angular/router';
 
 /**
  * Wildcard (`**`) route target. Without it an unknown URL made the router
  * throw NG04002 and render the nav over an empty <main> with no way home
- * (issue #70). Mirrors the "Lesson not found" panel in lesson-detail.
+ *. Mirrors the "Lesson not found" panel in lesson-detail.
  */
 @Component({
   selector: 'app-not-found',
@@ -27,5 +28,6 @@ import { Router, RouterLink } from '@angular/router';
   `,
 })
 export class NotFoundComponent {
+  protected readonly sec = inject(SectionService);
   protected readonly path = inject(Router).url;
 }
