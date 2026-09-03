@@ -17,18 +17,21 @@ import { FolderStore } from './store.ts';
 import { JobRunner } from './jobs.ts';
 import { pipelineEnv } from './secrets.ts';
 import { isMain } from '../scripts/lib/is-main.ts';
+import { challenge, isAuthorized } from './auth.ts';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 
-interface Options {
+export interface Options {
   port: number;
   host: string;
   journal: string | undefined;
   dist: string;
   serveStatic: boolean;
+  /** Basic-auth password for hosted mode; undefined = open (local). */
+  password: string | undefined;
 }
 
-function parseArgs(argv: readonly string[]): Options {
+export function parseArgs(argv: readonly string[]): Options {
   const get = (flag: string): string | undefined => {
     const i = argv.indexOf(flag);
     return i >= 0 ? argv[i + 1] : undefined;
@@ -39,6 +42,7 @@ function parseArgs(argv: readonly string[]): Options {
     journal: get('--journal') ?? process.env['HORNBOOK_JOURNAL'],
     dist: resolve(get('--dist') ?? join(repoRoot, 'dist', 'hornbook', 'browser')),
     serveStatic: !argv.includes('--no-static'),
+    password: get('--password') ?? process.env['HORNBOOK_PASSWORD'] ?? undefined,
   };
 }
 
@@ -59,16 +63,15 @@ const MIME: Record<string, string> = {
   '.map': 'application/json',
 };
 
-// Sent with every HTML response. The UI loads scripts only from itself,
-// talks only to its own origin, and cannot be framed. Fonts still come from
-// Google Fonts until phase 8 bundles them.
+// Sent with every HTML response. The UI loads scripts, styles and fonts only
+// from itself, talks only to its own origin, and cannot be framed.
 const SECURITY_HEADERS: Record<string, string> = {
   'Content-Security-Policy': [
     "default-src 'self'",
     "script-src 'self'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
-    "font-src 'self' data: https://fonts.gstatic.com",
+    "font-src 'self' data:",
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -97,7 +100,15 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
     console.warn(`No build at ${distRoot} — run "npm run build" first, or use --no-static with ng serve.`);
   }
 
+  if (mode === 'hosted' && !opts.password) {
+    console.warn('Listening on a non-local address with no --password. Anyone who can reach this port can read and write the journal.');
+  }
+
   const server = createServer(async (req, res) => {
+    if (opts.password && !isAuthorized(req, opts.password)) {
+      challenge(res);
+      return;
+    }
     try {
       if (await api(req, res)) return;
     } catch (err) {
@@ -137,7 +148,7 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
   });
 
   server.listen(opts.port, opts.host, () => {
-    console.log(`Hornbook ${mode} server on http://${opts.host}:${opts.port}`);
+    console.log(`Hornbook ${mode} server on http://${opts.host}:${opts.port}${opts.password ? ' (password protected)' : ''}`);
     console.log(`Journal: ${store.dir}`);
     if (hasDist) console.log(`UI: ${distRoot}`);
   });

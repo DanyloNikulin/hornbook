@@ -11,21 +11,24 @@ This is a clean engine. It is **not** a fork of anyone's private lesson archive.
 ```bash
 npm install
 npm run build
-npm run serve      # http://127.0.0.1:8787
+npm run hornbook          # or: npm run hornbook:app
 ```
 
-That is the whole product: one server on your machine serving the UI and an API over your
-journal folder. For development, `npm start` runs the server next to the Angular dev server on
-http://localhost:4200 with `/api` proxied.
+That starts one server on your machine (127.0.0.1:8787) serving the UI and an API over your
+journal folder, and opens it in your browser. `hornbook:app` opens a chromeless window instead,
+using the Chrome, Edge, Chromium or Brave you already have, so it feels like a desktop app.
 
-The journal lives in `./journal` by default (the repo ships a small demo journal with a Spanish
-and an Italian pair). Point `HORNBOOK_JOURNAL` at your own folder:
+On first run your journal is created at `~/Hornbook` from the demo journal (a Spanish and an
+Italian pair); delete the demo pairs whenever you like. Options:
 
-```bash
-HORNBOOK_JOURNAL=~/Hornbook npm run serve
+```
+hornbook [--journal <dir>] [--port 8787] [--host 127.0.0.1] [--password …] [--app] [--no-open]
 ```
 
 Nothing you do in the app goes through git. Back up by copying the folder.
+
+For development, `npm start` runs the server next to the Angular dev server on
+http://localhost:4200 with `/api` proxied, using the repo's `./journal`.
 
 ## The journal folder
 
@@ -98,9 +101,22 @@ Learner-side text is written by the model in `learner`; the UI chrome is English
 
 ## Hosting
 
-Hosting is running the same server on a machine you control, behind a password or an access
-proxy: `npm run serve -- --host 0.0.0.0 --port 8787`. A Docker image and a desktop shell are the
-next steps in `docs/PLAN.md`.
+Hosting is running the same server on a machine you control. It is one owner's journal, not a
+multi-user service, so put a password on it:
+
+```bash
+npm run hornbook -- --host 0.0.0.0 --password change-me --no-open
+```
+
+or with Docker, journal on a volume:
+
+```bash
+docker build -t hornbook .
+docker run -p 8787:8787 -v hornbook-journal:/journal -e HORNBOOK_PASSWORD=change-me hornbook
+```
+
+The password is HTTP Basic auth on every request. For anything beyond one owner, put an access
+proxy (Cloudflare Access, Tailscale, a VPN) in front instead.
 
 ## Tests
 

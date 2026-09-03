@@ -12,7 +12,7 @@
   --font-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Fonts are bundled from fontsource via angular.json → styles, so the app works with no network. */
 
 /* ---------- Design tokens ---------- */
 :root {

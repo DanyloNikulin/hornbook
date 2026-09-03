@@ -30,6 +30,19 @@
               }
             ],
             "styles": [
+              "@fontsource/cormorant-garamond/400.css",
+              "@fontsource/cormorant-garamond/400-italic.css",
+              "@fontsource/cormorant-garamond/500.css",
+              "@fontsource/cormorant-garamond/500-italic.css",
+              "@fontsource/cormorant-garamond/600.css",
+              "@fontsource/cormorant-garamond/600-italic.css",
+              "@fontsource/cormorant-garamond/700.css",
+              "@fontsource/manrope/400.css",
+              "@fontsource/manrope/500.css",
+              "@fontsource/manrope/600.css",
+              "@fontsource/manrope/700.css",
+              "@fontsource/jetbrains-mono/400.css",
+              "@fontsource/jetbrains-mono/500.css",
               "src/styles.scss"
             ]
           },

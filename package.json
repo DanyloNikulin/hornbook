@@ -25,7 +25,9 @@
     "vocab-review:dry": "tsx scripts/review-vocab.ts --dry",
     "serve": "tsx server/main.ts",
     "server": "tsx watch server/main.ts --no-static",
-    "migrate": "tsx scripts/migrate-journal.ts"
+    "migrate": "tsx scripts/migrate-journal.ts",
+    "hornbook": "node bin/hornbook.mjs",
+    "hornbook:app": "node bin/hornbook.mjs --app"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
@@ -37,6 +39,9 @@
     "@angular/platform-browser": "^21.2.22",
     "@angular/router": "^21.2.22",
     "@anthropic-ai/sdk": "^0.98.0",
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/manrope": "^5.3.0",
     "dompurify": "^3.4.14",
     "fuse.js": "^7.3.0",
     "marked": "^18.0.4",
@@ -44,6 +49,7 @@
     "rxjs": "~7.8.0",
     "sharp": "^0.35.4",
     "tslib": "^2.3.0",
+    "tsx": "^4.23.13",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -59,15 +65,29 @@
     "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^22.20.1",
     "autoprefixer": "^10.5.0",
+    "concurrently": "^9.2.1",
     "eslint": "^10.4.0",
     "jsdom": "^28.0.0",
     "postcss": "^8.5.15",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.3.0",
-    "tsx": "^4.22.3",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.59.4",
-    "vitest": "^4.0.8",
-    "concurrently": "^9.2.1"
-  }
+    "vitest": "^4.0.8"
+  },
+  "bin": {
+    "hornbook": "bin/hornbook.mjs"
+  },
+  "files": [
+    "bin",
+    "server",
+    "scripts",
+    "src/lib",
+    "dist/hornbook/browser",
+    "journal",
+    "tsconfig.json",
+    "tsconfig.scripts.json",
+    "README.md",
+    "docs/PLAN.md"
+  ]
 }
