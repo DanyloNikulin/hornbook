@@ -3,8 +3,11 @@ name: PR gate
 # The single required quality gate for pull requests into main.
 # Everything runs in ONE job so branch protection only needs to require the
 # "gate" check context. Covers: reproducible installs, app lint/test/build,
-# pipeline-script typecheck + tests, worker tests + typecheck, freshness of
-# tracked generated artifacts, dependency audit, and workflow syntax lint.
+# pipeline-script + server typecheck and tests, freshness of tracked generated
+# artifacts, dependency audit, and workflow syntax lint.
+#
+# This is the only workflow. Hornbook's data never goes through git or CI:
+# the journal folder is written by the app itself.
 on:
   pull_request:
     branches: [main]
@@ -46,9 +49,9 @@ jobs:
       - name: Install root dependencies (npm ci)
         run: npm ci --no-audit --no-fund
 
-      # src/app/_data/lessons-meta.json is gitignored and generated — `ng test`
-      # imports it, so content must exist before any Angular step. Same
-      # commands the prebuild hook runs (idempotent, no AI calls).
+      # journal/*/_derived/ is gitignored and generated — the schema spec reads
+      # it, so it must exist before any Angular step. Same commands the
+      # prebuild hook runs (idempotent, no AI calls).
       - name: Generate content (backfill topics + derived data)
         run: npm run backfill-topics -- --auto && npm run build-data
 
@@ -61,14 +64,12 @@ jobs:
       - name: Build (production)
         run: npm run build
 
-      # Tracked generated artifacts must be fresh: lesson `topics` fields,
-      # lessons/_topics-version.json, lessons/_topics-suggestions.json.
-      # (The bulky derived files — src/app/_data/, lessons/_cards/_vocab/
-      # _search-index.json — are gitignored, so they can never be stale in git;
-      # cheatsheet.json needs ANTHROPIC_API_KEY and stays out of the gate.)
-      # If a PR adds a lesson without topics or changes scripts/lib/topics.ts,
-      # the prebuild hook rewrites tracked files — fail with the diff so the
-      # author commits the regeneration.
+      # Tracked generated artifacts of the demo journal must be fresh: lesson
+      # `topics` fields and journal/*/_topics-version.json. (Derived files are
+      # gitignored; the cheat sheet needs ANTHROPIC_API_KEY and stays out.)
+      # If a PR adds a demo lesson without topics or changes
+      # scripts/lib/topics.ts, the prebuild hook rewrites tracked files — fail
+      # with the diff so the author commits the regeneration.
       - name: Fail if tracked generated artifacts are stale
         run: |
           if [ -n "$(git status --porcelain)" ]; then
@@ -78,32 +79,16 @@ jobs:
             exit 1
           fi
 
-      # scripts/ is outside the Angular test + tsconfig graph —
-      # keep the scripts/lib specs and the Record<TopicT, …> exhaustiveness
-      # check inside the gate.
-      - name: Typecheck pipeline scripts
+      # scripts/ and server/ are outside the Angular test + tsconfig graph —
+      # keep their specs and the Record<TopicT, …> exhaustiveness check inside
+      # the gate.
+      - name: Typecheck pipeline scripts and server
         run: npm run typecheck:scripts
 
-      - name: Test pipeline scripts
+      - name: Test pipeline scripts and server
         run: npm run test:scripts
-
-      - name: Install worker dependencies (npm ci)
-        run: npm ci --no-audit --no-fund
-        working-directory: worker
-
-      - name: Test worker
-        run: npm test
-        working-directory: worker
-
-      - name: Type-check worker
-        run: npm run typecheck
-        working-directory: worker
 
       # High/critical only — a moderate-severity advisory with no fix released
       # yet must not freeze every PR.
-      - name: Audit root dependencies
+      - name: Audit dependencies
         run: npm audit --audit-level=high
-
-      - name: Audit worker dependencies
-        run: npm audit --audit-level=high
-        working-directory: worker

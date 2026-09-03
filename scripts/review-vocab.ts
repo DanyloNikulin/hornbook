@@ -3,15 +3,15 @@
 // statistics + accumulated per-lesson suggestions. NEVER sends lesson content
 // to the AI — the payload is bounded by vocab size, not lesson count.
 //
-// Output: docs/vocab-reviews/YYYY-MM-DD.md — a markdown report with copy-paste
-// snippets ready to apply. Auto-PR is opened by .github/workflows/vocab-review.yml.
+// Output: docs/vocab-reviews/YYYY-MM-DD.md — a markdown report. Additions
+// are applied to the topic vocabulary straight away; everything else stays
+// a suggestion. Started from the Settings page (a job) or from the CLI.
 //
 // Usage:
-//   tsx scripts/review-vocab.ts          # call Claude, write report
-//   tsx scripts/review-vocab.ts --dry    # compute stats only, no API call
+//   tsx scripts/review-vocab.ts --section es-en          # call Claude, write report
+//   tsx scripts/review-vocab.ts --section es-en --dry    # compute stats only, no API call
 
-import { execSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
@@ -30,52 +30,6 @@ const CATEGORY_MAP_PATH = join(repoRoot, 'scripts/lib/topic-to-category.ts');
 const MODEL = process.env['CLAUDE_MODEL'] || 'claude-sonnet-4-6';
 
 const dry = process.argv.includes('--dry');
-
-// Minimum number of lessons ADDED (since the latest review file) required to
-// actually call Claude. Set via MIN_NEW_LESSONS env var. 0 disables the gate.
-// Used by the CI workflow to skip pushes that didn't add new content. Only
-// added lesson files count: a re-tag, a slug repair or any other edit to
-// existing lessons is not new material and must not spend a review (it did,
-// twice on 2026-09-02, before this counted additions only). First-ever run
-// (no prior review) is always allowed through.
-const MIN_NEW_LESSONS = Math.max(0, parseInt(process.env['MIN_NEW_LESSONS'] ?? '0', 10) || 0);
-
-// Counts how many lesson .json files were ADDED in git history since the
-// most recent docs/vocab-reviews/*.md was committed. Returns:
-//   { count: -1, lastReview: null }  — no prior review exists; gate is bypassed
-//   { count: N, lastReview: "..." }  — N lesson files added since then
-// On a git failure (shallow clone, missing history) it returns count=0 so the
-// gate SKIPS: spending a Claude call on unknown state is the wrong default.
-// The workflow checks out with fetch-depth 0, so this should not happen; if
-// it does, the log line says why.
-function countLessonsSinceLastReview(): { count: number; lastReview: string | null } {
-  if (!existsSync(reviewsDir)) return { count: -1, lastReview: null };
-  const reviews = readdirSync(reviewsDir).filter((f) => f.endsWith('.md')).sort();
-  if (reviews.length === 0) return { count: -1, lastReview: null };
-
-  const latest = reviews[reviews.length - 1];
-  const relPath = `docs/vocab-reviews/${latest}`;
-  try {
-    const sha = execSync(`git log -1 --format=%H -- "${relPath}"`, {
-      cwd: repoRoot,
-      encoding: 'utf8',
-    }).trim();
-    if (!sha) return { count: -1, lastReview: latest };
-
-    // --diff-filter=A: additions only. Renames show as R (not A) with git's
-    // default rename detection, so a repaired slug does not count either.
-    const diff = execSync(
-      `git diff --name-only --diff-filter=A ${sha} HEAD -- "journal/${currentSection().id}/*.json" ":(exclude)journal/${currentSection().id}/_*.json"`,
-      { cwd: repoRoot, encoding: 'utf8' },
-    ).trim();
-    const count = diff ? diff.split('\n').length : 0;
-    return { count, lastReview: latest };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`⚠ Could not count lessons since last review (${msg}). Skipping the review rather than spending on unknown state.`);
-    return { count: 0, lastReview: latest };
-  }
-}
 
 // ── Claude tool ─────────────────────────────────────────────────────────────
 
@@ -258,23 +212,6 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Skip if not enough lessons committed since the last review. First-ever
-  // run (no prior review) is always allowed through.
-  if (MIN_NEW_LESSONS > 0) {
-    const { count, lastReview } = countLessonsSinceLastReview();
-    if (lastReview && count >= 0 && count < MIN_NEW_LESSONS) {
-      console.log(
-        `Only ${count} new lesson(s) since last review (${lastReview}). Threshold MIN_NEW_LESSONS=${MIN_NEW_LESSONS}. Skipping.`,
-      );
-      return;
-    }
-    if (lastReview) {
-      console.log(`${count} new lesson(s) since last review (${lastReview}) — proceeding.`);
-    } else {
-      console.log('No prior review — running first vocab audit.');
-    }
-  }
-
   const client = new Anthropic({ apiKey: process.env['ANTHROPIC_API_KEY'] });
   const userPayload = renderStatsForAI(stats);
   console.log(`Calling ${MODEL} with ${userPayload.length} chars of stats...`);
@@ -304,11 +241,10 @@ async function main(): Promise<void> {
   const reportPath = writeReport(proposal, stats);
   console.log(`✓ Report written: ${reportPath}`);
 
-  // Auto-apply ONLY additions to schema.ts and topics.ts. Removals, splits and
-  // merges stay markdown-only suggestions: now that the review auto-merges to
-  // main, removing a topic (e.g. an as-yet-unused core tense) needs human
-  // judgment — additions are safe, a new topic never strips an existing
-  // lesson's tags.
+  // Apply ONLY additions to schema.ts and topics.ts. Removals, splits and
+  // merges stay markdown-only suggestions: removing a topic needs human
+  // judgment, while an addition is safe — a new topic never strips an
+  // existing lesson's tags.
   const applyResult = applyProposal(proposal);
   if (applyResult.changedFiles.length > 0) {
     console.log(
@@ -318,11 +254,6 @@ async function main(): Promise<void> {
     console.log('No additions to apply — schema.ts and topics.ts unchanged.');
   }
 
-  // For CI: emit the report path as GITHUB_OUTPUT so the workflow can decide
-  // whether to open a PR.
-  if (process.env['GITHUB_OUTPUT']) {
-    writeFileSync(process.env['GITHUB_OUTPUT'], `report_path=${reportPath}\n`, { flag: 'a' });
-  }
 }
 
 interface ApplyResult {
@@ -333,10 +264,8 @@ interface ApplyResult {
 
 // Apply ONLY the proposal's additions to schema.ts and topics.ts. Removals,
 // splits and merges are intentionally NOT auto-applied — they stay markdown
-// suggestions for a human to act on (the review auto-merges to main, and
-// auto-removing topics is too aggressive). Any single failure is logged but
-// doesn't abort the rest. The CI runner commits the code changes in the same
-// commit as the markdown report.
+// suggestions for a human to act on. Any single failure is logged but
+// doesn't abort the rest.
 function applyProposal(p: VocabProposal): ApplyResult {
   const result: ApplyResult = {
     additions: 0,
@@ -433,7 +362,7 @@ function writeReport(p: VocabProposal, stats: { computed_at: string; total_lesso
 
   // ── Additions ──
   if (p.additions.length > 0) {
-    lines.push(`## Additions (${p.additions.length}) — **applied (auto-committed to main)**`);
+    lines.push(`## Additions (${p.additions.length}) — **applied**`);
     lines.push('');
     for (const a of p.additions) {
       lines.push(`### \`${a.id}\` — ${a.category}`);
@@ -449,8 +378,8 @@ function writeReport(p: VocabProposal, stats: { computed_at: string; total_lesso
       lines.push('```');
       lines.push('');
       lines.push(
-        `→ Applied in \`src/lib/schema.ts\` and \`scripts/lib/topics.ts\`. ` +
-          `To reject this addition, revert it from the \`vocab review\` commit on main.`,
+        `→ Applied in \`src/lib/schema.ts\`, \`scripts/lib/topics.ts\` and \`scripts/lib/topic-to-category.ts\`. ` +
+          `To reject it, remove the id and its patterns from those files.`,
       );
       lines.push('');
     }
@@ -514,13 +443,11 @@ function writeReport(p: VocabProposal, stats: { computed_at: string; total_lesso
   lines.push(
     `## How to use this report
 
-This review was **auto-committed straight to main** (no PR).
-
-- **Additions** above are **already applied** in the same commit. To undo one, revert it from the \`vocab review\` commit.
+- **Additions** above are **already applied** to the topic vocabulary. To undo one, remove the id and its patterns from the three source files.
 - **Removals / splits / merges** are **suggestions only — not applied**. Act on them manually if you agree.
 - **Concerns** are advisory, no action proposed.
 
-When the topics config changes, the next build's \`prebuild\` runs \`backfill-topics --auto\`: it detects the hash change and re-tags every lesson with the new vocab.`,
+When the topic vocabulary changes, the next start runs \`backfill-topics --auto\`: it detects the change and re-tags every lesson with the new vocabulary.`,
   );
 
   writeFileSync(path, lines.join('\n') + '\n', 'utf8');

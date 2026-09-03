@@ -68,6 +68,3 @@ Thumbs.db
 /journal/secrets.json
 /journal/_uploads/
 
-# Wrangler local cache
-.wrangler/
-worker/.wrangler/

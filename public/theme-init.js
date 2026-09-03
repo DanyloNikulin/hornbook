@@ -2,7 +2,7 @@
 // don't get a light flash while the Angular bundle loads.
 //
 // Lives in its own file (served from /theme-init.js) rather than inline in
-// index.html because public/_headers ships `script-src 'self'` with no
+// index.html because the server sends `script-src 'self'` with no
 // nonce/hash — an inline script is blocked by that CSP.
 // AppComponent re-reads the same localStorage key and takes over from here.
 (function () {

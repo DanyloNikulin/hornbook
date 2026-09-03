@@ -59,6 +59,28 @@ const MIME: Record<string, string> = {
   '.map': 'application/json',
 };
 
+// Sent with every HTML response. The UI loads scripts only from itself,
+// talks only to its own origin, and cannot be framed. Fonts still come from
+// Google Fonts until phase 8 bundles them.
+const SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data:",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+  ].join('; '),
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'X-Frame-Options': 'DENY',
+  'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+};
+
 export function startServer(opts: Options): ReturnType<typeof createServer> {
   const store = new FolderStore(opts.journal);
   const mode = opts.host === '127.0.0.1' || opts.host === 'localhost' ? 'local' : 'hosted';
@@ -109,6 +131,7 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
     res.writeHead(200, {
       'Content-Type': MIME[ext] ?? 'application/octet-stream',
       'Cache-Control': hashed ? 'public, max-age=31536000, immutable' : 'no-cache',
+      ...(ext === '.html' ? SECURITY_HEADERS : {}),
     });
     createReadStream(filePath).pipe(res);
   });
