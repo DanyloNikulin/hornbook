@@ -1,70 +1,237 @@
-<section class="il-panel" style="padding-top: 2rem;">
-  <div class="il-panel-inner" style="max-width: 720px; margin: 0 auto;">
-    <p><a [routerLink]="sec.home()" class="il-lesson-bc-link">{{ 'common.backToLessons' | t }}</a></p>
+<section class="il-panel il-compose-page">
+  <div class="il-panel-inner il-compose-inner">
+    <p class="il-compose-back"><a [routerLink]="sec.home()" class="il-lesson-bc-link">{{ 'common.backToLessons' | t }}</a></p>
     <h1 class="il-section-title">{{ 'compose.title' | t }}</h1>
-    <p class="il-section-sub">{{ 'compose.sub' | t }}</p>
+    <p class="il-section-sub il-compose-sub">{{ 'compose.sub' | t }}</p>
 
-    <label class="il-searchbar" style="display:block; margin-bottom: 12px;">
-      {{ 'compose.date' | t }}
-      <input type="date" [(ngModel)]="date" />
-    </label>
-
-    <h2 class="il-compose-h">{{ 'compose.byHand' | t }}</h2>
-    <label class="il-searchbar" style="display:block; margin-bottom: 12px;">
-      {{ 'compose.lessonTitle' | t }}
-      <input type="text" [(ngModel)]="title" [placeholder]="'compose.titlePlaceholder' | t" />
-    </label>
-    <label style="display:block; margin-bottom: 12px; color: var(--ink-2);">
-      {{ 'compose.summary' | t }}
-      <textarea [(ngModel)]="summary" rows="3" style="width:100%; margin-top:6px;"></textarea>
-    </label>
-    <label style="display:block; margin-bottom: 12px; color: var(--ink-2);">
-      {{ 'compose.article' | t }}
-      <textarea [(ngModel)]="article" rows="8" style="width:100%; margin-top:6px;"></textarea>
-    </label>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 24px;">
-      <button type="button" class="il-btn" [disabled]="busy()" (click)="save()">{{ busy() ? ('compose.saving' | t) : ('compose.save' | t) }}</button>
-      <button type="button" class="il-btn ghost" [disabled]="busy()" (click)="downloadJson()">{{ 'compose.download' | t }}</button>
+    <div class="il-compose-tabs" role="tablist" [attr.aria-label]="'compose.tabsAria' | t">
+      <button
+        type="button"
+        role="tab"
+        id="compose-tab-hand"
+        [class.active]="activeMode() === 'hand'"
+        [attr.aria-selected]="activeMode() === 'hand'"
+        aria-controls="compose-panel-hand"
+        (click)="setMode('hand')"
+      >{{ 'compose.byHand' | t }}</button>
+      <button
+        type="button"
+        role="tab"
+        id="compose-tab-transcript"
+        [class.active]="activeMode() === 'transcript'"
+        [attr.aria-selected]="activeMode() === 'transcript'"
+        aria-controls="compose-panel-transcript"
+        (click)="setMode('transcript')"
+      >{{ 'compose.fromTranscript' | t }}</button>
+      <button
+        type="button"
+        role="tab"
+        id="compose-tab-recording"
+        [class.active]="activeMode() === 'recording'"
+        [attr.aria-selected]="activeMode() === 'recording'"
+        aria-controls="compose-panel-recording"
+        (click)="setMode('recording')"
+      >{{ 'compose.fromRecording' | t }}</button>
     </div>
 
-    <h2 class="il-compose-h">{{ 'compose.fromTranscript' | t }}</h2>
-    <p class="il-section-sub">{{ 'compose.fromTranscriptSub' | t }}</p>
-    @if (!canHear()) {
-      <p class="il-settings-help" style="margin-bottom: 8px;">{{ 'compose.noEars' | t }}</p>
-    }
-    <textarea [(ngModel)]="transcript" rows="6" style="width:100%; margin: 6px 0 8px;" [placeholder]="'compose.transcriptPlaceholder' | t" [disabled]="busy()"></textarea>
-    <button type="button" class="il-btn" [disabled]="busy()" (click)="submitTranscript()">{{ 'compose.extract' | t }}</button>
-
-    <h2 class="il-compose-h" style="margin-top: 24px;">{{ 'compose.fromRecording' | t }}</h2>
-    @if (canHear()) {
-      <p class="il-section-sub">{{ 'compose.fromRecordingSub' | t }} <a [routerLink]="sec.link('application')">{{ 'nav.appSettings' | t }}</a>.</p>
-      <label class="il-file">
-        <input class="il-file-native" type="file" [disabled]="busy()" (change)="onFile($event)" accept=".mp4,.mov,.webm,.m4a,.mp3,.wav,.ogg,.opus,.txt,.vtt,.srt,.json" />
-        <span class="il-btn ghost sm">{{ 'file.choose' | t }}</span>
-        <span class="il-file-name">{{ pickedName() || ('file.none' | t) }}</span>
+    <div class="il-compose-basics">
+      <label class="il-compose-field">
+        <span>{{ 'compose.date' | t }}</span>
+        <input type="date" [(ngModel)]="date" />
       </label>
-    } @else {
-      <p class="il-section-sub">{{ 'compose.fromRecordingLocked' | t }} <a [routerLink]="sec.link('application')">{{ 'nav.appSettings' | t }}</a>. {{ 'compose.fromRecordingLockedHint' | t }}</p>
-    }
+      <label class="il-compose-field">
+        <span>{{ 'compose.lessonTitle' | t }} <small>{{ 'compose.titleOptional' | t }}</small></span>
+        <input type="text" [(ngModel)]="title" maxlength="200" [placeholder]="'compose.titlePlaceholder' | t" />
+      </label>
+    </div>
 
-    @if (job(); as j) {
-      <div class="il-job" [class.il-job--failed]="j.status === 'failed'" [class.il-job--done]="j.status === 'done'">
-        <div class="il-job-head">
-          <span class="il-job-status">{{ ('job.' + j.status) | t }}</span>
-          <span>{{ j.label }}</span>
-          @if (jobRunning()) {
-            <span class="il-stat-sub">{{ 'job.working' | t }}</span>
-          }
+    @if (activeMode() === 'hand') {
+      <div id="compose-panel-hand" role="tabpanel" aria-labelledby="compose-tab-hand" class="il-compose-tabpanel">
+        <label class="il-compose-field">
+          <span>{{ 'compose.summary' | t }}</span>
+          <textarea [(ngModel)]="summary" rows="3"></textarea>
+        </label>
+        <label class="il-compose-field">
+          <span>{{ 'compose.article' | t }}</span>
+          <textarea [(ngModel)]="article" rows="9"></textarea>
+        </label>
+        <div class="il-compose-actions">
+          <button type="button" class="il-btn" [disabled]="busy()" (click)="save()">{{ busy() ? ('compose.saving' | t) : ('compose.save' | t) }}</button>
+          <button type="button" class="il-btn ghost" [disabled]="busy()" (click)="downloadJson()">{{ 'compose.download' | t }}</button>
         </div>
-        <pre class="il-log">{{ j.log || ('job.waiting' | t) }}</pre>
       </div>
     }
 
+    @if (activeMode() === 'transcript') {
+      <div id="compose-panel-transcript" role="tabpanel" aria-labelledby="compose-tab-transcript" class="il-compose-tabpanel">
+        <p class="il-section-sub">{{ 'compose.fromTranscriptSub' | t }}</p>
+        <label class="il-compose-field il-compose-field--spaced">
+          <span>{{ 'compose.transcriptLabel' | t }}</span>
+          <textarea [(ngModel)]="transcript" rows="10" [placeholder]="'compose.transcriptPlaceholder' | t" [disabled]="busy()"></textarea>
+        </label>
+        <div class="il-compose-actions">
+          <button type="button" class="il-btn" [disabled]="busy()" (click)="submitTranscript()">{{ 'compose.start' | t }}</button>
+          <a class="il-compose-settings-link" [routerLink]="sec.link('application')">{{ 'compose.changeModels' | t }}</a>
+        </div>
+      </div>
+    }
+
+    @if (activeMode() === 'recording') {
+      <div id="compose-panel-recording" role="tabpanel" aria-labelledby="compose-tab-recording" class="il-compose-tabpanel">
+        @if (!pickedFile()) {
+          <label
+            class="il-compose-dropzone"
+            [class.is-dragging]="dragActive()"
+            (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave($event)"
+            (drop)="onDrop($event)"
+          >
+            <input
+              class="il-file-native"
+              type="file"
+              [disabled]="busy()"
+              (change)="onFile($event)"
+              accept=".mp4,.mov,.webm,.m4a,.mp3,.wav,.ogg,.opus,.aac,.txt,.vtt,.srt,.json"
+            />
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" /></svg>
+            <strong>{{ 'compose.dropTitle' | t }}</strong>
+            <span>{{ 'compose.dropTypes' | t }}</span>
+          </label>
+          @if (!canHear()) {
+            <aside class="il-compose-setup-state">
+              <span class="il-compose-setup-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 16 0c0 5-4 4-4 8"/><path d="M9 12a3 3 0 0 1 6 0c0 2-2 2-2 4"/><path d="M12 20h.01"/></svg>
+              </span>
+              <span><strong>{{ 'compose.hearingSetupTitle' | t }}</strong><small>{{ 'compose.noEarsDrop' | t }}</small></span>
+              <a class="il-btn ghost sm" [routerLink]="sec.link('application')" fragment="local-tools">{{ 'compose.openLocalTools' | t }}</a>
+            </aside>
+          }
+        } @else if (pickedFile(); as file) {
+          <div class="il-compose-preflight">
+            <div class="il-compose-file-head">
+              <span class="il-compose-file-icon" aria-hidden="true">{{ pickedKind() === 'json' ? '{ }' : '▶' }}</span>
+              <span><strong>{{ file.name }}</strong><small>{{ fileSize(file) }} · {{ ('compose.kind.' + pickedKind()) | t }}</small></span>
+              <label class="il-compose-change">
+                <input
+                  class="il-file-native"
+                  type="file"
+                  [disabled]="busy()"
+                  (change)="onFile($event)"
+                  accept=".mp4,.mov,.webm,.m4a,.mp3,.wav,.ogg,.opus,.aac,.txt,.vtt,.srt,.json"
+                />
+                <span>{{ 'compose.changeFile' | t }}</span>
+              </label>
+            </div>
+
+            <p class="il-compose-ready">{{ 'compose.ready' | t }}</p>
+            <ol class="il-compose-steps">
+              <li>
+                <span class="il-compose-step-num">1</span>
+                <strong>{{ 'compose.stepHear' | t }}</strong>
+                @if (hearingRequired()) {
+                  <span>{{ providerName(providers().transcribe.driver) }} · <code>{{ providers().transcribe.model }}</code></span>
+                } @else {
+                  <span>{{ 'compose.stepNotNeeded' | t }}</span>
+                }
+              </li>
+              <li>
+                <span class="il-compose-step-num">2</span>
+                <strong>{{ 'compose.stepSlides' | t }}</strong>
+                <span>{{ (pickedKind() === 'video' ? 'compose.stepSlidesVideo' : 'compose.stepSlidesSkip') | t }}</span>
+              </li>
+              <li>
+                <span class="il-compose-step-num">3</span>
+                <strong>{{ 'compose.stepWrite' | t }}</strong>
+                @if (pickedKind() === 'json') {
+                  <span>{{ 'compose.stepWriteJson' | t }}</span>
+                } @else {
+                  <span>{{ providerName(providers().extract.driver) }} · <code>{{ providers().extract.model }}</code> · {{ 'compose.stepWriteOutput' | t }}</span>
+                }
+              </li>
+              <li>
+                <span class="il-compose-step-num">4</span>
+                <strong>{{ 'compose.stepCheck' | t }}</strong>
+                <span>{{ 'compose.stepCheckDetail' | t }}</span>
+              </li>
+              <li>
+                <span class="il-compose-step-num">5</span>
+                <strong>{{ 'compose.stepSave' | t }}</strong>
+                <span>{{ 'compose.stepSaveDetail' | t: { name: saveName(), pair: sec.label() } }}</span>
+              </li>
+            </ol>
+
+            <p class="il-compose-privacy">{{ (pickedKind() === 'json' ? 'compose.privacyJson' : 'compose.privacy') | t: { provider: providerName(providers().extract.driver) } }}</p>
+            @if (startBlocked()) {
+              <p class="il-compose-blocked" role="alert">{{ 'compose.hearingBlocked' | t }} <a [routerLink]="sec.link('application')" fragment="local-tools">{{ 'compose.openLocalTools' | t }}</a>.</p>
+            }
+            <div class="il-compose-actions il-compose-actions--preflight">
+              <button type="button" class="il-btn" [disabled]="busy() || startBlocked()" (click)="startFile()">{{ busy() ? ('job.working' | t) : ('compose.start' | t) }}</button>
+              <button type="button" class="il-btn ghost" [disabled]="busy()" (click)="cancelFile()">{{ 'compose.cancel' | t }}</button>
+              <a class="il-compose-settings-link" [routerLink]="sec.link('application')">{{ 'compose.changeModels' | t }}</a>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (job(); as j) {
+      <section class="il-job il-job--process" [class.il-job--failed]="j.status === 'failed'" [class.il-job--done]="j.status === 'done'" aria-labelledby="process-job-title">
+        <header class="il-job-process-head">
+          <div>
+            <span class="il-job-status">{{ ('job.' + j.status) | t }}</span>
+            <h2 id="process-job-title">{{ 'job.adding' | t }} <em>{{ j.label }}</em></h2>
+          </div>
+          <p class="il-job-time"><strong>{{ jobElapsed(j) }}</strong> {{ 'job.elapsed' | t }} · {{ 'job.started' | t }} {{ jobStarted(j) }}</p>
+        </header>
+        <p class="il-job-lead">{{ 'job.stepsLead' | t }} {{ 'job.notificationHint' | t }}</p>
+
+        @if (j.stages; as stages) {
+          <ol class="il-job-stages" [attr.aria-label]="'job.stagesAria' | t">
+            @for (stage of stages; track stage.id) {
+              <li class="il-job-stage" [class]="'il-job-stage il-job-stage--' + stage.status" [attr.aria-current]="stage.status === 'running' ? 'step' : null">
+                <div class="il-job-stage-name">
+                  <span class="il-job-stage-dot" aria-hidden="true">
+                    @if (stage.status === 'done') { ✓ }
+                    @else if (stage.status === 'running') { ▶ }
+                    @else if (stage.status === 'failed') { ! }
+                  </span>
+                  {{ ('job.stage.' + stage.id) | t }}
+                </div>
+                <p class="il-job-stage-meta">
+                  @if (stageElapsed(stage)) { {{ stageElapsed(stage) }} · }
+                  {{ ('job.stageStatus.' + stage.status) | t }}
+                </p>
+                <p>{{ ('job.stageDetail.' + stage.id) | t }}</p>
+              </li>
+            }
+          </ol>
+          <div class="il-job-progress" role="progressbar" [attr.aria-valuenow]="stageProgress(j)" aria-valuemin="0" aria-valuemax="100">
+            <span [style.width.%]="stageProgress(j)"></span>
+          </div>
+        }
+
+        <div class="il-job-log-head">
+          <span>{{ 'job.liveLog' | t }}</span>
+          <button type="button" (click)="copyLog(j.log)">{{ (logCopied() ? 'job.copiedLog' : 'job.copyLog') | t }}</button>
+        </div>
+        <pre class="il-log" tabindex="0">{{ j.log || ('job.waiting' | t) }}</pre>
+        @if (j.status === 'failed' && j.error) {
+          <p class="il-job-error" role="alert">{{ j.error }}</p>
+        }
+        @if (jobRunning()) {
+          <p class="il-job-running" role="status">{{ 'job.working' | t }}</p>
+        }
+        @if (j.status === 'done') {
+          <p class="il-job-finished" role="status">{{ 'job.finished' | t }}</p>
+        }
+      </section>
+    }
+
     @if (error()) {
-      <p style="color: #a33; margin-top: 1rem;" role="alert">{{ error() }}</p>
+      <p class="il-compose-message il-compose-message--error" role="alert">{{ error() }}</p>
     }
     @if (ok()) {
-      <p style="color: var(--success); margin-top: 1rem;">{{ ok() }}</p>
+      <p class="il-compose-message il-compose-message--ok">{{ ok() }}</p>
     }
   </div>
 </section>

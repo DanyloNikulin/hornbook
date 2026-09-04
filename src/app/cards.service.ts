@@ -188,6 +188,15 @@ export class CardsService {
     return this.store.sm2()[id] ?? INITIAL;
   }
 
+  isNew(id: string): boolean {
+    return !(id in this.store.sm2());
+  }
+
+  newCount(pool: readonly Card[]): number {
+    const state = this.store.sm2();
+    return pool.filter((card) => !(card.id in state)).length;
+  }
+
   dueIds(pool: readonly Card[], now: string = today()): readonly string[] {
     const s = this.store.sm2();
     return pool.filter((c) => isDue(s[c.id] ?? INITIAL, now)).map((c) => c.id);

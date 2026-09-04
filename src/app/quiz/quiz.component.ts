@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TPipe } from '../i18n.pipe';
 import { QuizResultsService } from '../quiz-results.service';
@@ -12,6 +12,7 @@ type SelfGradeMap = Record<number, 'right' | 'wrong' | undefined>;
   selector: 'app-quiz',
   imports: [FormsModule, TPipe],
   templateUrl: './quiz.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class QuizComponent {
   private readonly results = inject(QuizResultsService);
@@ -21,13 +22,13 @@ export class QuizComponent {
 
   protected readonly answers = signal<AnswerMap>({});
   protected readonly selfGrades = signal<SelfGradeMap>({});
-  protected readonly revealed = signal<Record<number, boolean>>({});
+  protected readonly checked = signal(false);
   protected readonly submitted = signal(false);
 
   protected readonly previousBest = computed(() => this.results.forLesson(this.lessonSlug()));
 
   protected readonly score = computed(() => {
-    if (!this.submitted()) return 0;
+    if (!this.checked()) return 0;
     let s = 0;
     this.questions().forEach((q, i) => {
       if (this.isCorrect(q, i)) s += 1;
@@ -35,30 +36,42 @@ export class QuizComponent {
     return s;
   });
 
-  protected readonly canSubmit = computed(() =>
-    this.questions().every(
-      (q, i) =>
-        q.type !== 'translate' ||
-        this.translateAutoCorrect(q, i) ||
-        this.selfGrades()[i] !== undefined,
-    ),
+  protected readonly gradedCount = computed(() => {
+    if (!this.checked()) return 0;
+    return this.questions().filter((q, i) => this.isGraded(q, i)).length;
+  });
+
+  protected readonly pendingTranslations = computed(() => {
+    if (!this.checked()) return 0;
+    return this.questions().filter((q, i) => q.type === 'translate' && !this.isGraded(q, i)).length;
+  });
+
+  protected readonly progressPercent = computed(() => {
+    const total = this.questions().length;
+    return total === 0 ? 0 : Math.round((this.gradedCount() / total) * 100);
+  });
+
+  protected readonly canSubmit = computed(
+    () => this.checked() && this.pendingTranslations() === 0,
   );
 
   protected setAnswer(i: number, value: string | number): void {
+    if (this.checked()) return;
     this.answers.update((m) => ({ ...m, [i]: value }));
-    if (this.questions()[i]?.type === 'translate') {
-      // A grade belongs to the answer text the learner reviewed. Editing the
-      // translation afterwards must require a fresh self-assessment.
-      this.selfGrades.update((m) => ({ ...m, [i]: undefined }));
-    }
   }
 
-  protected reveal(i: number): void {
-    this.revealed.update((m) => ({ ...m, [i]: true }));
+  protected check(): void {
+    this.checked.set(true);
   }
 
   protected selfGrade(i: number, grade: 'right' | 'wrong'): void {
+    if (!this.checked() || this.submitted()) return;
     this.selfGrades.update((m) => ({ ...m, [i]: grade }));
+  }
+
+  protected isGraded(q: QuizQuestionT, i: number): boolean {
+    if (!this.checked()) return false;
+    return q.type !== 'translate' || this.translateAutoCorrect(q, i) || this.selfGrades()[i] !== undefined;
   }
 
   protected isCorrect(q: QuizQuestionT, i: number): boolean {
@@ -102,17 +115,17 @@ export class QuizComponent {
   protected retry(): void {
     this.answers.set({});
     this.selfGrades.set({});
-    this.revealed.set({});
+    this.checked.set(false);
     this.submitted.set(false);
   }
 
   // Template helpers
-  protected mcCorrect(i: number, idx: number, q: QuizQuestionT): boolean {
-    return q.type === 'mc' && this.submitted() && q.answer === idx;
+  protected mcChosenWrong(i: number, idx: number, q: QuizQuestionT): boolean {
+    return q.type === 'mc' && this.checked() && this.answers()[i] === idx && q.answer !== idx;
   }
 
-  protected mcChosenWrong(i: number, idx: number, q: QuizQuestionT): boolean {
-    return q.type === 'mc' && this.submitted() && this.answers()[i] === idx && q.answer !== idx;
+  protected mcCorrect(_i: number, idx: number, q: QuizQuestionT): boolean {
+    return q.type === 'mc' && this.checked() && q.answer === idx;
   }
 }
 

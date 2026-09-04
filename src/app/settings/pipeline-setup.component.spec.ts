@@ -39,7 +39,7 @@ describe('PipelineSetupComponent', () => {
       ok: false,
       pick: true,
       detail: 'Pick one',
-      models: ['llama3.2:latest', 'qwen2.5:7b'],
+      models: ['qwen2.5:7b', 'llama3.2:latest'],
     });
     const config = { driver: 'ollama', model: '' };
     const fixture = mount('extract', config);
@@ -52,20 +52,29 @@ describe('PipelineSetupComponent', () => {
     fixture.detectChanges();
     expect(root.textContent).toContain('Pulled on this host');
     expect(root.textContent).toContain('llama3.2:latest');
-    expect(root.querySelector('.il-pipe-models .il-chip.active')).toBeNull();
+    const options = [...root.querySelectorAll<HTMLButtonElement>('.il-model-option')];
+    expect(options.map((option) => option.textContent?.trim())).toEqual([
+      'llama3.2:latest',
+      'qwen2.5:7b',
+    ]);
     // A found list waits for a pick; it is neither "Ready." nor "Not yet.".
     const result = root.querySelector('.il-pipe-result') as HTMLElement;
     expect(result.classList.contains('il-pipe-result--pick')).toBe(true);
     expect(result.classList.contains('il-pipe-result--bad')).toBe(false);
     expect(result.textContent).toContain('Connected.');
     expect(result.textContent).not.toContain('Not yet.');
-    const chip = [...root.querySelectorAll('.il-pipe-models .il-chip')].find((b) =>
-      b.textContent?.includes('qwen2.5:7b'),
-    ) as HTMLButtonElement | undefined;
-    chip?.click();
+    const search = root.querySelector<HTMLInputElement>('.il-model-search');
+    expect(search).toBeTruthy();
+    search!.value = 'qwen';
+    search!.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    const filtered = [...root.querySelectorAll<HTMLButtonElement>('.il-model-option')];
+    expect(filtered.map((option) => option.textContent?.trim())).toEqual(['qwen2.5:7b']);
+    filtered[0]?.click();
     fixture.detectChanges();
     expect(config.model).toBe('qwen2.5:7b');
-    expect(chip?.classList.contains('active')).toBe(true);
+    expect(root.querySelector('.il-model-picker-trigger')?.textContent).toContain('qwen2.5:7b');
+    expect(root.querySelector('.il-model-picker-popover')).toBeNull();
   });
 
   it('labels an API list as belonging to the key, not to Hornbook', async () => {
@@ -104,11 +113,12 @@ describe('PipelineSetupComponent', () => {
   it('hides model chips when hearing is skipped', () => {
     const fixture = mount('transcribe', { driver: 'skip', model: '-' });
     const root = fixture.nativeElement as HTMLElement;
-    expect(root.querySelector('.il-pipe-models')).toBeNull();
+    expect(root.querySelector('.il-model-picker')).toBeNull();
     expect(root.textContent).not.toContain('This key can use');
   });
 
-  it('lets the user pick Claude Code, Codex, Grok or Kimi on this computer for writing', () => {
+  it('checks every coding CLI, labels experimental choices, and explains the default model', async () => {
+    post.mockResolvedValue({ ok: true, detail: 'CLI found. Uses its own sign-in.' });
     const config = { driver: 'ollama', model: 'qwen2.5:7b' };
     const fixture = mount('extract', config);
     const root = fixture.nativeElement as HTMLElement;
@@ -116,6 +126,10 @@ describe('PipelineSetupComponent', () => {
     expect(here).toBeTruthy();
     here?.click();
     fixture.detectChanges();
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(root.querySelectorAll('.il-cli-status--ok')).toHaveLength(4);
+    });
     expect(config.driver).toBe('claude-cli');
     expect(config.model).toBe('-');
     expect(root.textContent).toContain('Claude Code');
@@ -123,13 +137,51 @@ describe('PipelineSetupComponent', () => {
     expect(root.textContent).toContain('Grok');
     expect(root.textContent).toContain('Kimi');
     expect(root.textContent).toContain('stores no key');
-    const grok = [...root.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Grok');
+    expect(root.querySelectorAll('.il-cli-option')).toHaveLength(4);
+    expect(root.querySelectorAll('.il-cli-status--ok')).toHaveLength(4);
+    expect(root.querySelectorAll('.il-cli-experimental')).toHaveLength(2);
+    expect(root.textContent).toContain('A single dash means Hornbook does not override');
+    expect(post).toHaveBeenCalledTimes(4);
+    const probedDrivers = post.mock.calls.map((call) => call[1]?.driver).sort();
+    expect(probedDrivers).toEqual(['claude-cli', 'codex-cli', 'grok-cli', 'kimi-cli']);
+    const grok = [...root.querySelectorAll<HTMLButtonElement>('.il-cli-pick')].find(
+      (button) => button.textContent?.trim() === 'Grok',
+    );
     grok?.click();
     fixture.detectChanges();
     expect(config.driver).toBe('grok-cli');
-    const kimi = [...root.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Kimi');
+    const kimi = [...root.querySelectorAll<HTMLButtonElement>('.il-cli-pick')].find(
+      (button) => button.textContent?.trim() === 'Kimi',
+    );
     kimi?.click();
     fixture.detectChanges();
     expect(config.driver).toBe('kimi-cli');
+  });
+
+  it('greys out a missing CLI and gives a concrete configuration line', async () => {
+    post.mockImplementation(async (_url: string, body: { driver: string }) =>
+      body.driver === 'grok-cli'
+        ? { ok: false, detail: 'The grok CLI is not on PATH.' }
+        : { ok: true, detail: `${body.driver} found.` },
+    );
+    const fixture = mount('extract', { driver: 'ollama', model: 'qwen2.5:7b' });
+    const root = fixture.nativeElement as HTMLElement;
+    const here = [...root.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('This computer'),
+    );
+    here?.click();
+    fixture.detectChanges();
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(root.querySelectorAll('.il-cli-status--ok, .il-cli-status--bad')).toHaveLength(4);
+    });
+
+    const grokCard = [...root.querySelectorAll<HTMLElement>('.il-cli-option')].find((card) =>
+      card.textContent?.includes('Grok'),
+    );
+    expect(grokCard?.classList.contains('il-cli-option--missing')).toBe(true);
+    expect(grokCard?.querySelector<HTMLButtonElement>('.il-cli-pick')?.disabled).toBe(true);
+    expect(grokCard?.textContent).toContain('GROK_BIN');
+    expect(grokCard?.textContent).toContain('Install this CLI');
   });
 });

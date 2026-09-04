@@ -8,6 +8,63 @@
       <span class="il-lesson-bc-active">{{ l.title }}</span>
     </nav>
 
+    <div class="il-lesson-layout">
+      <aside class="il-lesson-rail">
+        <nav [attr.aria-label]="'lesson.onThisPage' | t">
+          <p class="il-lesson-rail-title">{{ 'lesson.onThisPage' | t }}</p>
+          <div class="il-lesson-rail-links">
+            @if (articleHtml()) {
+              <a [routerLink]="[]" fragment="lesson-notes" class="il-lesson-rail-link">
+                <span>{{ 'lesson.notes' | t }}</span>
+              </a>
+            }
+            @if (l.vocabulary.length > 0) {
+              <a [routerLink]="[]" fragment="lesson-glossary" class="il-lesson-rail-link">
+                <span>{{ 'lesson.glossaryLabel' | t }}</span>
+                <span class="il-lesson-rail-count">{{ l.vocabulary.length }}</span>
+              </a>
+            }
+            @if (l.grammar.length > 0) {
+              <a [routerLink]="[]" fragment="lesson-grammar" class="il-lesson-rail-link">
+                <span>{{ 'lesson.grammarLabel' | t }}</span>
+                <span class="il-lesson-rail-count">{{ l.grammar.length }}</span>
+              </a>
+            }
+            @if (l.slides.length > 0) {
+              <a [routerLink]="[]" fragment="lesson-slides" class="il-lesson-rail-link">
+                <span>{{ 'lesson.slidesLabel' | t }}</span>
+                <span class="il-lesson-rail-count">{{ l.slides.length }}</span>
+              </a>
+            }
+            @if (l.quotes.length > 0) {
+              <a [routerLink]="[]" fragment="lesson-examples" class="il-lesson-rail-link">
+                <span>{{ 'lesson.examplesLabel' | t }}</span>
+                <span class="il-lesson-rail-count">{{ l.quotes.length }}</span>
+              </a>
+            }
+            @if (l.quiz.length > 0) {
+              <a [routerLink]="[]" fragment="lesson-quiz" class="il-lesson-rail-link">
+                <span>{{ 'lesson.quizLabel' | t }}</span>
+                <span class="il-lesson-rail-count">{{ l.quiz.length }}</span>
+              </a>
+            }
+          </div>
+        </nav>
+        <div class="il-lesson-rail-actions">
+          <a
+            [routerLink]="sec.link('flashcards')"
+            [queryParams]="{ lesson: l.slug }"
+            class="il-btn ghost sm"
+            [attr.aria-label]="'lesson.cardsAria' | t"
+          >{{ 'lesson.cards' | t: { n: l.vocabulary.length } }}</a>
+          @if (l.quiz.length > 0) {
+            <a [routerLink]="[]" fragment="lesson-quiz" class="il-lesson-rail-quiz">{{ 'lesson.takeQuiz' | t }} ↓</a>
+          }
+        </div>
+      </aside>
+
+      <div class="il-lesson-content">
+
     <!-- Hero card -->
     <div class="il-lesson-hero">
       <div class="il-lesson-meta">
@@ -33,6 +90,11 @@
           </svg>
           {{ 'count.words' | t: { n: l.vocabulary.length } }}
         </span>
+        @if (l.slides.length > 0) {
+          <span class="il-meta-pill">
+            {{ 'count.slides' | t: { n: l.slides.length } }}
+          </span>
+        }
       </div>
 
       <h1 class="il-lesson-title">{{ l.title }}</h1>
@@ -54,7 +116,7 @@
 
       <div class="il-lesson-actions">
         <a [routerLink]="sec.link('flashcards')"
-           [queryParams]="{ lesson: l.slug, mini: 5 }"
+           [queryParams]="{ lesson: l.slug }"
            class="il-btn"
            [attr.aria-label]="'lesson.cardsAria' | t">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -62,6 +124,9 @@
           </svg>
           {{ 'lesson.cards' | t: { n: l.vocabulary.length } }}
         </a>
+        @if (l.quiz.length > 0) {
+          <a [routerLink]="[]" fragment="lesson-quiz" class="il-btn ghost">{{ 'lesson.takeQuiz' | t }}</a>
+        }
         <a [href]="flagUrl()" target="_blank" rel="noopener noreferrer" class="il-btn ghost sm">
           {{ 'lesson.report' | t }}
         </a>
@@ -70,7 +135,7 @@
 
     <!-- Article body (markdown) -->
     @if (articleHtml(); as html) {
-      <section class="il-lesson-section">
+      <section id="lesson-notes" class="il-lesson-section">
         <div class="il-lesson-section-head">
           <span class="il-lesson-section-label">{{ 'lesson.notes' | t }}</span>
           <span class="il-lesson-section-line"></span>
@@ -81,7 +146,7 @@
 
     <!-- Vocabulary grid -->
     @if (l.vocabulary.length > 0) {
-      <section class="il-lesson-section">
+      <section id="lesson-glossary" class="il-lesson-section">
         <div class="il-lesson-section-head">
           <span class="il-lesson-section-label">{{ 'lesson.glossaryLabel' | t }}</span>
           <span class="il-lesson-section-line"></span>
@@ -111,7 +176,7 @@
 
     <!-- Grammar -->
     @if (l.grammar.length > 0) {
-      <section class="il-lesson-section">
+      <section id="lesson-grammar" class="il-lesson-section">
         <div class="il-lesson-section-head">
           <span class="il-lesson-section-label">{{ 'lesson.grammarLabel' | t }}</span>
           <span class="il-lesson-section-line"></span>
@@ -147,9 +212,49 @@
       </section>
     }
 
+    <!-- Slides extracted from the lesson recording -->
+    @if (l.slides.length > 0) {
+      <section id="lesson-slides" class="il-lesson-section">
+        <div class="il-lesson-section-head">
+          <span class="il-lesson-section-label">{{ 'lesson.slidesLabel' | t }}</span>
+          <span class="il-lesson-section-line"></span>
+        </div>
+        <h2 class="il-lesson-section-title">{{ 'lesson.slidesTitle' | t }}</h2>
+        <div class="il-slide-grid">
+          @for (slide of l.slides; track $index) {
+            <article class="il-slide-card">
+              <div class="il-slide-preview">
+                <div class="il-slide-markdown" [innerHTML]="slideHtml()[$index]"></div>
+              </div>
+              <div class="il-slide-detail">
+                <p class="il-slide-meta">
+                  {{ slide.ts }} · {{ 'lesson.slideNumber' | t: { n: $index + 1 } }}
+                </p>
+                @if (slide.extracted_table; as table) {
+                  <div class="il-slide-table-wrap">
+                    <table class="il-slide-table">
+                      <tbody>
+                        @for (row of table; track $index; let isFirst = $first) {
+                          <tr [class]="isFirst ? 'il-slide-table-head-row' : ''">
+                            @for (cell of row; track $index) {
+                              <td>{{ cell }}</td>
+                            }
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+
     <!-- Quotes / examples from lesson -->
     @if (l.quotes.length > 0) {
-      <section class="il-lesson-section">
+      <section id="lesson-examples" class="il-lesson-section">
         <div class="il-lesson-section-head">
           <span class="il-lesson-section-label">{{ 'lesson.examplesLabel' | t }}</span>
           <span class="il-lesson-section-line"></span>
@@ -172,7 +277,7 @@
 
     <!-- Quiz -->
     @if (l.quiz.length > 0) {
-      <section class="il-lesson-section">
+      <section id="lesson-quiz" class="il-lesson-section">
         <div class="il-lesson-section-head">
           <span class="il-lesson-section-label">{{ 'lesson.quizLabel' | t }}</span>
           <span class="il-lesson-section-line"></span>
@@ -247,6 +352,8 @@
       }
     </nav>
 
+      </div>
+    </div>
   </div>
 } @else if (loading()) {
   <!-- Loading skeleton: shows manifest metadata immediately so the page

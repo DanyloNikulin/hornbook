@@ -136,7 +136,11 @@ function loadExistingSlugs(): Map<string, string> {
   return existingSlugs(currentSection().id);
 }
 
-export async function extract(workDir: string, dateHint: string): Promise<LessonT> {
+export interface ExtractHooks {
+  onModelAnswer?: () => void;
+}
+
+export async function extract(workDir: string, dateHint: string, hooks: ExtractHooks = {}): Promise<LessonT> {
   const transcriptPath = join(workDir, 'transcript.txt');
   const manifestPath = join(workDir, 'frames-manifest.json');
   const framesDir = join(workDir, 'frames');
@@ -201,6 +205,8 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
       toolName: lessonTool.name,
     },
     logsDir,
+    console,
+    hooks,
   );
   if (attempts > 1) console.log(`✓ Lesson valid after a repair round.`);
   const result = { data: lesson };

@@ -2,6 +2,7 @@ import { Injectable, inject, signal, type WritableSignal } from '@angular/core';
 import type { JobView, SetupPlanRequest, StartJob } from '../lib/api-types';
 import { ApiService } from './api.service';
 import { SectionService } from './section.service';
+import { I18nService } from './i18n.service';
 
 const POLL_MS = 1200;
 
@@ -13,6 +14,7 @@ const POLL_MS = 1200;
 export class JobsService {
   private readonly api = inject(ApiService);
   private readonly section = inject(SectionService);
+  private readonly i18n = inject(I18nService);
 
   readonly current = signal<JobView | null>(null);
   /** The setup job being followed (downloads of local tools), apart from lesson jobs. */
@@ -23,6 +25,7 @@ export class JobsService {
   /** Queue a job and follow it. Resolves with the finished job. */
   async run(input: StartJob): Promise<JobView> {
     this.stop();
+    this.prepareNotifications();
     const started = await this.api.post<JobView>(`${this.section.apiBase()}/jobs`, input);
     this.current.set(started);
     return this.follow(started.id, this.current, (timer) => (this.timer = timer));
@@ -34,6 +37,7 @@ export class JobsService {
       clearTimeout(this.setupTimer);
       this.setupTimer = null;
     }
+    this.prepareNotifications();
     const started = await this.api.post<JobView>('/api/setup/jobs', input);
     this.setupJob.set(started);
     onStarted?.(started);
@@ -64,6 +68,7 @@ export class JobsService {
           sink.set(job);
           if (job.status === 'done' || job.status === 'failed') {
             setTimer(null);
+            this.notify(job);
             resolve(job);
             return;
           }
@@ -75,5 +80,23 @@ export class JobsService {
       };
       void tick();
     });
+  }
+
+  private prepareNotifications(): void {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'default') return;
+    void Notification.requestPermission().catch(() => undefined);
+  }
+
+  private notify(job: JobView): void {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted' || !document.hidden) return;
+    try {
+      const bodyKey = job.status === 'done' ? 'job.notificationDone' : 'job.notificationFailed';
+      new Notification(this.i18n.t('job.notificationTitle'), {
+        body: this.i18n.t(bodyKey, { label: job.label }),
+        tag: `hornbook-job-${job.id}`,
+      });
+    } catch {
+      // Notifications are a convenience; job completion must never depend on them.
+    }
   }
 }

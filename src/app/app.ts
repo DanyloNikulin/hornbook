@@ -39,11 +39,11 @@ export class AppComponent {
 
   // Section pages show the section nav; home and setup show only the brand.
   protected readonly inSection = computed(() => {
-    const path = this.url().split('?')[0];
+    const path = routePath(this.url());
     return this.section.current() !== null && path !== '/' && !path.startsWith('/setup') && path !== '/settings';
   });
 
-  protected readonly isCheatsheet = computed(() => this.url().split('?')[0].endsWith('/cheatsheet'));
+  protected readonly isCheatsheet = computed(() => routePath(this.url()).endsWith('/cheatsheet'));
 
   constructor() {
     const router = this.router;
@@ -63,11 +63,15 @@ export class AppComponent {
 
   /** Switch to another section, keeping the same page when it exists there. */
   protected switchSection(id: string): void {
-    const path = this.url().split('?')[0];
+    const path = routePath(this.url());
     const rest = path.split('/').slice(2).join('/');
     // Lesson slugs are section-specific; land on the section home instead.
     const target = rest.startsWith('lesson/') ? [] : rest ? [rest] : [];
     void this.router.navigate(['/', id, ...target]);
   }
 
+}
+
+export function routePath(url: string): string {
+  return url.split(/[?#]/, 1)[0] ?? '/';
 }

@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, expect } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AppComponent } from './app';
+import { AppComponent, routePath } from './app';
 import { SectionService } from './section.service';
 
 describe('AppComponent', () => {
@@ -15,6 +15,11 @@ describe('AppComponent', () => {
   it('creates', () => {
     const fixture = TestBed.createComponent(AppComponent);
     expect(fixture.componentInstance).toBeTruthy();
+  });
+
+  it('recognises the current page when the URL has a query or fragment', () => {
+    expect(routePath('/es-en/cheatsheet#sheet-tenses-present')).toBe('/es-en/cheatsheet');
+    expect(routePath('/es-en/flashcards?lesson=greetings#card')).toBe('/es-en/flashcards');
   });
 
   it('renders the brand and the journal-level nav outside a section', async () => {

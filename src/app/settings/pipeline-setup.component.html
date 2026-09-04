@@ -15,14 +15,56 @@
   <p class="il-settings-help">{{ placeNote() | t }}</p>
 
   @if (extractCli()) {
-    <p class="il-pipe-step">{{ 'pipeline.whichCli' | t }}</p>
-    <div class="il-locale-picks" role="radiogroup" [attr.aria-label]="'pipeline.whichCli' | t">
+    <div class="il-cli-heading">
+      <p class="il-pipe-step">{{ 'pipeline.whichCli' | t }}</p>
+      <button type="button" class="il-cli-refresh" [disabled]="cliStatusBusy()" (click)="refreshCliStatuses()">
+        {{ (cliStatusBusy() ? 'pipeline.cliCheckingAll' : 'pipeline.cliCheckAgain') | t }}
+      </button>
+    </div>
+    <div class="il-cli-list" role="radiogroup" [attr.aria-label]="'pipeline.whichCli' | t">
       @for (p of cliPaths(); track p.driver) {
-        <button type="button" class="il-chip" [class.active]="config().driver === p.driver"
-                role="radio" [attr.aria-checked]="config().driver === p.driver"
-                (click)="setCliDriver(p.driver)">
-          {{ ('pipeline.service.' + p.driver) | t }}
-        </button>
+        <div class="il-cli-option" [class.il-cli-option--missing]="cliUnavailable(p.driver)"
+             [class.il-cli-option--selected]="config().driver === p.driver">
+          <div class="il-cli-option-head">
+            <button type="button" class="il-cli-pick"
+                    [class.active]="config().driver === p.driver"
+                    [disabled]="cliUnavailable(p.driver)"
+                    role="radio" [attr.aria-checked]="config().driver === p.driver"
+                    [attr.aria-describedby]="'cli-detail-' + p.driver"
+                    (click)="setCliDriver(p.driver)">
+              {{ ('pipeline.service.' + p.driver) | t }}
+            </button>
+            @if (cliExperimental(p.driver)) {
+              <span class="il-cli-experimental">{{ 'pipeline.cliExperimental' | t }}</span>
+            }
+            @if (cliStatus(p.driver); as status) {
+              <span class="il-cli-status" [class.il-cli-status--ok]="status.state === 'installed'"
+                    [class.il-cli-status--bad]="status.state === 'missing'">
+                @if (status.state === 'checking') {
+                  {{ 'pipeline.cliChecking' | t }}
+                } @else if (status.state === 'installed') {
+                  {{ 'setup.status.installed' | t }}
+                } @else {
+                  {{ 'setup.status.missing' | t }}
+                }
+              </span>
+            }
+          </div>
+          <div class="il-cli-option-copy" [id]="'cli-detail-' + p.driver">
+            @if (cliStatus(p.driver); as status) {
+              @if (status.state === 'checking') {
+                <p>{{ 'pipeline.cliCheckingOne' | t }}</p>
+              } @else if (status.state === 'installed') {
+                <p>{{ status.detail }}</p>
+              } @else {
+                <p>{{ status.detail }}</p>
+                <p class="il-cli-install">{{ 'pipeline.cliInstall' | t: { env: cliEnvironment(p.driver) } }}</p>
+              }
+            } @else {
+              <p>{{ 'pipeline.cliWaiting' | t }}</p>
+            }
+          </div>
+        </div>
       }
     </div>
   }
@@ -67,24 +109,59 @@
       }
     }
 
-    <label class="il-settings-row il-settings-row--stack">
+    <div class="il-settings-row il-settings-row--stack">
       <span>
         {{ (path.modelKind === 'file' ? 'pipeline.modelFile' : 'pipeline.modelName') | t }}
         <span class="il-settings-help">{{ modelHelp() | t }}</span>
       </span>
       @if (listedModels().length) {
         <span class="il-pipe-step">{{ listedLabel() | t }}</span>
-        <span class="il-locale-picks il-pipe-models" role="radiogroup" [attr.aria-label]="listedLabel() | t">
-          @for (m of listedModels(); track m) {
-            <button type="button" class="il-chip" [class.active]="selectedModel() === m"
-                    role="radio" [attr.aria-checked]="selectedModel() === m"
-                    (click)="pickModel(m)">{{ m }}</button>
+        <div class="il-model-picker">
+          <button type="button" class="il-model-picker-trigger" (click)="toggleModelPicker()"
+                  aria-haspopup="listbox" [attr.aria-expanded]="modelPickerOpen()"
+                  [attr.aria-controls]="modelListId()">
+            <span>
+              <small>{{ 'pipeline.selectedModel' | t }}</small>
+              <strong>{{ selectedModel() || ('pipeline.chooseModel' | t) }}</strong>
+            </span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+          @if (modelPickerOpen()) {
+            <div class="il-model-picker-popover">
+              <input type="search" class="il-model-search"
+                     [ngModel]="modelQuery()" (ngModelChange)="modelQuery.set($event)"
+                     [attr.aria-label]="'pipeline.searchModels' | t"
+                     [placeholder]="'pipeline.searchModels' | t" autocomplete="off" />
+              <div class="il-model-options" role="listbox" [id]="modelListId()"
+                   [attr.aria-label]="listedLabel() | t">
+                @for (m of filteredModels(); track m) {
+                  <button type="button" role="option" class="il-model-option"
+                          [class.active]="selectedModel() === m"
+                          [attr.aria-selected]="selectedModel() === m"
+                          (click)="pickModel(m)">{{ m }}</button>
+                } @empty {
+                  <p class="il-model-empty">{{ 'pipeline.noModelsMatch' | t }}</p>
+                }
+              </div>
+            </div>
           }
+        </div>
+      }
+      @if (extractCli()) {
+        <span class="il-cli-default-note">
+          <code>-</code>
+          <span>
+            <strong>{{ 'pipeline.cliDefaultTitle' | t }}</strong>
+            <small>{{ 'pipeline.cliDefaultHelp' | t }}</small>
+          </span>
         </span>
       }
       <input type="text" [ngModel]="selectedModel()" (ngModelChange)="onModelInput($event)"
+             [attr.aria-label]="(path.modelKind === 'file' ? 'pipeline.modelFile' : 'pipeline.modelName') | t"
              [placeholder]="'pipeline.orType' | t" />
-    </label>
+    </div>
     }
   }
 

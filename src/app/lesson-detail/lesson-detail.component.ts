@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, resource } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, resource } from '@angular/core';
 import { SectionService } from '../section.service';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -14,6 +14,7 @@ import type { LessonT, LessonMetaT } from '../../lib/schema';
   selector: 'app-lesson-detail',
   imports: [RouterLink, QuizComponent, TPipe],
   templateUrl: './lesson-detail.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LessonDetailComponent {
   protected readonly sec = inject(SectionService);
@@ -48,8 +49,7 @@ export class LessonDetailComponent {
   protected readonly neighbors = computed(() => this.lessons.neighborsMeta(this.slug()));
 
   protected readonly lessonIndex = computed(() => {
-    const idx = this.lessons.indexBySlug(this.slug());
-    return idx !== -1 ? String(idx + 1).padStart(2, '0') : '—';
+    return this.lessons.numberBySlug(this.slug()) ?? '—';
   });
 
   // Topic-overlap suggestions: lessons sharing >=1 topic with this one,
@@ -80,10 +80,19 @@ export class LessonDetailComponent {
   protected readonly articleHtml = computed<SafeHtml | null>(() => {
     const l = this.lesson();
     if (!l) return null;
-    const rawHtml = marked.parse(l.article_md, { async: false }) as string;
+    return this.renderMarkdown(l.article_md);
+  });
+
+  protected readonly slideHtml = computed<readonly SafeHtml[]>(() => {
+    const l = this.lesson();
+    return l ? l.slides.map((slide) => this.renderMarkdown(slide.text_md)) : [];
+  });
+
+  private renderMarkdown(markdown: string): SafeHtml {
+    const rawHtml = marked.parse(markdown, { async: false }) as string;
     const clean = DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
     return this.sanitizer.bypassSecurityTrustHtml(clean);
-  });
+  }
 
   protected reload(): void {
     this.lessonResource.reload();

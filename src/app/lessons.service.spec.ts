@@ -159,6 +159,16 @@ describe('LessonsService — load and fetch', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('numbers lessons chronologically when the manifest is newest first', () => {
+    const svc = service();
+    svc.metas.set([meta('newest', []), meta('middle', []), meta('oldest', [])]);
+
+    expect(svc.numberBySlug('oldest')).toBe(1);
+    expect(svc.numberBySlug('middle')).toBe(2);
+    expect(svc.numberBySlug('newest')).toBe(3);
+    expect(svc.numberBySlug('missing')).toBeNull();
+  });
+
   it('load() fills the manifest for a section and records failures', async () => {
     const fetchMock = vi
       .fn()

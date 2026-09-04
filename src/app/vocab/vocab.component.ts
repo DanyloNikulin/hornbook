@@ -7,7 +7,12 @@ import { VocabService } from '../vocab.service';
 import type { DerivedVocabT, LevelT } from '../../lib/schema';
 
 const LEVELS: readonly LevelT[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 50;
+const LETTERS = [
+  ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index)),
+  '#',
+];
+type SortOrder = 'az' | 'za';
 
 @Component({
   selector: 'app-vocab',
@@ -24,8 +29,11 @@ export class VocabComponent {
 
   protected readonly PAGE_SIZE = PAGE_SIZE;
   protected readonly levels = LEVELS;
+  protected readonly letters = LETTERS;
   protected readonly query = signal('');
   protected readonly levelFilter = signal<LevelT | 'all'>('all');
+  protected readonly letterFilter = signal<string | null>(null);
+  protected readonly sortOrder = signal<SortOrder>('az');
   protected readonly page = signal(0);
   protected readonly speakingWord = signal<string | null>(null);
 
@@ -45,14 +53,26 @@ export class VocabComponent {
   protected readonly filtered = computed<readonly DerivedVocabT[]>(() => {
     const q = this.query().trim().toLowerCase();
     const lvl = this.levelFilter();
-    return this.vocab().filter((v) => {
+    const letter = this.letterFilter();
+    const matching = this.vocab().filter((v) => {
       if (lvl !== 'all' && v.level !== lvl) return false;
+      if (letter && vocabInitial(v.target) !== letter) return false;
       if (!q) return true;
       // Match only the headword + translation, not the example sentence —
       // example matches produced noisy results (common words appear in many
       // examples), making it feel like search went "by example, not by word".
       return v.target.toLowerCase().includes(q) || v.learner.toLowerCase().includes(q);
     });
+    return sortVocabEntries(matching, this.sortOrder());
+  });
+
+  protected readonly letterCounts = computed<Record<string, number>>(() => {
+    const counts = Object.fromEntries(LETTERS.map((letter) => [letter, 0])) as Record<string, number>;
+    for (const entry of this.vocab()) {
+      const letter = vocabInitial(entry.target);
+      if (letter in counts) counts[letter]++;
+    }
+    return counts;
   });
 
   protected readonly totalPages = computed(() =>
@@ -91,6 +111,20 @@ export class VocabComponent {
     this.page.set(0);
   }
 
+  protected setLetterFilter(letter: string | null): void {
+    this.letterFilter.set(this.letterFilter() === letter ? null : letter);
+    this.page.set(0);
+  }
+
+  protected setSortOrder(order: SortOrder): void {
+    this.sortOrder.set(order);
+    this.page.set(0);
+  }
+
+  protected letterFor(word: string): string {
+    return vocabInitial(word);
+  }
+
   protected reload(): void {
     this.vocabResource.reload();
   }
@@ -105,4 +139,17 @@ export class VocabComponent {
     this.speakingWord.set(text);
     setTimeout(() => this.speakingWord.set(null), 700);
   }
+}
+
+export function vocabInitial(word: string): string {
+  const plain = word.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return plain.match(/[a-z]/i)?.[0]?.toUpperCase() ?? '#';
+}
+
+export function sortVocabEntries(entries: readonly DerivedVocabT[], order: SortOrder): DerivedVocabT[] {
+  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  return [...entries].sort((a, b) => {
+    const compared = collator.compare(a.target, b.target) || collator.compare(a.learner, b.learner);
+    return order === 'az' ? compared : -compared;
+  });
 }

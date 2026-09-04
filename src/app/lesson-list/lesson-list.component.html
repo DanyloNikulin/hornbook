@@ -16,12 +16,15 @@
   <div class="il-panel-inner">
 
     @if (lessons().length === 0 && !activeTopic()) {
-      <div style="text-align:center; padding: 80px 0; color: var(--muted);">
-        <p style="font-family: var(--font-display); font-size: 22px; margin-bottom: 12px;">{{ 'lessons.empty' | t }}</p>
+      <div class="il-empty-state il-empty-state--lessons">
+        <span class="il-empty-mark" aria-hidden="true">＋</span>
+        <p class="il-empty-kicker">{{ 'lessons.emptyKicker' | t }}</p>
+        <h2>{{ 'lessons.empty' | t }}</h2>
         @if (loadError()) {
-          <p style="font-size: 14px;" role="alert">{{ 'lessons.loadError' | t: { error: loadError()! } }}</p>
+          <p role="alert">{{ 'lessons.loadError' | t: { error: loadError()! } }}</p>
         } @else {
-          <p style="font-size: 14px;"><a [routerLink]="sec.link('compose')" class="il-btn sm">{{ 'lessons.addFirst' | t }}</a></p>
+          <p>{{ 'lessons.emptySub' | t }}</p>
+          <a [routerLink]="sec.link('compose')" class="il-btn sm">{{ 'lessons.addFirst' | t }}</a>
         }
       </div>
     } @else {

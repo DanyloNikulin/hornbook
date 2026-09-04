@@ -6,7 +6,7 @@
 //   --from transcript skip ffmpeg; input is a .txt transcript
 //   --from json       validate and copy an existing lesson JSON
 //
-// Usage: tsx scripts/process.ts <input> --date YYYY-MM-DD [--section es-en]
+// Usage: tsx scripts/process.ts <input> --date YYYY-MM-DD [--title title] [--section es-en]
 //        [--from video|audio|transcript|json] [--workdir dir]
 
 import { writeFileSync, mkdirSync, rmSync, existsSync, readFileSync, copyFileSync } from 'node:fs';
@@ -16,15 +16,23 @@ import { extractFrames } from './extract-frames.ts';
 import { extract } from './extract.ts';
 import { lessonToMarkdown } from './lib/markdown.ts';
 import { Lesson, type LessonT } from '../src/lib/schema.ts';
-import { repoRootDir, resolveSectionArg, sectionDir, writeDerived, lessonFileStem } from './lib/journal.ts';
+import { existingSlugs, repoRootDir, resolveSectionArg, sectionDir, writeDerived, lessonFileStem } from './lib/journal.ts';
+import { ensureUniqueSlug, slugify } from './lib/slug.ts';
 import { currentProviders } from './lib/config.ts';
 import { isMain } from './lib/is-main.ts';
 
 type From = 'video' | 'audio' | 'transcript' | 'json';
+type ProcessStage = 'hearing' | 'slides' | 'writing' | 'checking';
+type ProcessStageStatus = 'running' | 'done' | 'skipped';
+
+function reportStage(id: ProcessStage, status: ProcessStageStatus): void {
+  console.log(`HORNBOOK_STAGE ${JSON.stringify({ id, status })}`);
+}
 
 interface Args {
   input: string;
   date: string;
+  title: string | null;
   workdir: string;
   from: From;
 }
@@ -38,15 +46,17 @@ function inferFrom(path: string): From {
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: { input: string | null; date: string | null; workdir: string | null; from: From | null } = {
+  const args: { input: string | null; date: string | null; title: string | null; workdir: string | null; from: From | null } = {
     input: null,
     date: null,
+    title: null,
     workdir: null,
     from: null,
   };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--date') args.date = argv[++i] ?? null;
+    else if (a === '--title') args.title = argv[++i]?.trim() || null;
     else if (a === '--workdir') args.workdir = argv[++i] ?? null;
     else if (a === '--from') args.from = argv[++i] as From;
     else if (a === '--section') i++;
@@ -54,7 +64,7 @@ function parseArgs(argv: string[]): Args {
   }
   if (!args.input) {
     console.error(
-      'Usage: tsx scripts/process.ts <input> --date YYYY-MM-DD [--section id] [--from video|audio|transcript|json]',
+      'Usage: tsx scripts/process.ts <input> --date YYYY-MM-DD [--title title] [--section id] [--from video|audio|transcript|json]',
     );
     process.exit(1);
   }
@@ -70,6 +80,7 @@ function parseArgs(argv: string[]): Args {
   return {
     input: args.input,
     date: args.date,
+    title: args.title,
     from,
     workdir: args.workdir ?? join(repoRootDir(), 'work', basename(args.input, extname(args.input))),
   };
@@ -89,10 +100,18 @@ export function writeLesson(sectionId: string, lesson: LessonT): { jsonPath: str
   return { jsonPath, mdPath };
 }
 
+function applyInputDetails(sectionId: string, lesson: LessonT, date: string, title: string | null): void {
+  lesson.date = date;
+  if (title) lesson.title = title;
+  const requestedSlug = title ? slugify(title) || 'lesson' : lesson.slug;
+  lesson.slug = ensureUniqueSlug(requestedSlug, date, existingSlugs(sectionId));
+  lesson.id = `${date}-${lesson.slug}`;
+}
+
 async function main(): Promise<void> {
   const section = resolveSectionArg(process.argv);
   const args = parseArgs(process.argv);
-  const { input, date, workdir, from } = args;
+  const { input, date, title, workdir, from } = args;
 
   if (!existsSync(input)) {
     console.error(`Input not found: ${input}`);
@@ -101,12 +120,15 @@ async function main(): Promise<void> {
   console.log(`Section: ${section.id} (${section.target} → ${section.learner})`);
 
   if (from === 'json') {
+    reportStage('checking', 'running');
     const parsed = Lesson.safeParse(JSON.parse(readFileSync(input, 'utf8')));
     if (!parsed.success) {
       console.error(JSON.stringify(parsed.error.format(), null, 2));
       process.exit(1);
     }
+    applyInputDetails(section.id, parsed.data, date, title);
     const out = writeLesson(section.id, parsed.data);
+    reportStage('checking', 'done');
     console.log(`✓ ${out.jsonPath}`);
     console.log(`HORNBOOK_RESULT ${JSON.stringify({ slug: parsed.data.slug, id: parsed.data.id })}`);
     return;
@@ -124,24 +146,43 @@ async function main(): Promise<void> {
     );
     process.exit(1);
   } else {
+    reportStage('hearing', 'running');
     console.log(`\n=== Transcribe (${from}) ===`);
     const transcript = await transcribe(input, workdir);
     writeFileSync(join(workdir, 'transcript.txt'), transcript, 'utf8');
     console.log(`✓ Transcript: ${transcript.length} chars`);
+    reportStage('hearing', 'done');
   }
 
   if (from === 'video') {
+    reportStage('slides', 'running');
     console.log(`\n=== Extract slide frames ===`);
     const frames = await extractFrames(input, workdir);
     console.log(`✓ Frames: ${frames.length} unique slides`);
+    reportStage('slides', 'done');
   } else {
     console.log('=== Skip frames ===');
   }
 
+  reportStage('writing', 'running');
   console.log(`\n=== Extract structured lesson ===`);
-  const lesson = await extract(workdir, date);
+  let checking = false;
+  const lesson = await extract(workdir, date, {
+    onModelAnswer: () => {
+      if (checking) return;
+      checking = true;
+      reportStage('writing', 'done');
+      reportStage('checking', 'running');
+    },
+  });
+  if (!checking) {
+    reportStage('writing', 'done');
+    reportStage('checking', 'running');
+  }
+  applyInputDetails(section.id, lesson, date, title);
   console.log(`\n=== Writing lesson files ===`);
   const out = writeLesson(section.id, lesson);
+  reportStage('checking', 'done');
   console.log(`✓ ${out.jsonPath}`);
   console.log(`✓ ${out.mdPath}`);
   console.log(`Workdir kept at ${workdir}`);

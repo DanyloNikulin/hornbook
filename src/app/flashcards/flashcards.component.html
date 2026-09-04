@@ -1,63 +1,67 @@
-<section class="max-w-2xl mx-auto px-6 py-10 space-y-6" style="background: var(--paper); min-height: 100vh;">
-  <header class="space-y-3">
-    <a [routerLink]="sec.home()" class="inline-flex items-center gap-1.5 text-sm transition-colors hover:text-[var(--primary)]" style="color: var(--muted);">
-      {{ 'common.allLessons' | t }}
-    </a>
-    <div class="flex items-baseline justify-between gap-3 flex-wrap">
-      <h1 class="font-display text-4xl font-semibold" style="color: var(--ink);">
-        {{ 'cards.title' | t }}
-      </h1>
-      <span class="text-sm font-mono" style="color: var(--ink-2);">
-        @if (isMini()) {
-          {{ 'cards.miniCount' | t: { done: miniDone(), limit: miniLimit() ?? 0 } }}
-        } @else if (mode() === 'type') {
-          {{ 'cards.todayCount' | t: { done: dailyDone(), limit: DAILY_LIMIT } }}
-        } @else {
+<section class="il-cards-page">
+  <header class="il-cards-head">
+    <a [routerLink]="sec.home()" class="il-cards-back">{{ 'common.allLessons' | t }}</a>
+    <div class="il-cards-title-row">
+      <h1>{{ 'cards.title' | t }}</h1>
+      <span class="il-cards-session-count">
+        @if (mode() === 'pairs') {
           {{ 'cards.roundsCount' | t: { done: pairsDone(), limit: PAIRS_LIMIT } }}
+        } @else if (lessonFilter()) {
+          {{ 'cards.lessonCount' | t: { done: lessonDone(), total: lessonTotal() } }}
+        } @else {
+          {{ 'cards.todayCount' | t: { done: dailyDone(), limit: DAILY_LIMIT } }}
         }
       </span>
     </div>
-    @if (lessonFilter(); as slug) {
-      <p class="text-xs" style="color: var(--muted);">
-        @if (isMini()) {
-          {{ 'cards.miniFromLead' | t }}
-          <a [routerLink]="sec.link('lesson', slug)" class="hover:underline" style="color: var(--primary-ink);">{{ slug }}</a>
-          {{ 'cards.miniFromTail' | t: { n: miniLimit() ?? 0 } }}
-        } @else {
-          {{ 'cards.onlyLessonLead' | t }}
-          <a [routerLink]="sec.link('lesson', slug)" class="hover:underline" style="color: var(--primary-ink);">{{ slug }}</a> ·
-          <a [routerLink]="sec.link('flashcards')" class="hover:underline" style="color: var(--muted);">{{ 'cards.showAll' | t }}</a>
-        }
-      </p>
-    }
   </header>
 
-  <!-- Mode + direction toggles -->
-  <div class="flex flex-wrap items-center gap-1 text-xs">
-    <button type="button" (click)="mode.set('type')" class="il-chip" [class.active]="mode() === 'type'">
-      {{ 'cards.type' | t }}
-    </button>
-    <button type="button" (click)="mode.set('pairs')" class="il-chip" [class.active]="mode() === 'pairs'">
-      {{ 'cards.pairs' | t }}
-    </button>
+  <div class="il-cards-deck-row">
+    <label class="il-cards-deck-select">
+      <span>{{ 'cards.deck' | t }}</span>
+      <select [ngModel]="lessonFilter() ?? ''" (ngModelChange)="selectDeck($event)"
+              [attr.aria-label]="'cards.deck' | t">
+        <option value="">{{ 'cards.allCards' | t }}</option>
+        @for (lesson of lessonOptions(); track lesson.slug) {
+          <option [value]="lesson.slug">
+            {{ lesson.slug === lessonFilter() ? ('cards.thisLesson' | t: { title: lesson.title }) : lesson.title }}
+          </option>
+        }
+      </select>
+    </label>
+    <span class="il-cards-deck-stats">
+      {{ 'cards.deckStats' | t: { total: poolSize(), due: deckDue(), fresh: deckNew() } }}
+    </span>
+  </div>
+  <p class="il-cards-deck-help">{{ 'cards.deckHelp' | t }}</p>
+
+  <div class="il-cards-filters" [attr.aria-label]="'cards.filters' | t">
+    <div class="il-cards-filter-group il-cards-filter-group--mode">
+      <button type="button" (click)="mode.set('type')" class="il-chip" [class.active]="mode() === 'type'">
+        {{ 'cards.type' | t }}
+      </button>
+      <button type="button" (click)="mode.set('pairs')" class="il-chip" [class.active]="mode() === 'pairs'">
+        {{ 'cards.pairs' | t }}
+      </button>
+    </div>
 
     @if (mode() === 'type') {
-      <span class="w-px h-4 mx-1.5" style="background: var(--line);" aria-hidden="true"></span>
-      <button type="button" (click)="direction.set('target-learner')" class="il-chip" [class.active]="direction() === 'target-learner'">
-        {{ pairFwd }}
-      </button>
-      <button type="button" (click)="direction.set('learner-target')" class="il-chip" [class.active]="direction() === 'learner-target'">
-        {{ pairRev }}
-      </button>
-
-      <span class="w-px h-4 mx-1.5" style="background: var(--line);" aria-hidden="true"></span>
-
-      @for (lvl of levels; track lvl) {
-        <button type="button" (click)="level.set(lvl)" class="il-chip" [class.active]="level() === lvl"
-                [title]="lvl === 'all' ? ('cards.allLevelsTitle' | t) : ('cards.levelTitle' | t: { level: lvl })">
-          {{ lvl === 'all' ? ('cards.all' | t) : lvl }}
+      <div class="il-cards-filter-group il-cards-filter-group--divided il-cards-filter-group--direction">
+        <button type="button" (click)="direction.set('target-learner')" class="il-chip" [class.active]="direction() === 'target-learner'">
+          {{ pairFwd }}
         </button>
-      }
+        <button type="button" (click)="direction.set('learner-target')" class="il-chip" [class.active]="direction() === 'learner-target'">
+          {{ pairRev }}
+        </button>
+      </div>
+
+      <div class="il-cards-filter-group il-cards-filter-group--divided il-cards-filter-group--levels">
+        @for (lvl of levels; track lvl) {
+          <button type="button" (click)="level.set(lvl)" class="il-chip" [class.active]="level() === lvl"
+                  [title]="lvl === 'all' ? ('cards.allLevelsTitle' | t) : ('cards.levelTitle' | t: { level: lvl })">
+            {{ lvl === 'all' ? ('cards.all' | t) : lvl }}
+          </button>
+        }
+      </div>
     }
   </div>
 
@@ -75,24 +79,31 @@
   <!-- ============ TYPE MODE ============ -->
   @if (mode() === 'type') {
     @if (current(); as card) {
-      <div class="rounded-3xl p-6 sm:p-10 min-h-[260px] flex flex-col gap-5"
-           style="background: var(--paper-2); border: 2px solid var(--line);"
+      <article class="il-study-card"
            [style.borderColor]="revealed()
              ? (typedResult() === 'exact' ? '#6b8e4e' : typedResult() === 'close' ? '#b4884a' : '#c0653f')
              : 'var(--line)'">
-        <div class="flex items-start gap-3">
-          <div class="flex-1 font-display text-3xl sm:text-4xl leading-tight whitespace-pre-wrap text-center" style="color: var(--ink);">
-            {{ card.front }}
-          </div>
+        <div class="il-study-card-meta">
+          <span>
+            {{ 'cards.cardProgress' | t: { current: cardNumber(), total: cardTotal() } }} ·
+            {{ (currentIsNew() ? 'cards.new' : 'cards.review') | t }}
+          </span>
           @if (card.direction === 'target-learner') {
             <button type="button" (click)="speakFront()"
                     [attr.aria-label]="'cards.listen' | t"
-                    class="text-xl shrink-0 mt-1 transition-colors hover:text-[var(--primary)]"
-                    style="color: var(--muted); background: none; border: none; cursor: pointer;">
-              🔊
+                    class="il-study-listen">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M11 5 6 9H2v6h4l5 4z" />
+                <path d="M19.1 4.9a10 10 0 0 1 0 14.2M15.5 8.5a5 5 0 0 1 0 7" />
+              </svg>
             </button>
           }
         </div>
+
+        <p class="il-study-front">{{ card.front }}</p>
+        @if (exampleFor(card); as example) {
+          <p class="il-study-example">{{ example }}</p>
+        }
 
         @if (!revealed()) {
           <input #typeInput
@@ -104,66 +115,69 @@
                  autocapitalize="off"
                  autocorrect="off"
                  spellcheck="false"
-                 class="w-full px-4 py-3 rounded-xl text-lg outline-none transition-colors"
-                 style="border: 2px solid var(--line); background: var(--paper); color: var(--ink); font-family: var(--font-body);" />
-          <button type="button" (click)="submitTyped()" class="il-btn" style="width: 100%; border-radius: 16px;">
-            {{ 'cards.check' | t }} <kbd class="ml-1.5 px-1.5 py-0.5 rounded font-mono text-xs" style="background: rgba(255,255,255,0.2);">{{ 'cards.enter' | t }}</kbd>
+                 class="il-study-input" />
+          <button type="button" (click)="submitTyped()" class="il-btn il-study-primary">
+            {{ 'cards.check' | t }} <kbd>{{ 'cards.enter' | t }}</kbd>
           </button>
         } @else {
-          <div class="pt-2 space-y-2" style="border-top: 1px solid var(--line);">
-            <div class="text-center">
+          <div class="il-study-result">
+            <div>
               @if (typedResult() === 'exact') {
-                <p class="text-sm" style="color: var(--success);">{{ 'cards.exact' | t }}</p>
+                <p class="il-study-verdict il-study-verdict--exact">{{ 'cards.exact' | t }}</p>
               } @else if (typedResult() === 'close') {
-                <p class="text-sm" style="color: var(--accent);">{{ 'cards.close' | t }}</p>
+                <p class="il-study-verdict il-study-verdict--close">{{ 'cards.close' | t }}</p>
               } @else {
-                <p class="text-sm" style="color: var(--primary);">{{ 'cards.wrong' | t }}</p>
+                <p class="il-study-verdict il-study-verdict--wrong">{{ 'cards.wrong' | t }}</p>
               }
             </div>
             @if (typed()) {
-              <div class="text-center">
-                <span class="text-xs" style="color: var(--muted);">{{ 'cards.you' | t }} </span>
-                <span class="font-mono" style="color: var(--ink-2);">{{ typed() }}</span>
+              <div>
+                <span>{{ 'cards.you' | t }} </span>
+                <strong>{{ typed() }}</strong>
               </div>
             }
-            <div class="text-center">
-              <span class="text-xs" style="color: var(--muted);">{{ 'cards.correct' | t }} </span>
-              <span class="font-mono" style="color: var(--primary-ink);">{{ card.expected ?? card.back }}</span>
+            <div>
+              <span>{{ 'cards.correct' | t }} </span>
+              <strong class="il-study-correct">{{ card.expected ?? card.back }}</strong>
             </div>
             @if (card.back !== (card.expected ?? card.back)) {
-              <p class="text-xs text-center italic whitespace-pre-wrap" style="color: var(--muted);">{{ card.back }}</p>
+              <p class="il-study-back">{{ card.back }}</p>
             }
           </div>
-          <div class="flex gap-2">
-            <button type="button" (click)="nextCard()" class="il-btn ghost" style="flex: 1; border-radius: 16px;">
-              {{ 'cards.next' | t }} <kbd class="ml-1.5 px-1.5 py-0.5 rounded font-mono text-xs" style="background: rgba(42,37,32,0.08);">{{ 'cards.enter' | t }}</kbd>
+          <div class="il-study-actions">
+            <button type="button" (click)="nextCard()" class="il-btn ghost il-study-primary">
+              {{ 'cards.next' | t }} <kbd>{{ 'cards.enter' | t }}</kbd>
             </button>
             <button type="button" (click)="resetCurrent()"
                     [title]="'cards.resetTitle' | t"
-                    class="il-chip px-3 py-3 text-xs">
+                    class="il-chip il-study-reset">
               {{ 'cards.reset' | t }}
             </button>
           </div>
         }
-      </div>
+      </article>
 
-      @if (card.lessons.length > 0) {
-        <p class="text-xs text-center" style="color: var(--muted);">
+      <p class="il-study-source">
+        @if (card.lessons.length > 0) {
           {{ 'cards.fromLesson' | t }}
           @for (slug of card.lessons; track slug; let last = $last) {
-            <a [routerLink]="sec.link('lesson', slug)" class="hover:underline" style="color: var(--primary-ink);">{{ slug }}</a>@if (!last) {<span>, </span>}
+            <a [routerLink]="sec.link('lesson', slug)">{{ slug }}</a>@if (!last) {<span>, </span>}
           }
-        </p>
-      }
+        }
+        @if (lessonFilter()) {
+          <span aria-hidden="true"> · </span>
+          <button type="button" (click)="skipCurrent()">{{ 'cards.skip' | t }}</button>
+        }
+      </p>
     } @else {
       <div class="rounded-3xl p-12 text-center space-y-4 border border-dashed" style="border-color: var(--line);">
-        @if (isMini() && miniDone() >= (miniLimit() ?? 0)) {
-          <p class="text-2xl font-display" style="color: var(--ink);">{{ 'cards.miniDone' | t }}</p>
-          <p class="text-sm" style="color: var(--ink-2);">{{ 'cards.miniDoneSub' | t: { done: miniDone(), limit: miniLimit() ?? 0 } }}</p>
+        @if (lessonFilter() && lessonTotal() > 0 && lessonDone() >= lessonTotal()) {
+          <p class="text-2xl font-display" style="color: var(--ink);">{{ 'cards.lessonDone' | t }}</p>
+          <p class="text-sm" style="color: var(--ink-2);">{{ 'cards.lessonDoneSub' | t: { total: lessonTotal() } }}</p>
           @if (lessonFilter(); as slug) {
             <a [routerLink]="sec.link('lesson', slug)" class="il-btn sm inline-block mt-2">{{ 'cards.backToLesson' | t }}</a>
           }
-        } @else if (dailyRemaining() === 0) {
+        } @else if (!lessonFilter() && dailyRemaining() === 0) {
           <p class="text-2xl font-display" style="color: var(--ink);">{{ 'cards.doneToday' | t }}</p>
           <p class="text-sm" style="color: var(--ink-2);">
             {{ 'cards.doneTodayType' | t: { limit: DAILY_LIMIT, dir: direction() === 'target-learner' ? pairFwd : pairRev } }}

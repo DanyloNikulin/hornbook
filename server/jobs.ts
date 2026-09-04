@@ -8,12 +8,24 @@ import { spawn as nodeSpawn, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import type { JobKind, JobProgress, JobView, StartJob, StartSetupJob } from '../src/lib/api-types.ts';
+import type {
+  JobKind,
+  JobProgress,
+  JobStageStatus,
+  JobStageView,
+  JobView,
+  ProcessStageId,
+  StartJob,
+  StartProcessJob,
+  StartSetupJob,
+} from '../src/lib/api-types.ts';
 
 const MAX_LOG_CHARS = 200_000;
 const MAX_JOBS_KEPT = 50;
 const RESULT_MARKER = 'HORNBOOK_RESULT ';
 const PROGRESS_MARKER = 'HORNBOOK_PROGRESS ';
+const STAGE_MARKER = 'HORNBOOK_STAGE ';
+const PROCESS_STAGES: readonly ProcessStageId[] = ['hearing', 'slides', 'writing', 'checking'];
 
 export interface JobRunnerOptions {
   repoRoot: string;
@@ -31,6 +43,7 @@ interface Job extends JobView {
   cmd: string;
   args: string[];
   cleanup?: () => void;
+  stageBuffer?: string;
 }
 
 export class JobRunner {
@@ -66,7 +79,13 @@ export class JobRunner {
         cleanup = () => rmSync(file, { force: true });
         label = input.filename;
         script = 'process.ts';
-        extra = [file, '--date', input.date, ...(input.from ? ['--from', input.from] : [])];
+        extra = [
+          file,
+          '--date',
+          input.date,
+          ...(input.title ? ['--title', input.title] : []),
+          ...(input.from ? ['--from', input.from] : []),
+        ];
         break;
       }
       case 'setup':
@@ -86,6 +105,7 @@ export class JobRunner {
     }
 
     const { cmd, args } = this.runner(script);
+    const createdAt = new Date().toISOString();
     const job: Job = {
       id,
       section,
@@ -93,7 +113,8 @@ export class JobRunner {
       status: 'queued',
       label,
       log: '',
-      createdAt: new Date().toISOString(),
+      createdAt,
+      ...(input.kind === 'process' ? { stages: initialProcessStages(input, createdAt), stageBuffer: '' } : {}),
       cmd,
       args: [...args, ...extra, '--section', section],
       cleanup,
@@ -145,8 +166,8 @@ export class JobRunner {
   }
 
   private view(job: Job): JobView {
-    const { cmd: _cmd, args: _args, cleanup: _cleanup, ...view } = job;
-    return view;
+    const { cmd: _cmd, args: _args, cleanup: _cleanup, stageBuffer: _stageBuffer, ...view } = job;
+    return { ...view, log: visibleLog(view.log) };
   }
 
   private trim(): void {
@@ -186,6 +207,7 @@ export class JobRunner {
 
     const append = (chunk: Buffer): void => {
       const text = chunk.toString();
+      if (job.kind === 'process') this.applyStageChunk(job, text);
       job.log += text;
       if (job.log.length > MAX_LOG_CHARS) job.log = '…' + job.log.slice(-MAX_LOG_CHARS);
       if (text.includes(PROGRESS_MARKER)) job.progress = parseProgress(job.log) ?? job.progress;
@@ -205,9 +227,15 @@ export class JobRunner {
     job.finishedAt = new Date().toISOString();
     if (code === 0) {
       job.status = 'done';
+      for (const stage of job.stages ?? []) {
+        if (stage.status === 'running') finishStage(stage, 'done', job.finishedAt);
+        else if (stage.status === 'waiting') finishStage(stage, 'skipped', job.finishedAt);
+      }
       job.result = parseResult(job.log);
     } else {
       job.status = 'failed';
+      const active = job.stages?.find((stage) => stage.status === 'running');
+      if (active) finishStage(active, 'failed', job.finishedAt);
       job.error = error ?? lastErrorLine(job.log) ?? `exit code ${code}`;
       if (error) job.log += `\n${error}\n`;
     }
@@ -220,6 +248,74 @@ export class JobRunner {
     this.opts.onFinish?.(this.view(job));
     this.pump();
   }
+
+  private applyStageChunk(job: Job, text: string): void {
+    const lines = `${job.stageBuffer ?? ''}${text}`.split(/\r?\n/);
+    job.stageBuffer = lines.pop() ?? '';
+    for (const line of lines) {
+      const event = parseStageEvent(line);
+      if (!event) continue;
+      const stage = job.stages?.find((candidate) => candidate.id === event.id);
+      if (!stage) continue;
+      const at = new Date().toISOString();
+      if (event.status === 'running') {
+        stage.status = 'running';
+        stage.startedAt ??= at;
+        delete stage.finishedAt;
+      } else {
+        stage.startedAt ??= at;
+        finishStage(stage, event.status, at);
+      }
+    }
+  }
+}
+
+function initialProcessStages(input: StartProcessJob, createdAt: string): JobStageView[] {
+  const from = input.from ?? inferProcessSource(input.filename);
+  return PROCESS_STAGES.map((id) => {
+    const skipped =
+      (id === 'hearing' && (from === 'transcript' || from === 'json')) ||
+      (id === 'slides' && from !== 'video') ||
+      (id === 'writing' && from === 'json');
+    return skipped ? { id, status: 'skipped', startedAt: createdAt, finishedAt: createdAt } : { id, status: 'waiting' };
+  });
+}
+
+function inferProcessSource(filename: string): NonNullable<StartProcessJob['from']> {
+  const ext = extname(filename).toLowerCase();
+  if (['.txt', '.vtt', '.srt'].includes(ext)) return 'transcript';
+  if (ext === '.json') return 'json';
+  if (['.m4a', '.mp3', '.wav', '.ogg', '.opus', '.aac'].includes(ext)) return 'audio';
+  return 'video';
+}
+
+function finishStage(stage: JobStageView, status: Exclude<JobStageStatus, 'waiting' | 'running'>, at: string): void {
+  stage.status = status;
+  stage.finishedAt = at;
+}
+
+function parseStageEvent(line: string): { id: ProcessStageId; status: Exclude<JobStageStatus, 'waiting' | 'failed'> } | undefined {
+  if (!line.startsWith(STAGE_MARKER)) return undefined;
+  try {
+    const raw = JSON.parse(line.slice(STAGE_MARKER.length)) as { id?: unknown; status?: unknown };
+    if (
+      typeof raw.id === 'string' &&
+      PROCESS_STAGES.includes(raw.id as ProcessStageId) &&
+      (raw.status === 'running' || raw.status === 'done' || raw.status === 'skipped')
+    ) {
+      return { id: raw.id as ProcessStageId, status: raw.status };
+    }
+  } catch {
+    // Malformed status lines stay harmless log text.
+  }
+  return undefined;
+}
+
+function visibleLog(log: string): string {
+  return log
+    .split(/\r?\n/)
+    .filter((line) => !line.startsWith(STAGE_MARKER))
+    .join('\n');
 }
 
 function shellish(a: string): string {

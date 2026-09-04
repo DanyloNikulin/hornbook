@@ -25,6 +25,15 @@ export interface ModeView {
 
 export type JobKind = 'process' | 'cheatsheet' | 'review-topics' | 'setup';
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
+export type ProcessStageId = 'hearing' | 'slides' | 'writing' | 'checking';
+export type JobStageStatus = 'waiting' | 'running' | 'done' | 'skipped' | 'failed';
+
+export interface JobStageView {
+  id: ProcessStageId;
+  status: JobStageStatus;
+  startedAt?: string;
+  finishedAt?: string;
+}
 
 export interface JobView {
   id: string;
@@ -42,6 +51,8 @@ export interface JobView {
   error?: string;
   /** Last progress line of a setup job. */
   progress?: JobProgress;
+  /** Structured progress for lesson-processing jobs. */
+  stages?: JobStageView[];
 }
 
 export interface JobProgress {
@@ -56,6 +67,8 @@ export interface StartProcessJob {
   filename: string;
   base64: string;
   date: string;
+  /** Optional human title chosen before extraction. */
+  title?: string;
   from?: 'video' | 'audio' | 'transcript' | 'json';
 }
 

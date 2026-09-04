@@ -30,13 +30,9 @@ export class CheatsheetComponent {
   protected readonly cheatsheet = computed<CheatsheetT>(
     () => (this.cheatsheetResource.error() ? EMPTY : (this.cheatsheetResource.value() ?? EMPTY)),
   );
-  protected readonly activeCategory = signal<string | null>(null);
-
-  protected readonly visibleCategories = computed<CheatsheetCategoryT[]>(() => {
-    const active = this.activeCategory();
-    if (active === null) return this.cheatsheet().categories;
-    return this.cheatsheet().categories.filter((c) => c.id === active);
-  });
+  protected readonly railQuery = signal('');
+  protected readonly activeSection = signal<string | null>(null);
+  protected readonly railCategories = computed(() => filterCheatsheetRail(this.cheatsheet().categories, this.railQuery()));
 
   protected readonly totalSections = computed(() =>
     this.cheatsheet().categories.reduce((n, c) => n + c.sections.length, 0),
@@ -51,8 +47,29 @@ export class CheatsheetComponent {
   protected readonly jobError = signal<string | null>(null);
   protected readonly showLog = signal(false);
 
-  protected setCategory(id: string | null): void {
-    this.activeCategory.set(id);
+  protected sectionAnchor(categoryId: string, sectionId: string): string {
+    return cheatsheetAnchor(categoryId, sectionId);
+  }
+
+  protected activateSection(categoryId: string, sectionId: string): void {
+    this.activeSection.set(cheatsheetAnchor(categoryId, sectionId));
+  }
+
+  protected isActiveSection(categoryId: string, sectionId: string): boolean {
+    const anchor = cheatsheetAnchor(categoryId, sectionId);
+    const active = this.activeSection();
+    if (active) return active === anchor;
+    const first = this.cheatsheet().categories.find((category) => category.sections.length > 0)?.sections[0];
+    const firstCategory = this.cheatsheet().categories.find((category) => category.sections.length > 0);
+    return !!first && !!firstCategory && anchor === cheatsheetAnchor(firstCategory.id, first.id);
+  }
+
+  protected updatedAt(): string {
+    const value = this.cheatsheet().updated_at;
+    if (!value) return this.i18n.t('sheet.neverUpdated');
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat(this.i18n.locale(), { dateStyle: 'medium' }).format(date);
   }
 
   protected reload(): void {
@@ -75,4 +92,21 @@ export class CheatsheetComponent {
       this.jobError.set((err as Error).message);
     }
   }
+}
+
+export function cheatsheetAnchor(categoryId: string, sectionId: string): string {
+  return `sheet-${categoryId}-${sectionId}`;
+}
+
+export function filterCheatsheetRail(categories: readonly CheatsheetCategoryT[], query: string): CheatsheetCategoryT[] {
+  const needle = query.trim().toLocaleLowerCase();
+  if (!needle) return [...categories];
+  return categories
+    .map((category) => ({
+      ...category,
+      sections: category.title.toLocaleLowerCase().includes(needle)
+        ? category.sections
+        : category.sections.filter((section) => section.title.toLocaleLowerCase().includes(needle)),
+    }))
+    .filter((category) => category.sections.length > 0);
 }

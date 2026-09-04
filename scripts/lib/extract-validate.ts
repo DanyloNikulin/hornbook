@@ -28,6 +28,11 @@ export interface ValidatedExtract {
   attempts: number;
 }
 
+export interface ExtractValidatedHooks {
+  /** Called after each model response, immediately before validation. */
+  onModelAnswer?: () => void;
+}
+
 type Log = Pick<Console, 'warn' | 'log'>;
 
 const MAX_ATTEMPTS = 2;
@@ -38,8 +43,10 @@ export async function extractValidated(
   req: ExtractRequest,
   logsDir: string,
   log: Log = console,
+  hooks: ExtractValidatedHooks = {},
 ): Promise<ValidatedExtract> {
   let raw = await extractor.extract(req);
+  hooks.onModelAnswer?.();
   for (let attempt = 1; ; attempt += 1) {
     const suffix = attempt === 1 ? '' : `-${attempt}`;
     writeFileSync(join(logsDir, `tool-input${suffix}.json`), JSON.stringify(raw, null, 2), 'utf8');
@@ -70,6 +77,7 @@ export async function extractValidated(
         ...req,
         userParts: [...req.userParts, { type: 'text', text: repairMessage(toolInput, hollow) }],
       });
+      hooks.onModelAnswer?.();
       continue;
     }
 
@@ -85,6 +93,7 @@ export async function extractValidated(
       ...req,
       userParts: [...req.userParts, { type: 'text', text: repairMessage(toolInput, issues) }],
     });
+    hooks.onModelAnswer?.();
   }
 }
 

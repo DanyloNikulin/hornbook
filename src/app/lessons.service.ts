@@ -18,8 +18,8 @@ export interface RelatedByTopicsMeta {
  *     metadata manifest so the synchronous API below works for every page
  *     inside the section.
  *   • `allMeta()`, `getMetaBySlug()`, `indexBySlug()`, `neighborsMeta()`,
- *     `pickRandomMeta()`, `byTopicMeta()`, `relatedByTopicsForMeta()` —
- *     synchronous, from the manifest.
+ *     `numberBySlug()`, `pickRandomMeta()`, `byTopicMeta()`,
+ *     `relatedByTopicsForMeta()` — synchronous, from the manifest.
  *   • `bySlug(slug)` — asynchronous, fetches one full lesson; promises are
  *     cached per section + slug so concurrent navigations share a request.
  */
@@ -82,6 +82,12 @@ export class LessonsService {
 
   indexBySlug(slug: string): number {
     return this.metas().findIndex((m) => m.slug === slug);
+  }
+
+  /** Human lesson number, counted from the oldest lesson in a newest-first manifest. */
+  numberBySlug(slug: string): number | null {
+    const idx = this.indexBySlug(slug);
+    return idx === -1 ? null : this.metas().length - idx;
   }
 
   neighborsMeta(slug: string): { prev: LessonMetaT | null; next: LessonMetaT | null } {

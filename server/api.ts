@@ -200,6 +200,7 @@ function isStartJob(input: Partial<StartJob>): input is StartJob {
         input.base64.length > 0 &&
         typeof input.date === 'string' &&
         /^\d{4}-\d{2}-\d{2}$/.test(input.date) &&
+        (input.title === undefined || (typeof input.title === 'string' && input.title.trim().length > 0 && input.title.length <= 200)) &&
         (input.from === undefined || ['video', 'audio', 'transcript', 'json'].includes(input.from))
       );
     case 'cheatsheet':

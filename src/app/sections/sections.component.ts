@@ -18,8 +18,11 @@ import { SectionService } from '../section.service';
         <p class="il-section-sub">{{ 'pairs.sub' | t }}</p>
 
         @if (sections().length === 0) {
-          <div class="il-card" style="margin-top: 1.5rem; padding: 1.5rem;">
-            <p style="color: var(--ink-2); margin-bottom: 1rem;">{{ 'pairs.empty' | t }}</p>
+          <div class="il-empty-state il-empty-state--journal">
+            <span class="il-empty-mark" aria-hidden="true">01</span>
+            <p class="il-empty-kicker">{{ 'pairs.emptyKicker' | t }}</p>
+            <h2>{{ 'pairs.empty' | t }}</h2>
+            <p>{{ 'pairs.emptySub' | t }}</p>
             <a routerLink="/setup" class="il-btn">{{ 'pairs.createFirst' | t }}</a>
           </div>
         } @else {

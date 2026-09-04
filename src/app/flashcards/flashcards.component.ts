@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   HostListener,
   ViewChild,
@@ -11,7 +12,8 @@ import {
 } from '@angular/core';
 import { TPipe } from '../i18n.pipe';
 import { SectionService } from '../section.service';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { LessonsService } from '../lessons.service';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
@@ -39,6 +41,7 @@ const MISMATCH_FLASH_MS = 600;
   selector: 'app-flashcards',
   imports: [RouterLink, FormsModule, TPipe],
   templateUrl: './flashcards.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FlashcardsComponent {
   protected readonly sec = inject(SectionService);
@@ -49,7 +52,9 @@ export class FlashcardsComponent {
   protected readonly learnerName = this.journal.learnerName();
   protected readonly speechLang = this.journal.speechLang();
   private readonly cards = inject(CardsService);
+  protected readonly lessons = inject(LessonsService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly DAILY_LIMIT = DAILY_LIMIT;
   protected readonly PAIRS_LIMIT = PAIRS_LIMIT;
@@ -60,27 +65,15 @@ export class FlashcardsComponent {
     { initialValue: null },
   );
 
-  // Mini-session: limit pool to N cards from a lesson, bypass daily cap.
-  // Triggered by `?lesson=<slug>&mini=5` from the lesson page.
-  protected readonly miniLimit = toSignal(
-    this.route.queryParamMap.pipe(
-      map((q) => {
-        const raw = q.get('mini');
-        if (!raw) return null;
-        const n = parseInt(raw, 10);
-        return Number.isInteger(n) && n > 0 && n <= 50 ? n : null;
-      }),
-    ),
-    { initialValue: null },
-  );
-
   protected readonly direction = signal<Direction>(this.loadDirection());
   protected readonly mode = signal<Mode>(this.loadMode());
   protected readonly level = signal<LevelFilter>(this.loadLevel());
   protected readonly levels = LEVELS;
 
-  // Counts user-rated cards within the current mini-session.
-  protected readonly miniDone = signal(0);
+  // A lesson deck is a stable one-pass queue. It deliberately includes cards
+  // that are not due yet and does not consume the daily all-cards allowance.
+  protected readonly lessonQueue = signal<readonly Card[]>([]);
+  protected readonly lessonDone = signal(0);
 
   // ---- card loading (lazy, per-lesson-or-all) ----
 
@@ -113,17 +106,29 @@ export class FlashcardsComponent {
   protected readonly dailyDone = computed(() => this.cards.dailyDone(this.direction()));
   protected readonly dailyRemaining = computed(() => this.cards.dailyRemaining(this.direction()));
   protected readonly poolSize = computed(() => this.pool().length);
-  protected readonly isMini = computed(() => this.miniLimit() !== null);
+  protected readonly lessonOptions = computed(() => this.lessons.allMeta());
+  protected readonly lessonTotal = computed(() => this.lessonQueue().length);
+  protected readonly deckDue = computed(() => this.cards.dueIds(this.pool()).length);
+  protected readonly deckNew = computed(() => this.cards.newCount(this.pool()));
 
   protected readonly current = computed<Card | null>(() => {
     if (this.mode() !== 'type') return null;
-    const mini = this.miniLimit();
-    if (mini !== null) {
-      if (this.miniDone() >= mini) return null;
-      return this.cards.nextDue(this.pool());
+    if (this.lessonFilter()) {
+      return this.lessonQueue()[this.lessonDone()] ?? null;
     }
     if (this.cards.dailyRemaining(this.direction()) <= 0) return null;
     return this.cards.nextDue(this.pool());
+  });
+
+  protected readonly cardNumber = computed(() =>
+    this.lessonFilter() ? this.lessonDone() + 1 : this.dailyDone() + 1,
+  );
+  protected readonly cardTotal = computed(() =>
+    this.lessonFilter() ? this.lessonTotal() : DAILY_LIMIT,
+  );
+  protected readonly currentIsNew = computed(() => {
+    const card = this.current();
+    return card ? this.cards.isNew(card.id) : false;
   });
 
   protected readonly typed = signal('');
@@ -166,11 +171,13 @@ export class FlashcardsComponent {
     effect(() => this.saveMode(this.mode()));
     effect(() => this.saveLevel(this.level()));
 
-    // Reset mini-session counter when entering/leaving mini mode or switching lesson.
+    // Rebuild the one-pass lesson queue when its lesson, direction, or level changes.
     effect(() => {
-      this.miniLimit();
-      this.lessonFilter();
-      this.miniDone.set(0);
+      const slug = this.lessonFilter();
+      const pool = this.pool();
+      if (slug) this.mode.set('type');
+      this.lessonQueue.set(slug ? [...pool] : []);
+      this.lessonDone.set(0);
     });
 
     // Focus the type input when active.
@@ -211,11 +218,16 @@ export class FlashcardsComponent {
     if (!card || !r) return;
     const rating: Rating = r === 'exact' ? 5 : r === 'close' ? 3 : 1;
     this.cards.rateCard(card.id, rating);
-    if (this.isMini()) {
-      this.miniDone.update((n) => n + 1);
+    if (this.lessonFilter()) {
+      this.lessonDone.update((n) => n + 1);
     } else {
       this.cards.incrementDaily(this.direction());
     }
+  }
+
+  protected skipCurrent(): void {
+    if (!this.lessonFilter() || !this.current()) return;
+    this.lessonDone.update((n) => n + 1);
   }
 
   protected resetCurrent(): void {
@@ -290,6 +302,18 @@ export class FlashcardsComponent {
 
   protected reloadCards(): void {
     this.cardsResource.reload();
+  }
+
+  protected selectDeck(slug: string): void {
+    void this.router.navigate(this.sec.link('flashcards'), {
+      queryParams: slug ? { lesson: slug } : {},
+    });
+  }
+
+  protected exampleFor(card: Card): string | null {
+    if (card.source !== 'vocab') return null;
+    const parts = card.back.split(/\n\s*\n/);
+    return parts.length > 1 ? parts.slice(1).join('\n\n').trim() || null : null;
   }
 
   // ---- keyboard ----

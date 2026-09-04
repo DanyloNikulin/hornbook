@@ -29,13 +29,14 @@ describe('JobRunner', () => {
   it('runs a process job, captures the log, parses the result and deletes the upload', async () => {
     const runner = makeRunner({
       'process.ts':
-        'const a=process.argv.slice(1);console.log("args:"+a.join(" "));console.log("env:"+process.env.HORNBOOK_TEST_ENV);console.log("HORNBOOK_RESULT "+JSON.stringify({slug:"greetings",id:"2026-01-01-greetings"}))',
+        'const a=process.argv.slice(1);const s=(id,status)=>console.log("HORNBOOK_STAGE "+JSON.stringify({id,status}));console.log("args:"+a.join(" "));console.log("env:"+process.env.HORNBOOK_TEST_ENV);s("writing","running");s("writing","done");s("checking","running");s("checking","done");console.log("HORNBOOK_RESULT "+JSON.stringify({slug:"greetings",id:"2026-01-01-greetings"}))',
     });
     const job = runner.enqueue('es-en', {
       kind: 'process',
       filename: 'lesson.txt',
       base64: Buffer.from('hello').toString('base64'),
       date: '2026-01-01',
+      title: 'Useful greetings',
       from: 'transcript',
     });
     expect(['queued', 'running']).toContain(job.status);
@@ -47,10 +48,41 @@ describe('JobRunner', () => {
     expect(done.status).toBe('done');
     expect(done.result).toEqual({ slug: 'greetings', id: '2026-01-01-greetings' });
     expect(done.log).toContain('--date 2026-01-01');
+    expect(done.log).toContain('--title Useful greetings');
     expect(done.log).toContain('--from transcript');
     expect(done.log).toContain('--section es-en');
     expect(done.log).toContain('env:yes');
+    expect(done.log.split(/\r?\n/).some((line) => line.startsWith('HORNBOOK_STAGE '))).toBe(false);
+    expect(done.stages?.map((stage) => `${stage.id}:${stage.status}`)).toEqual([
+      'hearing:skipped',
+      'slides:skipped',
+      'writing:done',
+      'checking:done',
+    ]);
+    expect(done.stages?.every((stage) => stage.finishedAt)).toBe(true);
     expect(readdirSync(join(dir, '_uploads'))).toHaveLength(0);
+  });
+
+  it('marks the active process stage failed and leaves later stages waiting', async () => {
+    const runner = makeRunner({
+      'process.ts': 'console.log("HORNBOOK_STAGE "+JSON.stringify({id:"hearing",status:"running"}));console.error("microphone broke");process.exit(1)',
+    });
+    const job = runner.enqueue('es-en', {
+      kind: 'process',
+      filename: 'lesson.mp4',
+      base64: Buffer.from('video').toString('base64'),
+      date: '2026-01-01',
+      from: 'video',
+    });
+    await runner.idle();
+    const failed = runner.get(job.id)!;
+    expect(failed.status).toBe('failed');
+    expect(failed.stages?.map((stage) => `${stage.id}:${stage.status}`)).toEqual([
+      'hearing:failed',
+      'slides:waiting',
+      'writing:waiting',
+      'checking:waiting',
+    ]);
   });
 
   it('follows a setup job: progress lines, result and the finish hook', async () => {

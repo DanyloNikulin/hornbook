@@ -103,7 +103,7 @@ describe('QuizComponent — translation self-grading', () => {
     }).compileComponents();
   });
 
-  it('requires a self-grade when auto_check is false, even for a model-answer match', async () => {
+  it('Check reveals the model answer, then requires a self-grade before saving', async () => {
     const question: QuizQuestionT = {
       type: 'translate',
       q: 'Я йду додому.',
@@ -122,40 +122,77 @@ describe('QuizComponent — translation self-grading', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const reveal = [...fixture.nativeElement.querySelectorAll('button')].find(
-      (button: HTMLButtonElement) => button.textContent?.includes('Show model answer'),
-    ) as HTMLButtonElement;
-    reveal.click();
-    fixture.detectChanges();
+    let text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).not.toContain('Model answer');
 
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Close enough');
-    expect(text).not.toContain('counted automatically');
-
-    const submit = [...fixture.nativeElement.querySelectorAll('button')].find(
+    const check = [...fixture.nativeElement.querySelectorAll('button')].find(
       (button: HTMLButtonElement) => button.textContent?.includes('Check'),
     ) as HTMLButtonElement;
-    expect(submit.disabled).toBe(true);
+    expect(check.disabled).toBe(false);
+    expect(check.title).toBe('');
+    check.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Model answer');
+    expect(text).toContain('Close enough');
+    expect(text).not.toContain('counted automatically');
+    expect((fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement).disabled).toBe(true);
+
+    let save = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (button: HTMLButtonElement) => button.textContent?.includes('Save score'),
+    ) as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
+    expect(save.textContent).toContain('1 translation left to grade');
+    expect(save.title).toBe('');
 
     const selfGrade = [...fixture.nativeElement.querySelectorAll('button')].find(
       (button: HTMLButtonElement) => button.textContent?.includes('Close enough'),
     ) as HTMLButtonElement;
     selfGrade.click();
     fixture.detectChanges();
-    expect(submit.disabled).toBe(false);
+    save = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (button: HTMLButtonElement) => button.textContent?.includes('Save score'),
+    ) as HTMLButtonElement;
+    expect(save.disabled).toBe(false);
 
-    textarea.value = 'Sono a casa.';
+    save.click();
+    fixture.detectChanges();
+    expect(record).toHaveBeenCalledWith('andare', 1, 1);
+  });
+
+  it('automatically grades a matching auto-check translation', async () => {
+    const question: QuizQuestionT = {
+      type: 'translate',
+      q: 'I stayed home.',
+      answer_target: 'Sono rimasto a casa.',
+      alternatives: [],
+      auto_check: true,
+    };
+    const fixture = TestBed.createComponent(QuizComponent);
+    fixture.componentRef.setInput('questions', [question]);
+    fixture.componentRef.setInput('lessonSlug', 'restare');
+    fixture.detectChanges();
+
+    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+    textarea.value = 'Sono rimasto a casa!';
     textarea.dispatchEvent(new Event('input'));
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(submit.disabled).toBe(true);
 
-    selfGrade.click();
+    const check = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (button: HTMLButtonElement) => button.textContent?.includes('Check'),
+    ) as HTMLButtonElement;
+    check.click();
     fixture.detectChanges();
-    expect(submit.disabled).toBe(false);
 
-    submit.click();
-    fixture.detectChanges();
-    expect(record).toHaveBeenCalledWith('andare', 1, 1);
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('counted automatically');
+    expect(text).not.toContain('Close enough');
+    const save = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (button: HTMLButtonElement) => button.textContent?.includes('Save score'),
+    ) as HTMLButtonElement;
+    expect(save.disabled).toBe(false);
   });
 });

@@ -93,9 +93,13 @@ describe('CardsService — SM-2 state', () => {
       expected: 'hello',
     };
     expect(svc.dueIds([card])).toEqual(['c1']);
+    expect(svc.isNew(card.id)).toBe(true);
+    expect(svc.newCount([card])).toBe(1);
     svc.rateCard('c1', 5);
     expect(store.sm2()['c1']?.repetitions).toBe(1);
     expect(svc.dueIds([card])).toEqual([]);
+    expect(svc.isNew(card.id)).toBe(false);
+    expect(svc.newCount([card])).toBe(0);
     expect(Object.values(store.activity())).toEqual([1]);
     expect(Object.keys(store.activity())[0]?.slice(0, 4)).toBe(todayKey.slice(0, 4));
     svc.resetCard('c1');
