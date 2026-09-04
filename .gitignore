@@ -68,3 +68,14 @@ Thumbs.db
 /journal/secrets.json
 /journal/_uploads/
 
+
+# Only the demo lessons are tracked. Anything else written into the repo
+# journal (a real lesson added while running `npm start`) stays out of git;
+# a new demo lesson needs its own ! line here.
+/journal/*/[0-9]*.json
+/journal/*/*.md
+/journal/*/_topics-suggestions.json
+/journal/*/_topic-reviews/
+!/journal/es-en/2026-01-01-greetings.json
+!/journal/es-en/2026-01-08-fin-de-semana-preterito.json
+!/journal/it-en/2026-01-15-saluti.json

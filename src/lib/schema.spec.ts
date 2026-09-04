@@ -179,8 +179,12 @@ describe('schema — LessonMeta shape', () => {
     expect(LessonMeta.safeParse({ ...valid, duration_min: 45 }).success).toBe(true);
   });
 
-  it('rejects unknown topics', () => {
-    expect(LessonMeta.safeParse({ ...valid, topics: ['not-a-real-topic'] }).success).toBe(false);
+  it('accepts any kebab-case slug as a topic', () => {
+    expect(LessonMeta.safeParse({ ...valid, topics: ['passato-prossimo'] }).success).toBe(true);
+  });
+
+  it('rejects a topic that is not a slug', () => {
+    expect(LessonMeta.safeParse({ ...valid, topics: ['Not A Slug'] }).success).toBe(false);
   });
 });
 

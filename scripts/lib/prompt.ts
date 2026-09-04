@@ -1,10 +1,10 @@
-import { TOPIC_VOCAB, type TopicT } from '../../src/lib/schema.ts';
+import type { TopicCatalogT, TopicT } from '../../src/lib/schema.ts';
 import { learnerLanguageName, targetLanguageName } from './config.ts';
 
-export function buildSystemPrompt(): string {
+export function buildSystemPrompt(catalog: TopicCatalogT): string {
   const target = targetLanguageName();
   const learner = learnerLanguageName();
-  const topicList = TOPIC_VOCAB.join(', ');
+  const topicList = catalog.topics.map((t) => t.id).join(', ') || '(no catalogue yet: use short kebab-case slugs)';
   return `You are an expert assistant who builds structured study materials from one-on-one language lessons.
 
 CONTEXT
@@ -72,7 +72,7 @@ If the lesson content is too sparse or unclear, still call the tool with empty a
 
 const lvl = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
-export function buildLessonTool(): {
+export function buildLessonTool(catalog: TopicCatalogT): {
   name: string;
   description: string;
   input_schema: Record<string, unknown>;
@@ -221,7 +221,10 @@ export function buildLessonTool(): {
         related: { type: 'array', items: { type: 'string' } },
         topics: {
           type: 'array',
-          items: { type: 'string', enum: [...TOPIC_VOCAB] },
+          items:
+            catalog.topics.length > 0
+              ? { type: 'string', enum: catalog.topics.map((t) => t.id) }
+              : { type: 'string' },
         },
         suggested_new_topics: { type: 'array', items: { type: 'string' } },
       },

@@ -5,35 +5,11 @@ export const Level = z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']);
 const DateRegex = /^\d{4}-\d{2}-\d{2}$/;
 const SlugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-// Controlled vocabulary for lesson topics. Deliberately language-neutral: the
-// extraction prompt tags each lesson from this list, the cheat sheet groups by
-// it, and the lesson list filters on it. `npm run vocab-review` proposes
-// additions from your own transcripts once you have a few lessons.
-//
-// The section comments below are INSERTION ANCHORS for vocab-review
-// (scripts/lib/vocab-apply.ts): a proposed topic is appended to the end of
-// the section matching its review category. Keep the comment text and order
-// exactly as-is, even for sections that are still empty in your journal.
-// Renaming an existing topic is a breaking change — write a migration.
-export const TOPIC_VOCAB = [
-  // Tenses
-  'grammar',
-  // Verb classes
-  'vocabulary',
-  // Specific common verbs
-  'conversation',
-  // Articles, nouns, prepositions
-  'reading',
-  // Pronouns
-  'listening',
-  // Adjectives
-  // Reading & pronunciation
-  'pronunciation',
-  // Set-phrase constructions
-  // Themes / vocabulary domains
-] as const;
-
-export const Topic = z.enum(TOPIC_VOCAB);
+// Topics are a per-section vocabulary kept in <section>/_topics.json (the
+// TopicCatalog below). A lesson carries slugs from that catalogue; the schema
+// checks only the shape so a journal can grow its own list without touching
+// the code.
+export const Topic = z.string().regex(SlugRegex);
 
 export const Vocab = z.object({
   target: z.string().min(1),
@@ -247,3 +223,50 @@ export type QuizResultT = z.infer<typeof QuizResult>;
 export type ProgressT = z.infer<typeof Progress>;
 
 export const EMPTY_PROGRESS: ProgressT = { sm2: {}, daily: null, quiz: {}, activity: {} };
+
+// ── Topic catalogue (per section, <section>/_topics.json) ───────────────────
+//
+// categories are the cheat sheet's categories: id plus a title in the learner
+// language. Each topic names the categories its lessons can change (a pure
+// vocabulary theme names none) and carries regex sources for the offline
+// tagger in scripts/lib/topics.ts, compiled case-insensitively.
+
+export const TopicCategory = z.object({
+  id: z.string().regex(SlugRegex),
+  title: z.string().min(1),
+});
+
+export const TopicEntry = z.object({
+  id: z.string().regex(SlugRegex),
+  categories: z.array(z.string().regex(SlugRegex)).default([]),
+  patterns: z.array(z.string()).default([]),
+});
+
+export const TopicCatalog = z.object({
+  categories: z.array(TopicCategory).default([]),
+  topics: z.array(TopicEntry).default([]),
+});
+
+export type TopicCategoryT = z.infer<typeof TopicCategory>;
+export type TopicEntryT = z.infer<typeof TopicEntry>;
+export type TopicCatalogT = z.infer<typeof TopicCatalog>;
+
+/** A section without _topics.json: six broad topics, each its own cheat-sheet category. */
+export const DEFAULT_TOPIC_CATALOG: TopicCatalogT = {
+  categories: [
+    { id: 'grammar', title: 'Grammar' },
+    { id: 'vocabulary', title: 'Vocabulary' },
+    { id: 'pronunciation', title: 'Pronunciation' },
+    { id: 'conversation', title: 'Conversation' },
+    { id: 'reading', title: 'Reading' },
+    { id: 'listening', title: 'Listening' },
+  ],
+  topics: [
+    { id: 'grammar', categories: ['grammar'], patterns: ['\\bgrammar\\b', '\\bconjugat', '\\bdeclens'] },
+    { id: 'vocabulary', categories: ['vocabulary'], patterns: ['\\bvocabular', '\\blexicon\\b', '\\bword list\\b'] },
+    { id: 'conversation', categories: ['conversation'], patterns: ['\\bdialog', '\\bconversation\\b', '\\brole.?play\\b'] },
+    { id: 'reading', categories: ['reading'], patterns: ['\\breading\\b'] },
+    { id: 'listening', categories: ['listening'], patterns: ['\\blisten', '\\baudio\\b'] },
+    { id: 'pronunciation', categories: ['pronunciation'], patterns: ['\\bpronunc', '\\bphonetic', '\\bstress\\b', '\\baccent\\b'] },
+  ],
+};

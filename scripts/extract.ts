@@ -8,7 +8,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { ensureUniqueSlug } from './lib/slug.ts';
 import { join } from 'node:path';
-import { TOPIC_VOCAB, type LessonT, type TopicT } from '../src/lib/schema.ts';
+import type { LessonT, TopicT } from '../src/lib/schema.ts';
 import {
   buildLessonTool,
   buildSystemPrompt,
@@ -19,7 +19,14 @@ import { detectTopics, formatTopics } from './lib/topics.ts';
 import { extractValidated } from './lib/extract-validate.ts';
 import { getExtractor } from './providers/index.ts';
 import type { ExtractMessagePart } from './providers/types.ts';
-import { currentSection, existingSlugs, readSectionLessons, resolveSectionArg, sectionDir } from './lib/journal.ts';
+import {
+  currentSection,
+  existingSlugs,
+  readSectionLessons,
+  readTopicCatalog,
+  resolveSectionArg,
+  sectionDir,
+} from './lib/journal.ts';
 import { isMain } from './lib/is-main.ts';
 
 // Everything below reads the section the CLI/server selected (journal.ts).
@@ -141,7 +148,8 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
     ? JSON.parse(readFileSync(manifestPath, 'utf8'))
     : [];
 
-  const preliminaryTopics = detectTopics(transcript);
+  const catalog = readTopicCatalog(currentSection().id);
+  const preliminaryTopics = detectTopics(transcript, catalog);
   console.log(`Preliminary topics (regex): ${formatTopics(preliminaryTopics)}`);
 
   const existingLessons = loadExistingLessons(preliminaryTopics);
@@ -178,7 +186,7 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
     }
   }
 
-  const lessonTool = buildLessonTool();
+  const lessonTool = buildLessonTool(catalog);
   console.log(`Extract via ${extractor.driver} (${userParts.filter((p) => p.type === 'image').length} image(s))...`);
 
   // Double-encoded fields and small-model field drift are repaired before
@@ -187,7 +195,7 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
   const { lesson, toolInput, attempts } = await extractValidated(
     extractor,
     {
-      system: buildSystemPrompt(),
+      system: buildSystemPrompt(catalog),
       userParts,
       jsonSchema: lessonTool.input_schema,
       toolName: lessonTool.name,
@@ -258,9 +266,9 @@ export async function extract(workDir: string, dateHint: string): Promise<Lesson
   console.log(`Final topics: ${formatTopics(aiTopics)}`);
 
   // Record AI's vocab-gap suggestions for the monthly Tier 2 review.
-  // Filter out IDs that are already in TOPIC_VOCAB — AI shouldn't suggest
+  // Filter out ids already in the catalogue — AI shouldn't suggest
   // those but be defensive so the suggestions file stays meaningful.
-  const vocabSet = new Set<string>(TOPIC_VOCAB);
+  const vocabSet = new Set<string>(catalog.topics.map((t) => t.id));
   const filteredSuggestions = suggestedNewTopics.filter((s) => !vocabSet.has(s));
   if (filteredSuggestions.length > 0) {
     recordSuggestions(filteredSuggestions, result.data.slug, result.data.date);

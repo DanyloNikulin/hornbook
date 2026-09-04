@@ -305,7 +305,7 @@ export const IT = {
   'settings.saved': 'Salvato.',
   'settings.maintenance': 'Manutenzione',
   'settings.maintenanceSub':
-    'La revisione degli argomenti legge le lezioni di questa coppia e propone nuovi tag per tutto il diario. Usa il modello di estrazione di questa coppia e servono almeno dieci lezioni.',
+    'La revisione degli argomenti legge le lezioni di questa coppia e propone nuovi tag per il catalogo di questa coppia. Usa il modello di estrazione di questa coppia e servono almeno dieci lezioni.',
   'settings.review': 'Rivedi gli argomenti',
   'settings.running': 'In corso…',
   'settings.reviewFailed': 'Revisione degli argomenti non riuscita — vedi il log.',

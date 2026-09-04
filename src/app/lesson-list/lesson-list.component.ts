@@ -8,12 +8,11 @@ import { QuizResultsService, type QuizResult } from '../quiz-results.service';
 import { VocabService } from '../vocab.service';
 import { ProgressService } from '../progress.service';
 import { today } from '../../lib/sm2';
-import { TOPIC_VOCAB, type DerivedVocabT, type LessonMetaT, type TopicT } from '../../lib/schema';
+import { type DerivedVocabT, type LessonMetaT, type TopicT } from '../../lib/schema';
 import { isStockTagline } from '../../lib/i18n';
 import { TPipe } from '../i18n.pipe';
 import { JournalService } from '../journal.service';
 
-const TOPIC_SET = new Set<string>(TOPIC_VOCAB);
 const PAGE_SIZE = 12;
 
 @Component({
@@ -50,17 +49,16 @@ export class LessonListComponent {
     this.wordOfDayResource.error() ? null : (this.wordOfDayResource.value() ?? null),
   );
 
-  // ?topic=… narrows the catalog. Unknown topic values silently degrade to
-  // "no filter" so a stale bookmark doesn't strand the user on an empty list.
-  protected readonly activeTopic = toSignal<TopicT | null>(
-    this.route.queryParamMap.pipe(
-      map((params) => {
-        const t = params.get('topic');
-        return t && TOPIC_SET.has(t) ? (t as TopicT) : null;
-      }),
-    ),
+  // ?topic=… narrows the catalog. A topic no lesson carries silently degrades
+  // to "no filter" so a stale bookmark doesn't strand the user on an empty list.
+  private readonly topicParam = toSignal(
+    this.route.queryParamMap.pipe(map((params) => params.get('topic'))),
     { initialValue: null },
   );
+  protected readonly activeTopic = computed<TopicT | null>(() => {
+    const t = this.topicParam();
+    return t && this.allMetas().some((m) => m.topics.includes(t)) ? t : null;
+  });
 
   protected readonly lessons = computed<readonly LessonMetaT[]>(() => {
     const topic = this.activeTopic();

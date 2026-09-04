@@ -6,7 +6,7 @@
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Lesson, TOPIC_VOCAB, type TopicT } from '../../src/lib/schema.ts';
+import { Lesson, type TopicCatalogT, type TopicT } from '../../src/lib/schema.ts';
 
 export interface TopicUsage {
   topic: TopicT;
@@ -69,7 +69,8 @@ function loadSuggestions(suggestionsPath: string): SuggestionsFile['topics'] {
   return {};
 }
 
-export function computeVocabStats(lessonsDir: string): VocabStats {
+export function computeVocabStats(lessonsDir: string, catalog: TopicCatalogT): VocabStats {
+  const topicIds: TopicT[] = catalog.topics.map((t) => t.id);
   // Load all valid lessons. Skip _-prefixed metadata files.
   const files = existsSync(lessonsDir)
     ? readdirSync(lessonsDir).filter((f) => f.endsWith('.json') && !f.startsWith('_'))
@@ -96,7 +97,7 @@ export function computeVocabStats(lessonsDir: string): VocabStats {
 
   // Per-topic statistics.
   const usage = new Map<TopicT, TopicUsage>();
-  for (const t of TOPIC_VOCAB) {
+  for (const t of topicIds) {
     usage.set(t, {
       topic: t,
       count: 0,
@@ -109,7 +110,7 @@ export function computeVocabStats(lessonsDir: string): VocabStats {
 
   // Co-occurrence matrix: { topic: { otherTopic: count } }.
   const coMatrix = new Map<TopicT, Map<TopicT, number>>();
-  for (const t of TOPIC_VOCAB) coMatrix.set(t, new Map());
+  for (const t of topicIds) coMatrix.set(t, new Map());
 
   for (const lesson of parsed) {
     for (const t of lesson.topics) {
@@ -165,7 +166,7 @@ export function computeVocabStats(lessonsDir: string): VocabStats {
     total_lessons: total,
     total_topicless: topicless,
     avg_topics_per_lesson: Math.round(avgTopics * 100) / 100,
-    vocab_size: TOPIC_VOCAB.length,
+    vocab_size: topicIds.length,
     topic_usage: topicUsage,
     unused_topics: unused,
     overused_topics: overused,

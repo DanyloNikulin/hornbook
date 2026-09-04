@@ -28,15 +28,10 @@ import type {
   CheatsheetSectionT,
   CheatsheetT,
 } from '../../src/lib/schema.ts';
-import {
-  CHEATSHEET_CATEGORY_IDS,
-  type CheatsheetCategoryId,
-} from './topic-to-category.ts';
-
-// Default English titles for the six canonical category ids. Used when a
-// patch introduces a category that doesn't yet exist on the cheat sheet.
-// Synced with build-cheatsheet.ts SYSTEM_PROMPT.
-export const DEFAULT_CATEGORY_TITLES: Record<CheatsheetCategoryId, string> = {
+// Titles of the default catalogue's six categories, used when a patch
+// introduces a category the cheat sheet does not have yet and the caller
+// passed no titles of its own (the section's catalogue normally does).
+export const DEFAULT_CATEGORY_TITLES: Record<string, string> = {
   grammar: 'Grammar',
   vocabulary: 'Vocabulary',
   pronunciation: 'Pronunciation',
@@ -56,15 +51,8 @@ export interface CheatsheetPatch {
   section_ids?: string[];
 }
 
-// Coerce a category id to its canonical CheatsheetCategoryId if it matches
-// one of the six known ids. Used only for default title lookup; unknown ids
-// are still accepted (the Zod schema permits any slug).
-function isKnownCategoryId(id: string): id is CheatsheetCategoryId {
-  return (CHEATSHEET_CATEGORY_IDS as readonly string[]).includes(id);
-}
-
-function defaultTitleFor(id: string): string {
-  return isKnownCategoryId(id) ? DEFAULT_CATEGORY_TITLES[id] : id;
+function defaultTitleFor(id: string, titles: Record<string, string>): string {
+  return titles[id] ?? DEFAULT_CATEGORY_TITLES[id] ?? id;
 }
 
 // Apply add_sections to a category: append sections whose id is not already
@@ -118,16 +106,16 @@ function applyRemoveSections(
   return { ...category, sections: next };
 }
 
-// Locate or create a category by id. Newly-created categories pick up a
-// canonical English title from DEFAULT_CATEGORY_TITLES when the id is one
-// of the six known slugs; otherwise the id doubles as the placeholder title.
+// Locate or create a category by id. A new category takes the title the
+// caller passed (the section's catalogue), else a default title, else the id.
 function ensureCategory(
   categories: CheatsheetCategoryT[],
   id: string,
+  titles: Record<string, string>,
 ): { idx: number; created: boolean } {
   const idx = categories.findIndex((c) => c.id === id);
   if (idx >= 0) return { idx, created: false };
-  categories.push({ id, title: defaultTitleFor(id), sections: [] });
+  categories.push({ id, title: defaultTitleFor(id, titles), sections: [] });
   return { idx: categories.length - 1, created: true };
 }
 
@@ -136,6 +124,7 @@ function ensureCategory(
 export function applyPatches(
   current: CheatsheetT,
   patches: readonly CheatsheetPatch[],
+  titles: Record<string, string> = {},
 ): CheatsheetT {
   // Work on a shallow copy of the categories array — we may push new
   // categories onto it. Each category is replaced wholesale when patched,
@@ -143,7 +132,7 @@ export function applyPatches(
   const categories: CheatsheetCategoryT[] = current.categories.map((c) => ({ ...c }));
 
   for (const patch of patches) {
-    const { idx } = ensureCategory(categories, patch.category_id);
+    const { idx } = ensureCategory(categories, patch.category_id, titles);
     const cat = categories[idx];
     if (!cat) continue; // unreachable — ensureCategory always returns a valid idx
 

@@ -14,8 +14,8 @@
 //   tsx scripts/backfill-topics.ts --auto          # hash-aware (build hook mode)
 //   tsx scripts/backfill-topics.ts --section es-en # one section only
 //
-// --auto compares the current topics-tagger hash (TOPIC_VOCAB + topics.ts
-// source) against <section>/_topics-version.json. If unchanged, behaves like
+// --auto compares the section's tagger hash (topic ids and patterns in its
+// _topics.json) against <section>/_topics-version.json. If unchanged, behaves like
 // --only-empty (safe, fills only missing topics). If changed, runs in UNION
 // mode — additive: adds regex-detected topics that aren't already present,
 // never removes. Preserves AI curation across regex evolution.
@@ -30,7 +30,7 @@ import { Lesson, type TopicT } from '../src/lib/schema.ts';
 import { detectTopics, formatTopics } from './lib/topics.ts';
 import { computeTopicsHash } from './lib/topics-hash.ts';
 import { lessonToMarkdown } from './lib/markdown.ts';
-import { configPath, journalDir, lessonFiles, listSections, sectionDir } from './lib/journal.ts';
+import { configPath, journalDir, lessonFiles, listSections, readTopicCatalog, sectionDir } from './lib/journal.ts';
 
 const dryRun = process.argv.includes('--dry-run');
 const autoMode = process.argv.includes('--auto');
@@ -73,12 +73,13 @@ if (rebuildMode) {
   console.log('Mode: rebuild (destructive — overwriting all topics with regex output).');
 }
 
-const currentHash = autoMode ? computeTopicsHash() : null;
 let totalUpdated = 0;
 
 for (const section of sections) {
   const dir = sectionDir(section.id);
   const versionPath = join(dir, '_topics-version.json');
+  const catalog = readTopicCatalog(section.id);
+  const currentHash = autoMode ? computeTopicsHash(catalog) : null;
 
   // Auto mode: hash same → only-empty (safe). Hash changed → UNION mode
   // (additive, preserves AI curation). The stored hash is updated at the end
@@ -144,7 +145,7 @@ for (const section of sections) {
       ...lesson.slides.map((s) => s.text_md),
     ].join('\n');
 
-    const detected = detectTopics(text);
+    const detected = detectTopics(text, catalog);
     const existing = lesson.topics;
 
     let nextTopics: TopicT[];

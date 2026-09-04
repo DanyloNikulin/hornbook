@@ -317,7 +317,7 @@ export const EN = {
   'settings.saved': 'Saved.',
   'settings.maintenance': 'Maintenance',
   'settings.maintenanceSub':
-    "Topic review reads this pair's lessons and proposes new topic tags for the whole journal. It uses this pair's extract model and needs at least ten lessons.",
+    "Topic review reads this pair's lessons and proposes new topic tags for this pair's catalogue. It uses this pair's extract model and needs at least ten lessons.",
   'settings.review': 'Review topics',
   'settings.running': 'Running…',
   'settings.reviewFailed': 'Topic review failed — see the log.',

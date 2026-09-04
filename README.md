@@ -44,6 +44,7 @@ journal/
     2026-01-01-greetings.json  lesson (source of truth)
     2026-01-01-greetings.md    rendered copy, regenerated on save
     _cheatsheet.json           grammar cheat sheet
+    _topics.json               topic catalogue: categories, topics, tagger patterns (optional)
     _progress.json             your SM-2 state, quiz scores, activity
     _derived/                  vocab, cards, search index (regenerated, not backed up)
   it-en/

@@ -1,39 +1,34 @@
-import { TOPIC_VOCAB, type TopicT } from '../../src/lib/schema.ts';
+// Regex topic tagger over a section's catalogue (<section>/_topics.json).
+// Each topic's `patterns` are regex sources, compiled case-insensitively; a
+// source that does not compile is skipped. This is a hint for hand-written
+// or imported lessons (`npm run backfill-topics`); the extraction model tags
+// lessons itself from the same catalogue.
 
-type PatternMap = Record<TopicT, RegExp[]>;
+import type { TopicCatalogT, TopicT } from '../../src/lib/schema.ts';
 
-// Regex hints used by `npm run backfill-topics` to tag lessons that were
-// written by hand or imported without topics. Keywords are English plus
-// Ukrainian/Russian learner-side terms inherited from the original journal;
-// add your own learner language here, or rely on the extraction model,
-// which tags lessons directly and does not use this file.
-//
-// The `// ───` section comments are INSERTION ANCHORS for vocab-review
-// (scripts/lib/vocab-apply.ts) and mirror the sections in src/lib/schema.ts.
-// Keep their text and order exactly as-is.
-const PATTERNS: PatternMap = {
-  // ─── Tenses
-  grammar: [/\bgrammar\b/i, /граматик/i, /грамматик/i, /\bconjugat/i, /\bdeclens/i],
-  // ─── Verb classes
-  vocabulary: [/\bvocabular/i, /\blexicon\b/i, /словник/i, /лексик/i, /\bword list\b/i],
-  // ─── Specific common verbs
-  conversation: [/\bdialog/i, /\bconversation\b/i, /діалог/i, /разговор/i, /\brole.?play\b/i],
-  // ─── Articles, nouns, prepositions
-  reading: [/\breading\b/i, /\btext\b/i, /читанн/i, /чтение/i],
-  // ─── Pronouns
-  listening: [/\blisten/i, /аудіюван/i, /аудирован/i, /\baudio\b/i],
-  // ─── Adjectives
-  // ─── Reading & pronunciation
-  pronunciation: [/\bpronunc/i, /\bphonetic/i, /вимов/i, /произнош/i, /\bstress\b/i, /\baccent\b/i],
-  // ─── Set-phrase constructions
-  // ─── Themes / vocabulary domains
-};
+export interface CompiledTopic {
+  id: TopicT;
+  regexes: RegExp[];
+}
 
-// Detect topics from raw transcript or article text.
-export function detectTopics(text: string): TopicT[] {
+export function compileCatalog(catalog: TopicCatalogT): CompiledTopic[] {
+  return catalog.topics.map((t) => ({
+    id: t.id,
+    regexes: t.patterns.flatMap((source) => {
+      try {
+        return [new RegExp(source, 'i')];
+      } catch {
+        return [];
+      }
+    }),
+  }));
+}
+
+/** Topics whose patterns match the text, in catalogue order. */
+export function detectTopics(text: string, catalog: TopicCatalogT): TopicT[] {
   const found: TopicT[] = [];
-  for (const id of TOPIC_VOCAB) {
-    if (PATTERNS[id].some((re) => re.test(text))) found.push(id);
+  for (const { id, regexes } of compileCatalog(catalog)) {
+    if (regexes.some((re) => re.test(text))) found.push(id);
   }
   return found;
 }

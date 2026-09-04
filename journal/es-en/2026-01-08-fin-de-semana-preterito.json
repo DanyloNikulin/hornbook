@@ -199,13 +199,48 @@
         "¿Viviste en Madrid el año pasado?"
       ],
       "table": [
-        ["", "hablar", "comer", "vivir"],
-        ["yo", "hablé", "comí", "viví"],
-        ["tú", "hablaste", "comiste", "viviste"],
-        ["él / ella / usted", "habló", "comió", "vivió"],
-        ["nosotros/as", "hablamos", "comimos", "vivimos"],
-        ["vosotros/as", "hablasteis", "comisteis", "vivisteis"],
-        ["ellos / ellas / ustedes", "hablaron", "comieron", "vivieron"]
+        [
+          "",
+          "hablar",
+          "comer",
+          "vivir"
+        ],
+        [
+          "yo",
+          "hablé",
+          "comí",
+          "viví"
+        ],
+        [
+          "tú",
+          "hablaste",
+          "comiste",
+          "viviste"
+        ],
+        [
+          "él / ella / usted",
+          "habló",
+          "comió",
+          "vivió"
+        ],
+        [
+          "nosotros/as",
+          "hablamos",
+          "comimos",
+          "vivimos"
+        ],
+        [
+          "vosotros/as",
+          "hablasteis",
+          "comisteis",
+          "vivisteis"
+        ],
+        [
+          "ellos / ellas / ustedes",
+          "hablaron",
+          "comieron",
+          "vivieron"
+        ]
       ]
     },
     {
@@ -216,13 +251,55 @@
         "¿Qué hiciste el domingo? — No hice nada, estuve en casa."
       ],
       "table": [
-        ["", "ir / ser", "hacer", "tener", "estar"],
-        ["yo", "fui", "hice", "tuve", "estuve"],
-        ["tú", "fuiste", "hiciste", "tuviste", "estuviste"],
-        ["él / ella / usted", "fue", "hizo", "tuvo", "estuvo"],
-        ["nosotros/as", "fuimos", "hicimos", "tuvimos", "estuvimos"],
-        ["vosotros/as", "fuisteis", "hicisteis", "tuvisteis", "estuvisteis"],
-        ["ellos / ellas / ustedes", "fueron", "hicieron", "tuvieron", "estuvieron"]
+        [
+          "",
+          "ir / ser",
+          "hacer",
+          "tener",
+          "estar"
+        ],
+        [
+          "yo",
+          "fui",
+          "hice",
+          "tuve",
+          "estuve"
+        ],
+        [
+          "tú",
+          "fuiste",
+          "hiciste",
+          "tuviste",
+          "estuviste"
+        ],
+        [
+          "él / ella / usted",
+          "fue",
+          "hizo",
+          "tuvo",
+          "estuvo"
+        ],
+        [
+          "nosotros/as",
+          "fuimos",
+          "hicimos",
+          "tuvimos",
+          "estuvimos"
+        ],
+        [
+          "vosotros/as",
+          "fuisteis",
+          "hicisteis",
+          "tuvisteis",
+          "estuvisteis"
+        ],
+        [
+          "ellos / ellas / ustedes",
+          "fueron",
+          "hicieron",
+          "tuvieron",
+          "estuvieron"
+        ]
       ]
     },
     {
@@ -234,13 +311,34 @@
         "Todavía no he visto esa película."
       ],
       "table": [
-        ["indefinido", "perfecto"],
-        ["ayer", "hoy"],
-        ["anoche", "esta mañana"],
-        ["el sábado pasado", "esta semana"],
-        ["la semana pasada", "este año"],
-        ["hace dos días", "ya"],
-        ["el año pasado", "todavía no"]
+        [
+          "indefinido",
+          "perfecto"
+        ],
+        [
+          "ayer",
+          "hoy"
+        ],
+        [
+          "anoche",
+          "esta mañana"
+        ],
+        [
+          "el sábado pasado",
+          "esta semana"
+        ],
+        [
+          "la semana pasada",
+          "este año"
+        ],
+        [
+          "hace dos días",
+          "ya"
+        ],
+        [
+          "el año pasado",
+          "todavía no"
+        ]
       ]
     },
     {
@@ -320,14 +418,24 @@
     {
       "type": "mc",
       "q": "Ayer ___ al cine con mis amigos.",
-      "options": ["voy", "fui", "he ido", "iba"],
+      "options": [
+        "voy",
+        "fui",
+        "he ido",
+        "iba"
+      ],
       "answer": 1,
       "explanation": "Ayer closes the period, so the indefinido fui. He ido would need an open marker like hoy."
     },
     {
       "type": "mc",
       "q": "¿Cuál es la forma de hacer para ella en el pretérito indefinido?",
-      "options": ["hació", "hizo", "hace", "hizó"],
+      "options": [
+        "hació",
+        "hizo",
+        "hace",
+        "hizó"
+      ],
       "answer": 1,
       "explanation": "Hacer changes its stem to hic- and the él/ella form is hizo, with a z and no accent."
     },
@@ -335,18 +443,27 @@
       "type": "fill",
       "q": "El sábado pasado nosotros ___ (comer) en un restaurante.",
       "answer": "comimos",
-      "alternatives": []
+      "alternatives": [],
+      "case_sensitive": false
     },
     {
       "type": "fill",
       "q": "Anoche ___ (llover) mucho.",
       "answer": "llovió",
-      "alternatives": ["llovio"]
+      "alternatives": [
+        "llovio"
+      ],
+      "case_sensitive": false
     },
     {
       "type": "mc",
       "q": "Which marker usually goes with the pretérito perfecto?",
-      "options": ["anoche", "la semana pasada", "esta mañana", "hace tres días"],
+      "options": [
+        "anoche",
+        "la semana pasada",
+        "esta mañana",
+        "hace tres días"
+      ],
       "answer": 2,
       "explanation": "Esta mañana is still part of today, an open period, so he desayunado. The other three are closed."
     },
@@ -354,19 +471,28 @@
       "type": "fill",
       "q": "Mis padres ___ (tener) que trabajar el domingo.",
       "answer": "tuvieron",
-      "alternatives": []
+      "alternatives": [],
+      "case_sensitive": false
     },
     {
       "type": "translate",
       "q": "We had a great time.",
       "answer_target": "Lo pasamos muy bien.",
-      "alternatives": ["Nos lo pasamos muy bien.", "Lo pasamos genial."],
+      "alternatives": [
+        "Nos lo pasamos muy bien.",
+        "Lo pasamos genial."
+      ],
       "auto_check": false
     },
     {
       "type": "mc",
       "q": "Fui can mean…",
-      "options": ["only I went", "only I was", "I went or I was", "I did"],
+      "options": [
+        "only I went",
+        "only I was",
+        "I went or I was",
+        "I did"
+      ],
       "answer": 2,
       "explanation": "Ir and ser share the whole indefinido. Fui al mercado is ir; fui profesor is ser."
     },
@@ -374,67 +500,299 @@
       "type": "fill",
       "q": "¿Tú ___ (ver) el partido el domingo?",
       "answer": "viste",
-      "alternatives": []
+      "alternatives": [],
+      "case_sensitive": false
     },
     {
       "type": "translate",
       "q": "I stayed at home because it rained.",
       "answer_target": "Me quedé en casa porque llovió.",
-      "alternatives": ["Me quedé en casa porque llovía."],
+      "alternatives": [
+        "Me quedé en casa porque llovía."
+      ],
       "auto_check": false
     }
   ],
   "flashcards": [
-    { "front": "madrugar", "back": "to get up early", "type": "word", "tags": ["A2", "verb"] },
-    { "front": "quedar con alguien", "back": "to meet up with someone", "type": "phrase", "tags": ["A2"] },
-    { "front": "dar un paseo", "back": "to go for a walk", "type": "phrase", "tags": ["A2"] },
-    { "front": "pasarlo bien", "back": "to have a good time", "type": "phrase", "tags": ["A2"] },
-    { "front": "quedarse en casa", "back": "to stay at home", "type": "phrase", "tags": ["A2"] },
-    { "front": "agotado/a", "back": "exhausted", "type": "word", "tags": ["A2"] },
-    { "front": "tardar", "back": "to take (time)", "type": "word", "tags": ["A2", "verb"] },
-    { "front": "la sobremesa", "back": "the conversation at the table after a meal", "type": "word", "tags": ["B1", "culture"] },
-    { "front": "el atasco", "back": "the traffic jam", "type": "word", "tags": ["A2"] },
-    { "front": "anoche", "back": "last night", "type": "word", "tags": ["A1", "marker"] },
-    { "front": "la semana pasada", "back": "last week", "type": "phrase", "tags": ["A1", "marker"] },
-    { "front": "hace dos días", "back": "two days ago", "type": "phrase", "tags": ["A2", "marker"] },
-    { "front": "por fin", "back": "finally, at last", "type": "phrase", "tags": ["A2"] },
-    { "front": "todavía no", "back": "not yet", "type": "phrase", "tags": ["A2", "marker"] },
-    { "front": "ir / ser — yo, indefinido", "back": "fui", "type": "grammar", "tags": ["indefinido", "irregular"] },
-    { "front": "hacer — él/ella, indefinido", "back": "hizo", "type": "grammar", "tags": ["indefinido", "irregular"] },
-    { "front": "tener — ellos, indefinido", "back": "tuvieron", "type": "grammar", "tags": ["indefinido", "irregular"] },
-    { "front": "estar — yo, indefinido", "back": "estuve", "type": "grammar", "tags": ["indefinido", "irregular"] },
-    { "front": "-ar verbs, nosotros, indefinido", "back": "-amos (hablamos)", "type": "grammar", "tags": ["indefinido", "regular"] },
-    { "front": "-er / -ir verbs, él/ella, indefinido", "back": "-ió (comió, vivió)", "type": "grammar", "tags": ["indefinido", "regular"] },
-    { "front": "ayer + ___ (tense)", "back": "indefinido: ayer vi una película", "type": "grammar", "tags": ["indefinido", "marker"] },
-    { "front": "esta mañana + ___ (tense)", "back": "perfecto (Spain): esta mañana he desayunado", "type": "grammar", "tags": ["perfecto", "marker"] }
+    {
+      "front": "madrugar",
+      "back": "to get up early",
+      "type": "word",
+      "tags": [
+        "A2",
+        "verb"
+      ]
+    },
+    {
+      "front": "quedar con alguien",
+      "back": "to meet up with someone",
+      "type": "phrase",
+      "tags": [
+        "A2"
+      ]
+    },
+    {
+      "front": "dar un paseo",
+      "back": "to go for a walk",
+      "type": "phrase",
+      "tags": [
+        "A2"
+      ]
+    },
+    {
+      "front": "pasarlo bien",
+      "back": "to have a good time",
+      "type": "phrase",
+      "tags": [
+        "A2"
+      ]
+    },
+    {
+      "front": "quedarse en casa",
+      "back": "to stay at home",
+      "type": "phrase",
+      "tags": [
+        "A2"
+      ]
+    },
+    {
+      "front": "agotado/a",
+      "back": "exhausted",
+      "type": "word",
+      "tags": [
+        "A2"
+      ]
+    },
+    {
+      "front": "tardar",
+      "back": "to take (time)",
+      "type": "word",
+      "tags": [
+        "A2",
+        "verb"
+      ]
+    },
+    {
+      "front": "la sobremesa",
+      "back": "the conversation at the table after a meal",
+      "type": "word",
+      "tags": [
+        "B1",
+        "culture"
+      ]
+    },
+    {
+      "front": "el atasco",
+      "back": "the traffic jam",
+      "type": "word",
+      "tags": [
+        "A2"
+      ]
+    },
+    {
+      "front": "anoche",
+      "back": "last night",
+      "type": "word",
+      "tags": [
+        "A1",
+        "marker"
+      ]
+    },
+    {
+      "front": "la semana pasada",
+      "back": "last week",
+      "type": "phrase",
+      "tags": [
+        "A1",
+        "marker"
+      ]
+    },
+    {
+      "front": "hace dos días",
+      "back": "two days ago",
+      "type": "phrase",
+      "tags": [
+        "A2",
+        "marker"
+      ]
+    },
+    {
+      "front": "por fin",
+      "back": "finally, at last",
+      "type": "phrase",
+      "tags": [
+        "A2"
+      ]
+    },
+    {
+      "front": "todavía no",
+      "back": "not yet",
+      "type": "phrase",
+      "tags": [
+        "A2",
+        "marker"
+      ]
+    },
+    {
+      "front": "ir / ser — yo, indefinido",
+      "back": "fui",
+      "type": "grammar",
+      "tags": [
+        "indefinido",
+        "irregular"
+      ]
+    },
+    {
+      "front": "hacer — él/ella, indefinido",
+      "back": "hizo",
+      "type": "grammar",
+      "tags": [
+        "indefinido",
+        "irregular"
+      ]
+    },
+    {
+      "front": "tener — ellos, indefinido",
+      "back": "tuvieron",
+      "type": "grammar",
+      "tags": [
+        "indefinido",
+        "irregular"
+      ]
+    },
+    {
+      "front": "estar — yo, indefinido",
+      "back": "estuve",
+      "type": "grammar",
+      "tags": [
+        "indefinido",
+        "irregular"
+      ]
+    },
+    {
+      "front": "-ar verbs, nosotros, indefinido",
+      "back": "-amos (hablamos)",
+      "type": "grammar",
+      "tags": [
+        "indefinido",
+        "regular"
+      ]
+    },
+    {
+      "front": "-er / -ir verbs, él/ella, indefinido",
+      "back": "-ió (comió, vivió)",
+      "type": "grammar",
+      "tags": [
+        "indefinido",
+        "regular"
+      ]
+    },
+    {
+      "front": "ayer + ___ (tense)",
+      "back": "indefinido: ayer vi una película",
+      "type": "grammar",
+      "tags": [
+        "indefinido",
+        "marker"
+      ]
+    },
+    {
+      "front": "esta mañana + ___ (tense)",
+      "back": "perfecto (Spain): esta mañana he desayunado",
+      "type": "grammar",
+      "tags": [
+        "perfecto",
+        "marker"
+      ]
+    }
   ],
   "slides": [
     {
       "ts": "08:00",
       "text_md": "# Pretérito indefinido — verbos regulares\n\nUna terminación para -ar, otra para -er / -ir.\n\n**Ojo con los acentos:** hablé, habló · comí, comió",
       "extracted_table": [
-        ["", "-ar (hablar)", "-er (comer)", "-ir (vivir)"],
-        ["yo", "hablé", "comí", "viví"],
-        ["tú", "hablaste", "comiste", "viviste"],
-        ["él / ella", "habló", "comió", "vivió"],
-        ["nosotros", "hablamos", "comimos", "vivimos"],
-        ["vosotros", "hablasteis", "comisteis", "vivisteis"],
-        ["ellos", "hablaron", "comieron", "vivieron"]
+        [
+          "",
+          "-ar (hablar)",
+          "-er (comer)",
+          "-ir (vivir)"
+        ],
+        [
+          "yo",
+          "hablé",
+          "comí",
+          "viví"
+        ],
+        [
+          "tú",
+          "hablaste",
+          "comiste",
+          "viviste"
+        ],
+        [
+          "él / ella",
+          "habló",
+          "comió",
+          "vivió"
+        ],
+        [
+          "nosotros",
+          "hablamos",
+          "comimos",
+          "vivimos"
+        ],
+        [
+          "vosotros",
+          "hablasteis",
+          "comisteis",
+          "vivisteis"
+        ],
+        [
+          "ellos",
+          "hablaron",
+          "comieron",
+          "vivieron"
+        ]
       ]
     },
     {
       "ts": "18:30",
       "text_md": "# ¿Indefinido o perfecto?\n\nEl marcador decide.\n\n- Periodo cerrado → **indefinido**\n- Periodo abierto (incluye ahora) → **perfecto**",
       "extracted_table": [
-        ["indefinido", "perfecto"],
-        ["ayer", "hoy"],
-        ["anoche", "esta mañana"],
-        ["el sábado pasado", "esta semana"],
-        ["la semana pasada", "este año"],
-        ["hace dos días", "ya / todavía no"]
+        [
+          "indefinido",
+          "perfecto"
+        ],
+        [
+          "ayer",
+          "hoy"
+        ],
+        [
+          "anoche",
+          "esta mañana"
+        ],
+        [
+          "el sábado pasado",
+          "esta semana"
+        ],
+        [
+          "la semana pasada",
+          "este año"
+        ],
+        [
+          "hace dos días",
+          "ya / todavía no"
+        ]
       ]
     }
   ],
-  "related": ["greetings"],
-  "topics": ["grammar", "conversation", "vocabulary"]
+  "related": [
+    "greetings"
+  ],
+  "topics": [
+    "grammar",
+    "conversation",
+    "vocabulary",
+    "pronunciation"
+  ]
 }

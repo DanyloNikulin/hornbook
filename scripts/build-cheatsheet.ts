@@ -31,21 +31,24 @@ import {
   type CheatsheetT,
   type CheatsheetCategoryT,
   type GrammarRuleT,
+  type TopicCatalogT,
   type TopicT,
 } from '../src/lib/schema.ts';
 import {
-  CHEATSHEET_CATEGORY_IDS,
+  categoryIds,
+  categoryTitle,
   type CheatsheetCategoryId,
   computeAffectedCategories,
 } from './lib/topic-to-category.ts';
-import {
-  applyPatches,
-  DEFAULT_CATEGORY_TITLES,
-  type CheatsheetPatch,
-  type PatchOperation,
-} from './lib/cheatsheet-patch.ts';
+import { applyPatches, type CheatsheetPatch, type PatchOperation } from './lib/cheatsheet-patch.ts';
 import { learnerLanguageName, targetLanguageName } from './lib/config.ts';
-import { cheatsheetPath, currentSection, readSectionLessons, resolveSectionArg } from './lib/journal.ts';
+import {
+  cheatsheetPath,
+  currentSection,
+  readSectionLessons,
+  readTopicCatalog,
+  resolveSectionArg,
+} from './lib/journal.ts';
 import { getExtractor } from './providers/index.ts';
 
 // The section is selected once in main() (--section); every path below
@@ -59,7 +62,7 @@ const CHEATSHEET_PATH = (): string => cheatsheetPath(currentSection().id);
 // NOT a full categories[] array. Local applyPatches() merges them into the
 // current cheat sheet.
 
-const PATCHES_TOOL = {
+const patchesTool = (catalog: TopicCatalogT) => ({
   name: 'apply_cheatsheet_patches',
   description:
     'Return a list of patches to apply to the cheat sheet. Each patch targets ONE category by id and contains add_sections / update_sections / remove_sections. DO NOT return the entire cheat sheet — only the deltas. If a section already covers a new lesson\'s topic, enrich it via update_sections (keep id, add to main_table / exception_tables / notes / source_lessons); only use add_sections for genuinely new sections. The merger is idempotent — repeating an unchanged section is fine but wasteful.',
@@ -75,9 +78,9 @@ const PATCHES_TOOL = {
           properties: {
             category_id: {
               type: 'string',
-              enum: [...CHEATSHEET_CATEGORY_IDS],
+              enum: categoryIds(catalog),
               description:
-                'Target category. Must be one of the six canonical ids. The user message tells you which categories are in scope for this build.',
+                'Target category id from the CATEGORIES list. The user message tells you which categories are in scope for this build.',
             },
             operation: {
               type: 'string',
@@ -150,20 +153,15 @@ const PATCHES_TOOL = {
       },
     },
   },
-};
+});
 
-const systemPrompt = (): string => {
+const systemPrompt = (catalog: TopicCatalogT): string => {
 const TARGET = targetLanguageName();
 const LEARNER = learnerLanguageName();
 return `You are maintaining a grammar cheat sheet for a language student. You receive (1) the current state of the categories that the new lessons can affect and (2) the new lessons' grammar + topics. You return a LIST OF PATCHES describing how to update those categories.
 
 CATEGORIES (the user message tells you which subset is in scope):
-- id: "grammar",        title: "Grammar"        — verb tenses, articles, agreement, conjugations
-- id: "vocabulary",     title: "Vocabulary"     — lemmas, word classes, high-frequency items
-- id: "pronunciation",  title: "Pronunciation"  — reading and sound rules
-- id: "conversation",   title: "Conversation"   — set phrases, structures, pronouns, prepositions
-- id: "reading",        title: "Reading"        — written forms and reading notes
-- id: "listening",      title: "Listening"      — spoken forms and listening notes
+${catalog.categories.map((c) => `- id: "${c.id}", title: "${c.title}"`).join('\n') || '- (none in the catalogue yet: use the ids named in the user message)'}
 
 PATCH OPERATIONS:
 - add_sections — append brand-new sections to a category.
@@ -205,10 +203,10 @@ interface NewLessonInput {
   affectedCategories: readonly CheatsheetCategoryId[];
 }
 
-function loadNewLessons(processedSlugs: Set<string>): NewLessonInput[] {
+function loadNewLessons(processedSlugs: Set<string>, catalog: TopicCatalogT): NewLessonInput[] {
   return readSectionLessons(currentSection().id).flatMap(({ lesson }) => {
     if (processedSlugs.has(lesson.slug)) return [];
-    const affected = computeAffectedCategories(lesson.topics);
+    const affected = computeAffectedCategories(lesson.topics, catalog);
     // Skip lessons that can't affect the cheat sheet at all. A lesson with
     // no topical hooks AND no grammar rules wouldn't change anything even
     // if we asked the model.
@@ -227,16 +225,20 @@ function loadNewLessons(processedSlugs: Set<string>): NewLessonInput[] {
 }
 
 // Compute the union of categories the whole batch affects. Lessons with no
-// affected categories but non-empty grammar fall back to "grammar" so
-// the model still has somewhere to put them.
-function computeBatchScope(lessons: readonly NewLessonInput[]): readonly CheatsheetCategoryId[] {
+// affected categories but non-empty grammar fall back to the catalogue's
+// first category so the model still has somewhere to put them.
+function computeBatchScope(
+  lessons: readonly NewLessonInput[],
+  catalog: TopicCatalogT,
+): readonly CheatsheetCategoryId[] {
   const set = new Set<CheatsheetCategoryId>();
+  const fallback = categoryIds(catalog)[0];
   for (const l of lessons) {
     for (const c of l.affectedCategories) set.add(c);
     // Grammar with no mapped topics still needs a home.
-    if (l.affectedCategories.length === 0 && l.grammar.length > 0) set.add('grammar');
+    if (l.affectedCategories.length === 0 && l.grammar.length > 0 && fallback) set.add(fallback);
   }
-  return CHEATSHEET_CATEGORY_IDS.filter((id) => set.has(id));
+  return categoryIds(catalog).filter((id) => set.has(id));
 }
 
 // Build the in-scope slice of the current cheat sheet — only the categories
@@ -245,11 +247,12 @@ function computeBatchScope(lessons: readonly NewLessonInput[]): readonly Cheatsh
 function pickInScopeCategories(
   current: CheatsheetT,
   scope: readonly CheatsheetCategoryId[],
+  catalog: TopicCatalogT,
 ): CheatsheetCategoryT[] {
   return scope.map((id) => {
     const existing = current.categories.find((c) => c.id === id);
     if (existing) return existing;
-    return { id, title: DEFAULT_CATEGORY_TITLES[id], sections: [] };
+    return { id, title: categoryTitle(catalog, id), sections: [] };
   });
 }
 
@@ -350,6 +353,7 @@ function summarisePatches(patches: readonly CheatsheetPatch[]): string {
 async function main(): Promise<void> {
   const section = resolveSectionArg(process.argv);
   console.log(`Section: ${section.id}`);
+  const catalog = readTopicCatalog(section.id);
   const force = process.argv.includes('--force');
   const dryRun = process.argv.includes('--dry-run');
 
@@ -357,7 +361,7 @@ async function main(): Promise<void> {
   if (force) console.log('--force: rebuilding cheatsheet from scratch');
 
   const processedSlugs = new Set(current.processed_lessons);
-  const newLessons = loadNewLessons(processedSlugs);
+  const newLessons = loadNewLessons(processedSlugs, catalog);
 
   if (newLessons.length === 0) {
     console.log('✓ Cheat sheet is up to date — no new lessons to process.');
@@ -373,8 +377,8 @@ async function main(): Promise<void> {
     );
   }
 
-  const scope = computeBatchScope(newLessons);
-  const inScope = pickInScopeCategories(current, scope);
+  const scope = computeBatchScope(newLessons, catalog);
+  const inScope = pickInScopeCategories(current, scope, catalog);
   const userMessage = buildUserMessage(inScope, newLessons);
 
   console.log(`In-scope categories: [${scope.join(', ') || '∅'}]`);
@@ -386,19 +390,24 @@ async function main(): Promise<void> {
   }
 
   const extractor = getExtractor();
+  const tool = patchesTool(catalog);
   console.log(`Writing patches via ${extractor.driver}...`);
   const toolInput = await extractor.extract({
-    system: systemPrompt(),
+    system: systemPrompt(catalog),
     userParts: [{ type: 'text', text: userMessage }],
-    jsonSchema: PATCHES_TOOL.input_schema,
-    toolName: PATCHES_TOOL.name,
-    toolDescription: PATCHES_TOOL.description,
+    jsonSchema: tool.input_schema,
+    toolName: tool.name,
+    toolDescription: tool.description,
   });
 
   const patches = parsePatchesFromToolInput(toolInput);
   console.log(`Patches received: ${summarisePatches(patches)}`);
 
-  const merged = applyPatches(current, patches);
+  const merged = applyPatches(
+    current,
+    patches,
+    Object.fromEntries(catalog.categories.map((c) => [c.id, c.title])),
+  );
   const updatedCheatsheet: CheatsheetT = {
     ...merged,
     processed_lessons: [...processedSlugs, ...newLessons.map((l) => l.slug)],

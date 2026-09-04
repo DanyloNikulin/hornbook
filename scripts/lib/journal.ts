@@ -6,7 +6,8 @@
 //   <journal>/<section>/<date>-<slug>.md     rendered, regenerated on save
 //   <journal>/<section>/_cheatsheet.json
 //   <journal>/<section>/_progress.json       learner state (SM-2, quiz, activity)
-//   <journal>/<section>/_topics-version.json / _topics-suggestions.json
+//   <journal>/<section>/_topics.json          topic catalogue: categories, topics, tagger patterns
+//   <journal>/<section>/_topics-version.json / _topics-suggestions.json / _topic-reviews/
 //   <journal>/<section>/_derived/            meta, vocab, cards, search index
 //
 // Location: HORNBOOK_JOURNAL, else <repo>/journal (the demo journal).
@@ -20,7 +21,13 @@ import {
   type JournalConfigT,
   type SectionConfigT,
 } from '../../src/lib/journal-config.ts';
-import { Lesson, type LessonT } from '../../src/lib/schema.ts';
+import {
+  DEFAULT_TOPIC_CATALOG,
+  Lesson,
+  TopicCatalog,
+  type LessonT,
+  type TopicCatalogT,
+} from '../../src/lib/schema.ts';
 import { buildDerived, type DerivedBundle } from './derived.ts';
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
@@ -99,6 +106,33 @@ export function cheatsheetPath(id: string): string {
 
 export function progressPath(id: string): string {
   return join(sectionDir(id), '_progress.json');
+}
+
+export function topicsPath(id: string): string {
+  return join(sectionDir(id), '_topics.json');
+}
+
+/** The section's topic catalogue, or the bundled default when it has none. */
+export function readTopicCatalog(id: string): TopicCatalogT {
+  const path = topicsPath(id);
+  if (!existsSync(path)) return DEFAULT_TOPIC_CATALOG;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(path, 'utf8'));
+  } catch (err) {
+    throw new Error(`Invalid JSON in ${path}: ${(err as Error).message}`);
+  }
+  const result = TopicCatalog.safeParse(raw);
+  if (!result.success) {
+    throw new Error(`${path} failed validation\n${JSON.stringify(result.error.format(), null, 2)}`);
+  }
+  return result.data;
+}
+
+export function writeTopicCatalog(id: string, catalog: TopicCatalogT): void {
+  const data = TopicCatalog.parse(catalog);
+  mkdirSync(sectionDir(id), { recursive: true });
+  writeFileSync(topicsPath(id), JSON.stringify(data, null, 2) + '\n', 'utf8');
 }
 
 export function lessonFileStem(lesson: Pick<LessonT, 'date' | 'slug'>): string {
