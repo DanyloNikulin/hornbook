@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { _electron as electron } from 'playwright-core';
 import type { JobView } from '../src/lib/api-types.ts';
 import { Report, outDir, repoRoot, throwawayJournal } from './lib.ts';
+import { unpackedFolder } from './package-output.ts';
 
 function executable(): string {
   const explicit = process.env['HORNBOOK_ELECTRON_EXE']?.trim();
@@ -15,14 +16,14 @@ function executable(): string {
   const release = join(repoRoot, 'release');
   const folders = existsSync(release) ? readdirSync(release) : [];
   if (process.platform === 'win32') {
-    const folder = folders.find((name) => /^win(?:-.+)?-unpacked$/.test(name)) ?? 'win-unpacked';
+    const folder = unpackedFolder(process.platform, process.arch, folders);
     return join(release, folder, 'Hornbook.exe');
   }
   if (process.platform === 'darwin') {
-    const folder = folders.find((name) => /^mac(?:-.+)?$/.test(name)) ?? 'mac';
+    const folder = unpackedFolder(process.platform, process.arch, folders);
     return join(release, folder, 'Hornbook.app', 'Contents', 'MacOS', 'Hornbook');
   }
-  const folder = folders.find((name) => /^linux(?:-.+)?-unpacked$/.test(name)) ?? 'linux-unpacked';
+  const folder = unpackedFolder(process.platform, process.arch, folders);
   return join(release, folder, 'hornbook');
 }
 

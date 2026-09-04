@@ -20,11 +20,12 @@ import { challenge, isAuthorized, isLaunchAuthorized } from './auth.ts';
 import { ManagedOllama } from './managed-ollama.ts';
 import { createSetup } from './setup.ts';
 import { DEFAULT_MANAGED_OLLAMA_PORT, managedPaths, toolsDir } from '../scripts/lib/tools.ts';
-import { packageRoot } from '../scripts/lib/runtime.ts';
+import { packageRoot, packageVersion } from '../scripts/lib/runtime.ts';
 import { ReleaseChecker } from './releases.ts';
 import type { JobView } from '../src/lib/api-types.ts';
 
 const repoRoot = packageRoot(import.meta.url);
+const APP_VERSION = packageVersion(repoRoot);
 
 export interface Options {
   port: number;
@@ -139,7 +140,7 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
     },
   });
   const setup = createSetup({ journalDir: () => store.dir, pipelineEnv: () => pipelineEnv(store.dir), jobs, managed });
-  const version = opts.version ?? '0.1.0';
+  const version = opts.version ?? APP_VERSION;
   const updates = opts.updates ?? new ReleaseChecker({
     currentVersion: version,
     url: opts.releasesUrl ?? process.env['HORNBOOK_RELEASES_URL'],

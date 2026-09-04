@@ -1,16 +1,34 @@
 # Hornbook
 
+[![PR gate](https://github.com/DanyloNikulin/hornbook/actions/workflows/pr-gate.yml/badge.svg)](https://github.com/DanyloNikulin/hornbook/actions/workflows/pr-gate.yml)
+[![GitHub release](https://img.shields.io/github/v/release/DanyloNikulin/hornbook)](https://github.com/DanyloNikulin/hornbook/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-1f4e5f.svg)](LICENSE)
+
 A **conspect journal** for 1:1 language lessons. Your journal is a folder of JSON files on your
 machine; Hornbook is the app that reads and writes it. Several language pairs live side by side.
 Recordings and cloud models are optional: with whisper.cpp and Ollama it runs at zero cost.
 
 This is a clean engine. It is **not** a fork of anyone's private lesson archive.
 
-## Install, run, open
+Hornbook 0.9 is the product preview. It is feature-complete enough for daily
+use; the next milestone is a refactor and hardening pass before 1.0.
+
+## Download and start
 
 Download the installer for Windows, macOS or Linux from
 [GitHub Releases](https://github.com/DanyloNikulin/hornbook/releases). Hornbook
 opens as a desktop app and stays in the tray while lesson and setup jobs run.
+Until the first `v0.9.0` tag is published, use the source instructions below;
+the release workflow creates the installers and container from that tag.
+
+1. Install and open Hornbook.
+2. In **Application settings**, click **Set up everything for local use**.
+3. Open a language pair and choose **Add**.
+4. Paste a transcript, choose a recording, write a lesson by hand, or import one.
+
+Your journal lives in `~/Hornbook` and does not go through GitHub.
+
+## Run from source
 
 To run from a source clone, use Node 22.12 or newer and git:
 
@@ -71,6 +89,8 @@ Everything happens on the **Add** page of a pair:
 - **From a recording** — drop audio or video; it is transcribed, then extracted. Slides in a
   video are read when the extract model has vision: any Anthropic or OpenAI model, or an Ollama
   model that lists the vision capability (gemma3, qwen2.5vl). A live log shows progress.
+- **Import a lesson** — choose a Hornbook lesson JSON file. If its id already exists, keep both
+  under a new slug or explicitly replace the existing lesson.
 
 The cheat sheet page updates itself with "Update from new lessons", and Settings has
 "Review topics" for proposing new topic tags. Both use the pair's extract model, so
@@ -87,6 +107,15 @@ npm run vocab-review -- --section es-en
 ```
 
 `--section` is optional while the journal has one pair.
+
+## Move or share lessons and pairs
+
+Every lesson page can export that lesson as canonical JSON. Pair settings can export the whole
+pair as a Hornbook ZIP containing its section settings, lesson JSON, cheat sheet, topic catalogue,
+theme and backdrop. Study progress is optional; derived indexes are never included and are rebuilt
+after import. Import lesson JSON on the pair's **Add** page, or import a pair ZIP on `/setup`.
+
+These exports are for moving and sharing. A full backup is still just a copy of the journal folder.
 
 ## Models
 
@@ -173,9 +202,12 @@ npm run hornbook -- --host 0.0.0.0 --password change-me --no-open
 or with Docker, journal on a volume:
 
 ```bash
-docker build -t hornbook .
-docker run -p 8787:8787 -v hornbook-journal:/journal -e HORNBOOK_PASSWORD=change-me hornbook
+docker run --init -p 8787:8787 -v hornbook-journal:/journal \
+  -e HORNBOOK_PASSWORD=change-me ghcr.io/danylonikulin/hornbook:0.9.0
 ```
+
+The container runs as uid 1000. A named volume works without extra setup; if
+you bind-mount a host folder instead, make that folder writable by uid 1000.
 
 The password is HTTP Basic auth on every request. For anything beyond one owner, put an access
 proxy (Cloudflare Access, Tailscale, a VPN) in front instead.
@@ -185,6 +217,7 @@ proxy (Cloudflare Access, Tailscale, a VPN) in front instead.
 ```bash
 npm test               # app
 npm run test:scripts   # pipeline scripts + server
+npm run release:check  # package, lockfile and changelog version agree
 ```
 
 Slower checks live in `harness/` and run against throwaway journals, never against yours
@@ -201,3 +234,6 @@ Windows has no flag glyphs of its own.
 
 MIT, see [LICENSE](LICENSE). The bundled display fonts are under the SIL Open Font License and the
 Twemoji flag subset is CC-BY 4.0; both are compatible with the MIT terms.
+
+Bug reports and contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md),
+[SECURITY.md](SECURITY.md) and [SUPPORT.md](SUPPORT.md) before opening an issue.

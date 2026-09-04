@@ -1,8 +1,24 @@
 {
   "name": "hornbook",
-  "version": "0.1.0",
+  "version": "0.9.0",
   "description": "A local-first conspect journal for one-to-one language lessons.",
   "author": "Danylo Nikulin",
+  "license": "MIT",
+  "homepage": "https://github.com/DanyloNikulin/hornbook#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DanyloNikulin/hornbook.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DanyloNikulin/hornbook/issues"
+  },
+  "keywords": [
+    "language-learning",
+    "local-first",
+    "spaced-repetition",
+    "whisper-cpp",
+    "ollama"
+  ],
   "type": "module",
   "main": "dist/node/electron/main.js",
   "scripts": {
@@ -36,6 +52,8 @@
     "hornbook:app": "npm run build && electron .",
     "package:dir": "npm run build && electron-builder --dir --config electron-builder.config.cjs",
     "package": "npm run build && electron-builder --config electron-builder.config.cjs",
+    "release:check": "tsx scripts/release.ts",
+    "release:notes": "tsx scripts/release.ts --output release-notes.md",
     "harness:electron": "tsx harness/electron.ts",
     "harness:api": "tsx harness/api-smoke.ts",
     "harness:pipeline": "tsx harness/pipeline.ts",
@@ -61,10 +79,11 @@
     "@fontsource/manrope": "^5.3.0",
     "country-flag-emoji-polyfill": "^0.1.10",
     "dompurify": "^3.4.14",
+    "electron-updater": "^6.8.9",
+    "fflate": "^0.8.3",
     "fuse.js": "^7.3.0",
     "marked": "^18.0.4",
     "openai": "^6.39.0",
-    "electron-updater": "^6.8.9",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zod": "^4.4.3"

@@ -42,8 +42,15 @@ module.exports = {
     ],
     ...(azureSigning ? { azureSignOptions: azureSigning } : {}),
   },
-  nsis: { oneClick: true, perMachine: false },
-  portable: { requestExecutionLevel: 'user' },
+  nsis: {
+    artifactName: '${productName}-${version}-${os}-${arch}-setup.${ext}',
+    oneClick: true,
+    perMachine: false,
+  },
+  portable: {
+    artifactName: '${productName}-${version}-${os}-${arch}-portable.${ext}',
+    requestExecutionLevel: 'user',
+  },
   mac: {
     icon: 'build/icon.icns',
     target: [

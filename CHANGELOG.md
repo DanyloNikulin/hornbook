@@ -4,6 +4,30 @@ All notable changes to Hornbook. The roadmap is in `docs/PLAN.md`.
 
 ## Unreleased
 
+- Nothing yet.
+
+## 0.9.0 — 2026-09-04
+
+Product preview: the complete local-first lesson workflow is packaged for
+desktop and Docker, with transfer tools and an automated release path. This
+is deliberately 0.9; the next phase is hardening and refactoring before 1.0.
+
+- Version tags now run a reproducible release workflow: package metadata and
+  changelog validation, full deterministic and smoke checks, tested Windows,
+  macOS and Linux distributions, checksums, a GitHub Release, and versioned
+  multi-architecture images on GitHub Container Registry.
+- The pull-request gate now includes API, browser, Docker and packaged desktop
+  walks. The Docker image runs as an unprivileged user and exposes a health
+  check while keeping the journal on its volume.
+- Added contribution, support and security policies, structured issue forms,
+  a pull-request checklist, CODEOWNERS, Dependabot and consistent text-file
+  attributes. GitHub Discussions and private vulnerability reports are on.
+- Lessons export as canonical JSON and import through an explicit Add tab.
+  Conflicts stop before writing and offer keep-both with a new slug or replace.
+  Whole language pairs move as ZIP archives with lessons, sheet, topics,
+  theme and backdrop, plus optional study progress; `_derived/` is rebuilt.
+  Lesson, vocabulary and card ids are now lesson-scoped, with old SM-2 card
+  progress mapped forward on read.
 - Native Electron shell: one-instance window, tray lifecycle, remembered
   size, journal and tool pickers, startup setting, native job notifications,
   and a random-port local server protected by a per-launch token.
@@ -91,7 +115,7 @@ turns a recording into a conspect runs inside the server as jobs.
   with four real slides, a Playwright browser walk, and a run through every
   coding CLI found on the machine.
 
-### Not yet
+### Deferred after 0.1
 
-Installers, setup of Ollama and whisper from inside the app, export and
-import of lessons and pairs. See `docs/PLAN.md`, Part 4.
+Packaged installers and release automation arrive with 0.9.0. The 1.0 release
+follows the hardening work in `docs/PLAN.md`, Part 4.

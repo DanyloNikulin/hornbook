@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Setup and usage questions
+    url: https://github.com/DanyloNikulin/hornbook/discussions
+    about: Ask for help without filing a product defect.
+  - name: Security report
+    url: https://github.com/DanyloNikulin/hornbook/security/advisories/new
+    about: Report vulnerabilities privately. Do not include lesson data or keys.

@@ -3,8 +3,8 @@ name: PR gate
 # The final "gate" job is the single branch-protection check. It collects the
 # ordinary quality checks and packaged desktop walks on all three platforms.
 #
-# This is the only workflow. Hornbook's data never goes through git or CI:
-# the journal folder is written by the app itself.
+# Hornbook's data never goes through git or CI: the journal folder is written
+# by the app itself. The separate release workflow runs only from version tags.
 on:
   pull_request:
     branches: [main]
@@ -85,6 +85,12 @@ jobs:
       - name: Test pipeline scripts and server
         run: npm run test:scripts
 
+      - name: API smoke
+        run: npm run harness:api
+
+      - name: Browser walk against the production build
+        run: xvfb-run -a npm run harness:ui
+
       # High/critical only — a moderate-severity advisory with no fix released
       # yet must not freeze every PR.
       - name: Audit dependencies
@@ -122,16 +128,48 @@ jobs:
       - name: Walk packaged app
         run: ${{ matrix.harness }}
 
+  container:
+    name: Packaged Docker image
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Build image
+        run: docker build --build-arg VERSION=ci --build-arg REVISION="$GITHUB_SHA" -t hornbook:ci .
+      - name: Start image and exercise its API
+        run: |
+          set -euo pipefail
+          docker run --detach --name hornbook-ci --publish 127.0.0.1:8787:8787 \
+            --env HORNBOOK_PASSWORD=ci-password hornbook:ci
+          trap 'docker logs hornbook-ci' ERR
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --user hornbook:ci-password http://127.0.0.1:8787/api/mode > mode.json; then
+              break
+            fi
+            sleep 1
+          done
+          expected=$(node -p "require('./package.json').version")
+          node -e "const fs=require('node:fs');const mode=JSON.parse(fs.readFileSync('mode.json'));if(mode.mode!=='hosted'||mode.version!==process.argv[1])process.exit(1)" "$expected"
+          curl --fail --silent --user hornbook:ci-password \
+            --header 'Content-Type: application/json' \
+            --data '{"target":"ja","learner":"en","title":"Container smoke"}' \
+            http://127.0.0.1:8787/api/sections > write.json
+          node -e "const fs=require('node:fs');const section=JSON.parse(fs.readFileSync('write.json'));if(section.id!=='ja-en')process.exit(1)"
+          docker rm --force hornbook-ci
+
   gate:
     name: gate
     if: always()
-    needs: [checks, desktop]
+    needs: [checks, desktop, container]
     runs-on: ubuntu-latest
     steps:
       - name: Require every gate component
         env:
           CHECKS_RESULT: ${{ needs.checks.result }}
           DESKTOP_RESULT: ${{ needs.desktop.result }}
+          CONTAINER_RESULT: ${{ needs.container.result }}
         run: |
           test "$CHECKS_RESULT" = success
           test "$DESKTOP_RESULT" = success
+          test "$CONTAINER_RESULT" = success

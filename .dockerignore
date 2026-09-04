@@ -1,11 +1,16 @@
 node_modules
 dist
+release
+coverage
 .angular
 .git
 .github
 docs
 harness
 work
+*.log
+.idea
+.vscode
 journal/*/_derived
 journal/*/_progress.json
 journal/secrets.json

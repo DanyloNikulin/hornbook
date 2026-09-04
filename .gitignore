@@ -3,6 +3,7 @@
 # Compiled output
 /dist
 /release
+/release-notes.md
 /tmp
 /out-tsc
 /bazel-out
