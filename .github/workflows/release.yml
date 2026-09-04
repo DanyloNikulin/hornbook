@@ -44,9 +44,11 @@ jobs:
         run: |
           set -euo pipefail
           npm run release:check -- --tag "$RELEASE_TAG" --output release-notes.md
-          echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
-          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-          echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          {
+            echo "version=${RELEASE_TAG#v}"
+            echo "image=ghcr.io/${GITHUB_REPOSITORY,,}"
+            echo "revision=$(git rev-parse HEAD)"
+          } >> "$GITHUB_OUTPUT"
       - name: Deterministic checks
         run: |
           npm run lint
@@ -193,7 +195,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$(find release-files -maxdepth 1 -type f -print -quit)"
-          (cd release-files && sha256sum * > SHA256SUMS.txt)
+          (cd release-files && sha256sum ./* > SHA256SUMS.txt)
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" release-files/* --clobber
             gh release edit "$RELEASE_TAG" --title "Hornbook ${{ needs.verify.outputs.version }}" --notes-file release-metadata/release-notes.md

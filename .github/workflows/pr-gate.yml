@@ -143,7 +143,7 @@ jobs:
           docker run --detach --name hornbook-ci --publish 127.0.0.1:8787:8787 \
             --env HORNBOOK_PASSWORD=ci-password hornbook:ci
           trap 'docker logs hornbook-ci' ERR
-          for attempt in $(seq 1 30); do
+          for _attempt in $(seq 1 30); do
             if curl --fail --silent --user hornbook:ci-password http://127.0.0.1:8787/api/mode > mode.json; then
               break
             fi
