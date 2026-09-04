@@ -5,7 +5,7 @@
 // given, so tests stub them.
 
 import { homedir } from 'node:os';
-import { posix, resolve, win32 } from 'node:path';
+import { posix, win32 } from 'node:path';
 import type {
   DownloadPlan,
   MachineInfo,
@@ -53,8 +53,9 @@ function pathFor(platform: NodeJS.Platform): typeof posix {
 
 export function toolsDir(env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform, home = homedir()): string {
   const override = env['HORNBOOK_TOOLS']?.trim();
-  if (override) return resolve(override);
-  const { join } = pathFor(platform);
+  const path = pathFor(platform);
+  if (override) return path.resolve(override);
+  const { join } = path;
   if (platform === 'win32') return join(env['LOCALAPPDATA'] ?? join(home, 'AppData', 'Local'), 'Hornbook', 'tools');
   if (platform === 'darwin') return join(home, 'Library', 'Application Support', 'Hornbook', 'tools');
   return join(env['XDG_DATA_HOME'] ?? join(home, '.local', 'share'), 'hornbook', 'tools');

@@ -5,7 +5,7 @@
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { spawn } from 'node:child_process';
-import { delimiter, join } from 'node:path';
+import { join } from 'node:path';
 import { totalmem } from 'node:os';
 import type { MachineInfo, ToolStatus } from '../src/lib/api-types.ts';
 import { managedPaths, PINS, preferredWhisperModel, toolsDir } from '../scripts/lib/tools.ts';
@@ -89,7 +89,7 @@ export function toolsEnv(base: NodeJS.ProcessEnv, opts: ToolsEnvOptions): NodeJS
   const out: NodeJS.ProcessEnv = { ...base };
   if (exists(p.ffmpeg)) {
     const key = Object.keys(out).find((k) => k.toUpperCase() === 'PATH') ?? 'PATH';
-    out[key] = [p.ffmpegDir, out[key]].filter(Boolean).join(delimiter);
+    out[key] = [p.ffmpegDir, out[key]].filter(Boolean).join(platform === 'win32' ? ';' : ':');
   }
   if (!out['WHISPER_BIN']?.trim() && exists(p.whisper)) out['WHISPER_BIN'] = p.whisper;
   if (!out['WHISPER_MODEL']?.trim()) {
