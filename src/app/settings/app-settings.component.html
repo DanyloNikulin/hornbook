@@ -42,6 +42,8 @@
         <button type="button" class="il-btn" [disabled]="saving()" (click)="save()">{{ saving() ? ('settings.saving' | t) : ('settings.save' | t) }}</button>
         @if (saved()) { <span style="color: var(--success);">{{ saved() }}</span> }
       </div>
+
+      <app-local-setup />
     }
 
     @if (error()) {

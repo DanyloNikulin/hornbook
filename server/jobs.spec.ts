@@ -53,6 +53,50 @@ describe('JobRunner', () => {
     expect(readdirSync(join(dir, '_uploads'))).toHaveLength(0);
   });
 
+  it('follows a setup job: progress lines, result and the finish hook', async () => {
+    const finished: string[] = [];
+    const runner = new JobRunner({
+      repoRoot: dir,
+      journalDir: () => dir,
+      env: () => process.env,
+      onFinish: (job) => finished.push(`${job.kind}:${job.status}`),
+      runner: () => ({
+        cmd: process.execPath,
+        args: [
+          '-e',
+          'const a=process.argv.slice(1);console.log("args:"+a.join(" "));console.log("HORNBOOK_PROGRESS "+JSON.stringify({pct:10,bytes:1,total:10,stage:"downloading"}));console.log("HORNBOOK_PROGRESS "+JSON.stringify({pct:100,stage:"done"}));console.log("HORNBOOK_RESULT "+JSON.stringify({tool:"whisper",path:"C:/t/whisper/whisper-cli.exe",version:"b4938"}))',
+          '--',
+        ],
+      }),
+    });
+    const job = runner.enqueue('_setup', { kind: 'setup', tool: 'whisper', variant: 'cuda', sha256: 'ab'.repeat(32) });
+    expect(job.label).toBe('Set up whisper');
+    await runner.idle();
+    const done = runner.get(job.id)!;
+    expect(done.status).toBe('done');
+    expect(done.log).toContain('--tool whisper --variant cuda --expect-sha256 ' + 'ab'.repeat(32));
+    expect(done.progress).toEqual({ pct: 100, stage: 'done' });
+    expect(done.result).toEqual({ tool: 'whisper', path: 'C:/t/whisper/whisper-cli.exe', version: 'b4938' });
+    expect(finished).toEqual(['setup:done']);
+    expect(runner.list('_setup').map((j) => j.id)).toEqual([job.id]);
+  });
+  it('stop() kills the running job and drops the queue', async () => {
+    const runner = makeRunner({
+      'build-cheatsheet.ts': 'setTimeout(() => console.log("late"), 30000)',
+      'review-vocab.ts': 'console.log("never")',
+    });
+    const first = runner.enqueue('es-en', { kind: 'cheatsheet' });
+    const second = runner.enqueue('es-en', { kind: 'review-topics' });
+    await new Promise((r) => setTimeout(r, 300));
+    runner.stop();
+    await runner.idle();
+    // The killed child releases its working directory a moment later on Windows.
+    await new Promise((r) => setTimeout(r, 700));
+    expect(runner.get(first.id)?.status).toBe('failed');
+    expect(runner.get(first.id)?.error).toMatch(/stopped with the server/);
+    expect(runner.get(second.id)?.status).toBe('queued');
+  });
+
   it('marks a failing job failed with the last error line and keeps going', async () => {
     const runner = makeRunner({
       'build-cheatsheet.ts': 'console.error("✘ ANTHROPIC_API_KEY env var is required");process.exit(1)',

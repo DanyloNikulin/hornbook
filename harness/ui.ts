@@ -177,6 +177,27 @@ async function main(): Promise<void> {
     }
     await shot('05b-settings-cli');
 
+    // Local tools: the five rows and the one button. A plan (source, size,
+    // checksum) is shown before any download; this walk fetches nothing.
+    const toolRows = page.locator('.il-setup-row');
+    r.rec('local tools list the five rows', (await toolRows.count()) === 5, `n=${await toolRows.count()}`);
+    const setupAll = page.locator('button').filter({ hasText: /Set up everything|Setting up|Prepara tutto|Preparazione/ }).first();
+    r.rec('the one setup button is there', (await setupAll.count()) === 1);
+    if (await reachable('https://huggingface.co/', 4000)) {
+      const modelRow = page.locator('.il-setup-row[data-tool="whisper-model"]');
+      await modelRow.getByRole('button', { name: /^(Download|Scarica)/ }).click();
+      const plan = modelRow.locator('.il-setup-plan');
+      await plan.filter({ hasText: /SHA-256/ }).first().waitFor({ timeout: 20000 }).catch(() => undefined);
+      const planText = (await plan.first().innerText().catch(() => '')).replace(/\s+/g, ' ');
+      r.rec('a download shows source, size and checksum before it starts', /SHA-256/.test(planText) && /MB/.test(planText), planText.slice(0, 140));
+      await shot('05c-settings-tools-plan');
+      await modelRow.getByRole('button', { name: /^(Cancel|Annulla)/ }).click();
+      await plan.first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => undefined);
+      r.rec('cancel puts the row back without fetching', (await plan.count()) === 0);
+    } else {
+      r.skip('download plan on the setup page', 'huggingface.co not reachable');
+    }
+
     r.section('Spanish pair');
     await goto('/es-en');
     await seen('Saludos');

@@ -6,6 +6,7 @@ import { createReadStream } from 'node:fs';
 import { extname } from 'node:path';
 import { FolderStore, HttpError, type DerivedKind } from './store.ts';
 import type { JobRunner } from './jobs.ts';
+import { SETUP_SECTION, type SetupApi } from './setup.ts';
 import type { StartJob } from '../src/lib/api-types.ts';
 
 const MAX_BODY_BYTES = 512 * 1024 * 1024; // base64 uploads of lesson video
@@ -22,6 +23,7 @@ const MIME_BY_EXT: Record<string, string> = {
 export interface ApiContext {
   store: FolderStore;
   jobs: JobRunner;
+  setup: SetupApi;
   mode: 'local' | 'hosted';
 }
 
@@ -129,6 +131,14 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
   });
 
   on('GET', '/api/sections/:id/files', (_r, _s, p) => store.listFiles(p['id']));
+
+  // Setup inside the app: local tools in the tools folder, downloads as jobs
+  // filed under the journal, not a pair.
+  on('GET', '/api/setup', () => ctx.setup.view());
+  on('POST', '/api/setup/plan', async (_r, _s, _p, body) => ctx.setup.plan(await body()));
+  on('POST', '/api/setup/jobs', async (_r, _s, _p, body) => ctx.setup.start(await body()));
+  on('GET', '/api/setup/jobs', () => ctx.jobs.list(SETUP_SECTION));
+  on('POST', '/api/setup/ollama/start', () => ctx.setup.startOllama());
 
   return async (req, res): Promise<boolean> => {
     const url = new URL(req.url ?? '/', 'http://localhost');

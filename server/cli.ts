@@ -7,6 +7,7 @@
 //   hornbook --journal ./j      another folder
 //   hornbook --no-open          just the server (Docker, services)
 //   hornbook --host 0.0.0.0 --password …   hosted
+//   hornbook doctor             what is installed for the zero-cost path
 //
 // Env: HORNBOOK_JOURNAL, HORNBOOK_PORT, HORNBOOK_HOST, HORNBOOK_PASSWORD.
 
@@ -17,6 +18,9 @@ import { fileURLToPath } from 'node:url';
 import { isMain } from '../scripts/lib/is-main.ts';
 import { parseArgs, startServer } from './main.ts';
 import { countLessons, openUrl, seedJournal } from './launch.ts';
+import { pipelineEnv } from './secrets.ts';
+import { defaultToolsDeps, machineInfo, toolStatuses } from './tools.ts';
+import { DEFAULT_MANAGED_OLLAMA_PORT, recommend, toolsDir } from '../scripts/lib/tools.ts';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 
@@ -25,6 +29,10 @@ export function defaultJournalDir(): string {
 }
 
 export async function cli(argv: readonly string[]): Promise<void> {
+  if (argv[0] === 'doctor') {
+    await doctor(resolve(parseArgs(argv).journal ?? defaultJournalDir()));
+    return;
+  }
   if (argv.includes('--help') || argv.includes('-h')) {
     console.log(`hornbook [--journal <dir>] [--port 8787] [--host 127.0.0.1] [--password …] [--app] [--no-open]
 
@@ -32,7 +40,8 @@ export async function cli(argv: readonly string[]): Promise<void> {
   --app       open a chromeless window (needs Chrome, Edge, Chromium or Brave) instead of a tab
   --no-open   start the server only
   --host      listen address; anything but 127.0.0.1 is hosted mode — set --password
-  --password  Basic-auth password for hosted mode (or HORNBOOK_PASSWORD)`);
+  --password  Basic-auth password for hosted mode (or HORNBOOK_PASSWORD)
+  doctor      print what is installed for the zero-cost path (ffmpeg, whisper.cpp, Ollama)`);
     return;
   }
 
@@ -68,6 +77,27 @@ export async function cli(argv: readonly string[]): Promise<void> {
   };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
+}
+
+/** The setup page as a table, for a terminal. No network beyond the local Ollama. */
+export async function doctor(journal: string): Promise<void> {
+  const deps = defaultToolsDeps();
+  const env = pipelineEnv(journal);
+  const managedHost = `http://127.0.0.1:${process.env['HORNBOOK_OLLAMA_PORT'] ?? DEFAULT_MANAGED_OLLAMA_PORT}`;
+  const [tools, machine] = await Promise.all([
+    toolStatuses(deps, { env, managedOllama: { host: managedHost, running: false } }),
+    machineInfo(deps),
+  ]);
+  console.log(`Hornbook doctor · tools folder ${toolsDir()}`);
+  for (const t of tools) {
+    const state = t.installed ? 'installed' : 'missing';
+    const where = [t.source === 'none' ? '' : t.source, t.version ?? '', t.path ?? ''].filter(Boolean).join(' · ');
+    console.log(`  ${t.id.padEnd(14)} ${state.padEnd(10)} ${where || t.detail}`);
+  }
+  const rec = recommend(machine);
+  const gpu = machine.gpu ? `${machine.gpu.name} ${Math.round(machine.gpu.vramMb / 1024)} GB` : 'no NVIDIA GPU';
+  console.log(`Machine: ${Math.round(machine.ramMb / 1024)} GB RAM · ${gpu}`);
+  console.log(`Recommended: ${rec.ollamaModel} for writing, whisper ${rec.whisperModel} (${rec.whisperVariant} build) for hearing.`);
 }
 
 if (isMain(import.meta.url)) {

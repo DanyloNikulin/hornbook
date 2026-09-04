@@ -10,7 +10,7 @@
 // a reachable Ollama (OLLAMA_HOST) to check the model list. Both are skipped
 // when absent.
 
-import { writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { JournalConfigT } from '../src/lib/journal-config.ts';
 import type { ProbeResult } from '../src/lib/api-types.ts';
@@ -51,7 +51,9 @@ async function main(): Promise<void> {
   };
   writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
 
-  const server = await startServer({ journal, port: PORT });
+  // Downloads of the setup checks land in a throwaway tools folder, never in the real one.
+  const tools = join(journal, 'tools');
+  const server = await startServer({ journal, port: PORT, env: { HORNBOOK_TOOLS: tools } });
   const api = client(server.api);
   r.rec('throwaway server up', true, server.api);
 
@@ -196,6 +198,27 @@ async function main(): Promise<void> {
     const listed = await api('GET', '/api/sections/es-en/jobs');
     r.rec('GET section jobs lists the three', listed.status === 200 && Array.isArray(listed.json) && listed.json.length === 3, `n=${Array.isArray(listed.json) ? listed.json.length : '?'}`);
     r.rec('server still answers after failed jobs', (await api('GET', '/api/mode')).status === 200);
+
+    r.section('setup');
+    const setup = await api('GET', '/api/setup');
+    const rows = (obj(setup)['tools'] as { id: string; installed: boolean; source: string }[]) ?? [];
+    r.rec('GET /api/setup lists the five tools', setup.status === 200 && rows.map((t) => t.id).join(',') === 'ffmpeg,whisper,whisper-model,ollama,ollama-model', rows.map((t) => `${t.id}:${t.installed ? t.source : 'missing'}`).join(' '));
+    const rec = obj(setup)['recommend'] as { ollamaModel?: unknown } | undefined;
+    r.rec('setup view names the tools folder and a recommendation', samePath(String(obj(setup)['toolsDir']), tools) && typeof rec?.ollamaModel === 'string', `${String(obj(setup)['toolsDir'])} → ${String(rec?.ollamaModel)}`);
+    const ffm = rows.find((t) => t.id === 'ffmpeg');
+    if (ffm?.installed) r.rec('an installed tool is detected, not fetched', ffm.source === 'system' || ffm.source === 'managed', `ffmpeg ${ffm.source}`);
+    else r.skip('an installed tool is detected, not fetched', 'ffmpeg is not installed on this machine');
+    r.rec('bad setup request → 400', (await api('POST', '/api/setup/jobs', { tool: 'nope' })).status === 400);
+    if (await reachable('https://api.github.com/', 4000)) {
+      const plan = await api('POST', '/api/setup/plan', { tool: 'whisper', variant: 'cpu' });
+      const p = obj(plan);
+      r.rec('a download plan names source, size and checksum before anything is fetched', plan.status === 200 && typeof p['sha256'] === 'string' && Number(p['sizeBytes']) > 0, `${String(p['fileName'])} ${String(p['sizeBytes'])} sha256 ${String(p['sha256']).slice(0, 12)}…`);
+      const bad = await api('POST', '/api/setup/jobs', { tool: 'whisper', variant: 'cpu', sha256: '0'.repeat(64) });
+      const badDone = await waitJob(api, String(obj(bad)['id']), 180_000);
+      r.rec('a download with a wrong checksum fails cleanly and installs nothing', badDone?.status === 'failed' && /checksum mismatch/i.test(badDone.error ?? badDone.log) && !existsSync(join(tools, 'whisper')), jobSummary(badDone));
+    } else {
+      r.skip('download plan and wrong-checksum download', 'github.com not reachable');
+    }
   } catch (err) {
     r.rec('harness runner', false, String(err));
   } finally {

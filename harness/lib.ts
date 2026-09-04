@@ -187,6 +187,8 @@ export interface ServerOptions {
   port: number;
   /** Serve dist/ too (the UI walk); default API only. */
   serveStatic?: boolean;
+  /** Extra environment for the server, e.g. HORNBOOK_TOOLS pointing at a throwaway folder. */
+  env?: Record<string, string>;
 }
 
 /**
@@ -200,7 +202,7 @@ export async function startServer(opts: ServerOptions): Promise<ServerHandle> {
   const child = spawn(process.execPath, args, {
     cwd: repoRoot,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, OPENAI_API_KEY: '', ANTHROPIC_API_KEY: '', HORNBOOK_PASSWORD: '' },
+    env: { ...process.env, OPENAI_API_KEY: '', ANTHROPIC_API_KEY: '', HORNBOOK_PASSWORD: '', ...(opts.env ?? {}) },
   });
   let log = '';
   child.stdout?.on('data', (d: Buffer) => (log += d.toString()));

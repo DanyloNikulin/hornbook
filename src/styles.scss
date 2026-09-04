@@ -1757,3 +1757,17 @@ h1, h2, h3, h4 {
   border-radius: 8px;
   border: 1px solid rgba(42, 37, 32, 0.18);
 }
+
+/* ── Local tools: setup inside the app ─────────────────────────────────── */
+.il-setup-row { border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 12px; padding: 14px 16px; margin: 10px 0; }
+[data-theme="night"] .il-setup-row { border-color: rgba(255, 255, 255, 0.14); }
+.il-setup-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.il-setup-pill { font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; opacity: 0.75; }
+.il-setup-pill--ok { color: var(--success); opacity: 1; }
+.il-setup-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.il-setup-actions .il-btn[disabled] { opacity: 0.55; cursor: default; transform: none; }
+.il-setup-plan { font-size: 13.5px; margin: 8px 0 0; }
+.il-setup-progress { display: block; width: 100%; height: 8px; margin-top: 10px; accent-color: var(--primary); }
+.il-setup-path { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; opacity: 0.8; word-break: break-all; margin: 4px 0 0; }
+.il-setup-cmd { font-size: 12.5px; padding: 8px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.06); overflow-x: auto; margin: 8px 0 0; }
+[data-theme="night"] .il-setup-cmd { background: rgba(255, 255, 255, 0.08); }

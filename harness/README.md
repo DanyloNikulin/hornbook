@@ -24,7 +24,10 @@ is not present on this machine, never that something is wrong.
 Walks every endpoint the UI uses over a copy of the demo journal: config,
 settings, lessons, derived data, progress round trip, the readiness probe in
 its four states (ready, pick a model, plain failure, bad request), a
-throwaway `ja-en` pair with a hand-written lesson, and the job runner. The
+throwaway `ja-en` pair with a hand-written lesson, the job runner, and the
+setup endpoints: the five tool rows, a download plan with its checksum, and
+a download with a wrong checksum that must fail and install nothing (into a
+throwaway tools folder; skipped when github.com is unreachable). The
 extract model is set to a name that cannot exist, so the cheat-sheet job is
 proven to fail cleanly rather than hang. With Ollama reachable the probe's
 model list is checked as well; with `WHISPER_BIN` and `WHISPER_MODEL` set the
@@ -47,7 +50,8 @@ each skipped with a reason when its tool is missing:
    and a topic review.
 
 Environment: `WHISPER_BIN`, `WHISPER_MODEL` (whisper.cpp binary and ggml
-file), `OLLAMA_HOST` (default `http://127.0.0.1:11434`),
+file; a whisper.cpp downloaded on Application settings → Local tools is used
+when they are unset), `OLLAMA_HOST` (default `http://127.0.0.1:11434`),
 `HORNBOOK_EXTRACT_MODEL` (default `qwen2.5:7b`), `HORNBOOK_VISION_MODEL`
 (default `gemma3:4b`). Each lesson the models write is validated against the
 lesson schema; the content itself is not judged.

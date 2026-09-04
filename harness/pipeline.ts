@@ -14,7 +14,9 @@
 // Steps that need a tool or a model that is not there are SKIPped, never
 // failed; the summary says what actually ran.
 
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { managedPaths, preferredWhisperModel, toolsDir } from '../scripts/lib/tools.ts';
+import { managedWhisperModels } from '../server/tools.ts';
 import { join } from 'node:path';
 import type { ProbeResult, JobView } from '../src/lib/api-types.ts';
 import { Lesson } from '../src/lib/schema.ts';
@@ -43,8 +45,11 @@ import {
 const PORT = Number(process.env['HORNBOOK_HARNESS_PORT'] ?? 8799);
 const EXTRACT_MODEL = process.env['HORNBOOK_EXTRACT_MODEL'] ?? 'qwen2.5:7b';
 const VISION_MODEL = process.env['HORNBOOK_VISION_MODEL'] ?? 'gemma3:4b';
-const WHISPER_BIN = process.env['WHISPER_BIN'];
-const WHISPER_MODEL = process.env['WHISPER_MODEL'];
+// A whisper.cpp managed from Application settings → Local tools counts as configured.
+const managed = managedPaths(toolsDir());
+const managedModel = preferredWhisperModel(managedWhisperModels(existsSync(managed.whisperModels) ? readdirSync(managed.whisperModels) : []));
+const WHISPER_BIN = process.env['WHISPER_BIN'] ?? (existsSync(managed.whisper) ? managed.whisper : undefined);
+const WHISPER_MODEL = process.env['WHISPER_MODEL'] ?? (managedModel ? managed.whisperModel(managedModel) : undefined);
 const JOB_TIMEOUT = 12 * 60 * 1000;
 
 const video = join(fixturesDir, 'lesson.mp4');
@@ -107,7 +112,7 @@ async function main(): Promise<void> {
     const text = existsSync(outBase + '.txt') ? (await import('node:fs')).readFileSync(outBase + '.txt', 'utf8') : '';
     r.rec('whisper-cli hears the fixture', w.code === 0 && /greet|hola|spanish|morning/i.test(text), `exit=${w.code} text=${text.slice(0, 200)}`);
   } else {
-    r.skip('whisper-cli hears the fixture', 'set WHISPER_BIN and WHISPER_MODEL to a whisper.cpp install');
+    r.skip('whisper-cli hears the fixture', 'set WHISPER_BIN and WHISPER_MODEL, or download whisper.cpp on Application settings → Local tools');
   }
 
   r.section('ollama');

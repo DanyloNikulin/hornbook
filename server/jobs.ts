@@ -8,11 +8,12 @@ import { spawn as nodeSpawn, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import type { JobKind, JobView, StartJob } from '../src/lib/api-types.ts';
+import type { JobKind, JobProgress, JobView, StartJob, StartSetupJob } from '../src/lib/api-types.ts';
 
 const MAX_LOG_CHARS = 200_000;
 const MAX_JOBS_KEPT = 50;
 const RESULT_MARKER = 'HORNBOOK_RESULT ';
+const PROGRESS_MARKER = 'HORNBOOK_PROGRESS ';
 
 export interface JobRunnerOptions {
   repoRoot: string;
@@ -22,6 +23,8 @@ export interface JobRunnerOptions {
   spawn?: typeof nodeSpawn;
   /** Command used to run a script; defaults to the current Node with tsx. */
   runner?: (script: string) => { cmd: string; args: string[] };
+  /** Called once a job has ended, done or failed. */
+  onFinish?: (job: JobView) => void;
 }
 
 interface Job extends JobView {
@@ -66,6 +69,11 @@ export class JobRunner {
         extra = [file, '--date', input.date, ...(input.from ? ['--from', input.from] : [])];
         break;
       }
+      case 'setup':
+        label = setupLabel(input);
+        script = 'setup-tool.ts';
+        extra = setupArgs(input);
+        break;
       case 'cheatsheet':
         label = input.force ? 'Rebuild cheat sheet from scratch' : 'Update cheat sheet';
         script = 'build-cheatsheet.ts';
@@ -109,6 +117,20 @@ export class JobRunner {
       .filter((j): j is Job => !!j && (!section || j.section === section))
       .map((j) => this.view(j))
       .reverse();
+  }
+
+  /**
+   * Kill the running child and drop the queue. Called when the server
+   * shuts down: on Windows a child outlives its parent, and a download or
+   * an extraction left running would keep writing into the tools folder.
+   */
+  stop(): void {
+    this.queue.length = 0;
+    const running = this.running;
+    if (!running) return;
+    running.job.log += '\nStopped: the server is shutting down.\n';
+    running.child.kill();
+    this.finish(running.job, 1, 'stopped with the server');
   }
 
   /** Resolves when the queue is idle. Tests and graceful shutdown. */
@@ -163,8 +185,10 @@ export class JobRunner {
     this.running = { job, child };
 
     const append = (chunk: Buffer): void => {
-      job.log += chunk.toString();
+      const text = chunk.toString();
+      job.log += text;
       if (job.log.length > MAX_LOG_CHARS) job.log = '…' + job.log.slice(-MAX_LOG_CHARS);
+      if (text.includes(PROGRESS_MARKER)) job.progress = parseProgress(job.log) ?? job.progress;
     };
     child.stdout?.on('data', append);
     child.stderr?.on('data', append);
@@ -193,6 +217,7 @@ export class JobRunner {
       // an upload that failed to delete is not worth failing the job over
     }
     if (this.running?.job === job) this.running = null;
+    this.opts.onFinish?.(this.view(job));
     this.pump();
   }
 }
@@ -210,6 +235,36 @@ function parseResult(log: string): JobView['result'] {
   } catch {
     return undefined;
   }
+}
+
+function parseProgress(log: string): JobProgress | undefined {
+  const idx = log.lastIndexOf(PROGRESS_MARKER);
+  if (idx === -1) return undefined;
+  const line = log.slice(idx + PROGRESS_MARKER.length).split('\n')[0];
+  try {
+    const raw = JSON.parse(line) as Partial<JobProgress>;
+    if (typeof raw.pct !== 'number') return undefined;
+    return {
+      pct: Math.max(0, Math.min(100, raw.pct)),
+      ...(typeof raw.bytes === 'number' ? { bytes: raw.bytes } : {}),
+      ...(typeof raw.total === 'number' ? { total: raw.total } : {}),
+      ...(typeof raw.stage === 'string' ? { stage: raw.stage } : {}),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function setupLabel(input: StartSetupJob): string {
+  return `Set up ${input.model ? `${input.tool} ${input.model}` : input.tool}`;
+}
+
+function setupArgs(input: StartSetupJob): string[] {
+  const a = ['--tool', input.tool];
+  if (input.model) a.push('--model', input.model);
+  if (input.variant) a.push('--variant', input.variant);
+  if (input.sha256) a.push('--expect-sha256', input.sha256);
+  return a;
 }
 
 function lastErrorLine(log: string): string | undefined {

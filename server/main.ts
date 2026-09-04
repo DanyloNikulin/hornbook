@@ -18,6 +18,9 @@ import { JobRunner } from './jobs.ts';
 import { pipelineEnv } from './secrets.ts';
 import { isMain } from '../scripts/lib/is-main.ts';
 import { challenge, isAuthorized } from './auth.ts';
+import { ManagedOllama } from './managed-ollama.ts';
+import { createSetup } from './setup.ts';
+import { DEFAULT_MANAGED_OLLAMA_PORT, managedPaths, toolsDir } from '../scripts/lib/tools.ts';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 
@@ -87,12 +90,25 @@ const SECURITY_HEADERS: Record<string, string> = {
 export function startServer(opts: Options): ReturnType<typeof createServer> {
   const store = new FolderStore(opts.journal);
   const mode = opts.host === '127.0.0.1' || opts.host === 'localhost' ? 'local' : 'hosted';
+  const tools = managedPaths(toolsDir());
+  const managed = new ManagedOllama({
+    exe: tools.ollama,
+    modelsDir: tools.ollamaModels,
+    port: Number(process.env['HORNBOOK_OLLAMA_PORT'] ?? DEFAULT_MANAGED_OLLAMA_PORT),
+    log: (line) => console.log(line),
+  });
   const jobs = new JobRunner({
     repoRoot,
     journalDir: () => store.dir,
     env: () => pipelineEnv(store.dir),
+    // A freshly downloaded managed Ollama comes up at once, so the model
+    // pull queued behind it finds a server.
+    onFinish: (job) => {
+      if (job.kind === 'setup' && job.status === 'done' && job.result?.tool === 'ollama') void setup.bootManagedOllama();
+    },
   });
-  const api = createApi({ store, jobs, mode });
+  const setup = createSetup({ journalDir: () => store.dir, pipelineEnv: () => pipelineEnv(store.dir), jobs, managed });
+  const api = createApi({ store, jobs, setup, mode });
   const distRoot = opts.dist;
   const hasDist = opts.serveStatic && existsSync(join(distRoot, 'index.html'));
 
@@ -152,7 +168,23 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
     console.log(`Hornbook ${mode} server on http://${opts.host}:${opts.port}${opts.password ? ' (password protected)' : ''}`);
     console.log(`Journal: ${store.dir}`);
     if (hasDist) console.log(`UI: ${distRoot}`);
+    void setup.bootManagedOllama();
   });
+  server.on('close', () => {
+    jobs.stop();
+    managed.stop();
+  });
+  process.once('exit', () => {
+    jobs.stop();
+    managed.stop();
+  });
+  for (const sig of ['SIGINT', 'SIGTERM'] as const) {
+    process.once(sig, () => {
+      jobs.stop();
+      managed.stop();
+      process.exit(0);
+    });
+  }
   return server;
 }
 

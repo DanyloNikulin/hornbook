@@ -112,6 +112,25 @@ keys. If the extract model has no vision, slides are skipped.
 
 Ollama is called through its native API. Set `OLLAMA_NUM_CTX=32768` for real lessons; 16k is the code default and cuts off a 10-minute extract.
 
+## Local tools
+
+Application settings has a **Local tools** section for the zero-cost path. For ffmpeg,
+whisper.cpp, a whisper model, Ollama and a writing model it shows whether each is installed
+(managed by Hornbook, found on PATH, set in Settings, or an Ollama running elsewhere) and offers
+a download or the package-manager line. Nothing is fetched until you press Start: a download
+first shows its source, size and SHA-256 from the release page, and the file is verified after
+the transfer. "Set up everything for local use" does the missing ones in order.
+
+Managed tools live outside the journal: `%LOCALAPPDATA%\Hornbook\tools` on Windows,
+`~/Library/Application Support/Hornbook/tools` on macOS, `~/.local/share/hornbook/tools` on
+Linux (`HORNBOOK_TOOLS` overrides). A managed Ollama runs as a child of the server on port
+11435 with its own models folder and stays off when an Ollama already answers on 11434.
+`hornbook doctor` prints the same table in a terminal.
+
+Downloads come from the releases pinned in `scripts/lib/tools.ts`: whisper.cpp (CPU build
+8 MB, CUDA build 671 MB), the standalone Ollama archive (1.47 GB on Windows), the BtbN ffmpeg
+build (169 MB), and the ggml models from Hugging Face. On macOS ffmpeg and whisper.cpp come
+from Homebrew; on Linux whisper.cpp is built from source.
 ## Look
 
 Each pair can have its own atmosphere, chosen in Settings: one of six bundled presets (each

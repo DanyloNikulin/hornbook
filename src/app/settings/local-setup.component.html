@@ -1,0 +1,134 @@
+<h2 class="il-compose-h" style="margin-top: 28px;">{{ 'setup.tools.title' | t }}</h2>
+<p class="il-section-sub">{{ 'setup.tools.sub' | t }}</p>
+
+@if (loading() && !view()) {
+  <p class="il-stat-sub">{{ 'common.loading' | t }}</p>
+} @else if (view(); as v) {
+  <p class="il-settings-help">
+    {{ 'setup.tools.machine' | t: { ram: ramGb(), gpu: gpuLabel() ?? ('setup.tools.noGpu' | t) } }}
+    {{ v.recommend.note }}
+  </p>
+  <p class="il-settings-help il-setup-path">{{ 'setup.tools.dir' | t: { dir: v.toolsDir } }}</p>
+
+  <div class="il-setup-actions" style="margin: 12px 0 18px;">
+    <button type="button" class="il-btn" [disabled]="allRunning() || ready()" (click)="setupAll()">
+      {{ allRunning() ? ('setup.tools.allRunning' | t: { step: allStep() ? (('setup.tool.' + allStep()) | t) : '' }) : ('setup.tools.all' | t) }}
+    </button>
+    <button type="button" class="il-btn ghost sm" [disabled]="loading() || allRunning()" (click)="load()">{{ 'setup.tools.refresh' | t }}</button>
+    @if (ready()) {
+      <span style="color: var(--success);">{{ 'setup.tools.allDone' | t }}</span>
+    } @else {
+      <span class="il-settings-help">{{ 'setup.tools.allSub' | t: { n: missing().length } }}</span>
+    }
+  </div>
+
+  @for (id of order; track id) {
+    @if (status(id); as s) {
+      <div class="il-setup-row" [attr.data-tool]="id">
+        <div class="il-setup-head">
+          <strong>{{ ('setup.tool.' + id) | t }}</strong>
+          <span class="il-setup-pill" [class.il-setup-pill--ok]="s.installed">
+            {{ (s.installed ? 'setup.status.installed' : 'setup.status.missing') | t }}
+            @if (s.installed && s.source !== 'none') { · {{ ('setup.source.' + s.source) | t }} }
+            @if (s.version) { · {{ s.version }} }
+          </span>
+        </div>
+        <p class="il-settings-help" style="margin: 4px 0 0;">{{ s.detail }}</p>
+        @if (s.path) { <p class="il-setup-path">{{ s.path }}</p> }
+
+        @if (id === 'whisper' && !s.installed && cudaOffered()) {
+          <div class="il-locale-picks" role="radiogroup" style="margin-top: 8px;">
+            <button type="button" class="il-chip" [class.active]="whisperVariant() === 'cpu'" role="radio" [attr.aria-checked]="whisperVariant() === 'cpu'" (click)="whisperVariant.set('cpu'); cancel(id)">{{ 'setup.variant.cpu' | t }}</button>
+            <button type="button" class="il-chip" [class.active]="whisperVariant() === 'cuda'" role="radio" [attr.aria-checked]="whisperVariant() === 'cuda'" (click)="whisperVariant.set('cuda'); cancel(id)">
+              {{ 'setup.variant.cuda' | t }}
+              @if (v.recommend.whisperVariant === 'cuda') { <span class="il-stat-sub">· {{ 'setup.recommended' | t }}</span> }
+            </button>
+          </div>
+        }
+        @if (id === 'whisper-model') {
+          <label class="il-settings-row il-settings-row--stack" style="margin-top: 8px;">
+            <span>{{ 'setup.whisperModel' | t }}</span>
+            <select [ngModel]="whisperModel()" (ngModelChange)="whisperModel.set($event); cancel(id)">
+              @for (m of v.whisperModels; track m.name) {
+                <option [value]="m.name">{{ m.name }} · {{ fmt(m.approxMb * 1e6) }}@if (m.name === v.recommend.whisperModel) { · {{ 'setup.recommended' | t }} }</option>
+              }
+            </select>
+          </label>
+        }
+        @if (id === 'ollama-model') {
+          <label class="il-settings-row il-settings-row--stack" style="margin-top: 8px;">
+            <span>{{ 'setup.ollamaModel' | t }}</span>
+            <select [ngModel]="ollamaModel()" (ngModelChange)="ollamaModel.set($event); cancel(id)">
+              @for (m of v.ollamaModels; track m.name) {
+                <option [value]="m.name">{{ m.name }} · {{ fmt(m.approxMb * 1e6) }}@if (m.vision) { · {{ 'setup.vision' | t }} }@if (m.name === v.recommend.ollamaModel) { · {{ 'setup.recommended' | t }} }</option>
+              }
+            </select>
+          </label>
+        }
+        @if (id === 'ollama' && s.installed && s.source === 'managed' && !s.running) {
+          <div class="il-setup-actions">
+            <button type="button" class="il-btn ghost sm" [disabled]="ollamaStarting()" (click)="startOllama()">{{ 'setup.action.startOllama' | t }}</button>
+            @if (ollamaNote()) { <span class="il-settings-help">{{ ollamaNote() }}</span> }
+          </div>
+        }
+
+        @if (row(id); as r) {
+          @if (!s.installed || isModelRow(id)) {
+            <div class="il-setup-actions">
+              @if (r.phase === 'idle' || r.phase === 'failed' || r.phase === 'done') {
+                <button type="button" class="il-btn ghost sm" [disabled]="allRunning() || (id === 'ollama-model' && !v.ollama.running)" (click)="prepare(id)">
+                  {{ (id === 'ollama-model' ? 'setup.action.pull' : 'setup.action.download') | t }}
+                </button>
+              }
+              @if (v.commands[id]; as cmd) {
+                <button type="button" class="il-btn ghost sm" (click)="toggleCommand(id)">{{ (showCommand()[id] ? 'setup.action.hideCommand' : 'setup.action.command') | t }}</button>
+              }
+            </div>
+            @if (showCommand()[id] && v.commands[id]; as cmd) {
+              <pre class="il-setup-cmd"><code>{{ cmd }}</code></pre>
+            }
+            @if (r.phase === 'planning') {
+              <p class="il-setup-plan il-settings-help">{{ 'setup.plan.resolving' | t }}</p>
+            }
+            @if (r.phase === 'ready' && r.plan; as plan) {
+              <p class="il-setup-plan">
+                @if (plan.kind === 'pull') {
+                  {{ 'setup.plan.pull' | t: { model: plan.model ?? plan.fileName, size: fmt(plan.sizeBytes) } }}
+                } @else {
+                  {{ 'setup.plan.line' | t: { file: plan.fileName, size: fmt(plan.sizeBytes), source: plan.source } }}
+                  <span class="il-setup-path">· {{ plan.sha256 ? ('setup.plan.sha' | t: { sha: shortSha(plan.sha256) }) : ('setup.plan.noSha' | t) }}</span>
+                }
+              </p>
+              <div class="il-setup-actions">
+                <button type="button" class="il-btn sm" (click)="download(id)">{{ (plan.kind === 'pull' ? 'setup.action.startPull' : 'setup.action.start') | t }}</button>
+                <button type="button" class="il-btn ghost sm" (click)="cancel(id)">{{ 'setup.action.cancel' | t }}</button>
+              </div>
+            }
+            @if (r.phase === 'running') {
+              @if (progress(id); as p) {
+                <progress class="il-setup-progress" max="100" [value]="p.pct"></progress>
+                <p class="il-settings-help">{{ 'setup.progress' | t: { stage: p.stage, pct: p.pct } }}</p>
+              } @else {
+                <p class="il-settings-help">{{ 'setup.plan.resolving' | t }}</p>
+              }
+            }
+            @if (r.phase === 'done') {
+              <p class="il-pipe-result il-pipe-result--ok" role="status">{{ 'setup.done' | t: { path: r.path ?? '' } }}</p>
+            }
+            @if (r.phase === 'failed') {
+              <p class="il-pipe-result il-pipe-result--bad" role="alert">{{ 'setup.failed' | t: { error: r.error ?? '' } }}</p>
+            }
+          }
+        }
+      </div>
+    }
+  }
+
+  @if (v.ollama.running) {
+    <p class="il-settings-help">{{ (v.ollama.managed ? 'setup.ollama.managed' : 'setup.ollama.external') | t: { host: v.ollama.host } }}</p>
+  }
+}
+
+@if (error()) {
+  <p style="color: #a33; margin-top: 1rem;" role="alert">{{ error() }}</p>
+}

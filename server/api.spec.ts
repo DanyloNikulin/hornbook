@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import type { AddressInfo } from 'node:net';
 import { startServer } from './main.ts';
 import { setJournalDir } from '../scripts/lib/journal.ts';
+import type { SetupView } from '../src/lib/api-types.ts';
 
 // A real server on an ephemeral port, driven with fetch. Static serving is
 // off (--no-static equivalent) so no build is needed.
@@ -31,6 +32,8 @@ function post(bodyObj: unknown, method = 'POST'): RequestInit {
 
 beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'hornbook-api-'));
+  // An empty tools folder: the setup view must report nothing managed.
+  process.env['HORNBOOK_TOOLS'] = join(dir, 'tools');
   server = startServer({ port: 0, host: '127.0.0.1', journal: dir, dist: join(dir, 'nodist'), serveStatic: false, password: undefined });
   await new Promise<void>((resolve) => server.once('listening', () => resolve()));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -40,6 +43,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
   setJournalDir(process.cwd());
+  delete process.env['HORNBOOK_TOOLS'];
   rmSync(dir, { recursive: true, force: true, maxRetries: 5 });
 });
 
@@ -134,5 +138,31 @@ describe('API — pipeline probe', () => {
     );
     expect(body.ok).toBe(false);
     expect(body.detail).toMatch(/binary/i);
+  });
+});
+
+describe('API — setup inside the app', () => {
+  it('reports the five tools, the machine and a recommendation', async () => {
+    const view = await json<SetupView>('/api/setup');
+    expect(view.tools.map((t) => t.id)).toEqual(['ffmpeg', 'whisper', 'whisper-model', 'ollama', 'ollama-model']);
+    expect(view.toolsDir.toLowerCase()).toBe(join(dir, 'tools').toLowerCase());
+    expect(view.tools.find((t) => t.id === 'whisper')?.source).not.toBe('managed');
+    expect(view.recommend.whisperModel).toBe('small');
+    expect(view.machine.ramMb).toBeGreaterThan(0);
+    expect(view.commands['ollama-model']).toMatch(/^ollama pull /);
+    expect(view.whisperModels.map((m) => m.name)).toContain('small');
+  });
+
+  it('validates plan and job requests', async () => {
+    expect((await api('/api/setup/plan', post({ tool: 'nope' }))).status).toBe(400);
+    expect((await api('/api/setup/jobs', post({ tool: 'whisper', variant: 'gpu' }))).status).toBe(400);
+    expect((await api('/api/setup/jobs', post({ tool: 'whisper-model', model: '../x' }))).status).toBe(400);
+    expect((await api('/api/setup/jobs', post({ tool: 'whisper', sha256: 'zz' }))).status).toBe(400);
+    expect((await api('/api/setup/jobs')).status).toBe(200);
+  });
+
+  it('explains a managed Ollama that is not installed', async () => {
+    const r = await json<{ running: boolean; detail: string }>('/api/setup/ollama/start', post({}));
+    expect(r.running === true || /No managed Ollama/.test(r.detail)).toBe(true);
   });
 });

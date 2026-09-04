@@ -10,6 +10,7 @@ import { ApiService } from '../api.service';
 import { SectionService } from '../section.service';
 import { SettingsNavComponent } from './settings-nav.component';
 import { PipelineSetupComponent } from './pipeline-setup.component';
+import { LocalSetupComponent } from './local-setup.component';
 
 /**
  * Journal-wide settings: interface language, default models, connection keys.
@@ -17,7 +18,7 @@ import { PipelineSetupComponent } from './pipeline-setup.component';
  */
 @Component({
   selector: 'app-app-settings',
-  imports: [FormsModule, RouterLink, TPipe, SettingsNavComponent, PipelineSetupComponent],
+  imports: [FormsModule, RouterLink, TPipe, SettingsNavComponent, PipelineSetupComponent, LocalSetupComponent],
   templateUrl: './app-settings.component.html',
 })
 export class AppSettingsComponent {

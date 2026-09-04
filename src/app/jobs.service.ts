@@ -1,5 +1,5 @@
-import { Injectable, inject, signal } from '@angular/core';
-import type { JobView, StartJob } from '../lib/api-types';
+import { Injectable, inject, signal, type WritableSignal } from '@angular/core';
+import type { JobView, SetupPlanRequest, StartJob } from '../lib/api-types';
 import { ApiService } from './api.service';
 import { SectionService } from './section.service';
 
@@ -15,14 +15,29 @@ export class JobsService {
   private readonly section = inject(SectionService);
 
   readonly current = signal<JobView | null>(null);
+  /** The setup job being followed (downloads of local tools), apart from lesson jobs. */
+  readonly setupJob = signal<JobView | null>(null);
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private setupTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Queue a job and follow it. Resolves with the finished job. */
   async run(input: StartJob): Promise<JobView> {
     this.stop();
     const started = await this.api.post<JobView>(`${this.section.apiBase()}/jobs`, input);
     this.current.set(started);
-    return this.follow(started.id);
+    return this.follow(started.id, this.current, (timer) => (this.timer = timer));
+  }
+
+  /** Queue a setup job for the journal and follow it. `onStarted` gets the queued job at once. */
+  async runSetup(input: SetupPlanRequest & { sha256?: string }, onStarted?: (job: JobView) => void): Promise<JobView> {
+    if (this.setupTimer) {
+      clearTimeout(this.setupTimer);
+      this.setupTimer = null;
+    }
+    const started = await this.api.post<JobView>('/api/setup/jobs', input);
+    this.setupJob.set(started);
+    onStarted?.(started);
+    return this.follow(started.id, this.setupJob, (timer) => (this.setupTimer = timer));
   }
 
   /** Recent jobs of the current section, newest first. */
@@ -37,20 +52,24 @@ export class JobsService {
     }
   }
 
-  private follow(id: string): Promise<JobView> {
+  private follow(
+    id: string,
+    sink: WritableSignal<JobView | null>,
+    setTimer: (timer: ReturnType<typeof setTimeout> | null) => void,
+  ): Promise<JobView> {
     return new Promise((resolve, reject) => {
       const tick = async (): Promise<void> => {
         try {
           const job = await this.api.get<JobView>(`/api/jobs/${encodeURIComponent(id)}`);
-          this.current.set(job);
+          sink.set(job);
           if (job.status === 'done' || job.status === 'failed') {
-            this.timer = null;
+            setTimer(null);
             resolve(job);
             return;
           }
-          this.timer = setTimeout(() => void tick(), POLL_MS);
+          setTimer(setTimeout(() => void tick(), POLL_MS));
         } catch (err) {
-          this.timer = null;
+          setTimer(null);
           reject(err as Error);
         }
       };

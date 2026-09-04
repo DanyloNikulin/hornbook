@@ -2,6 +2,20 @@
 
 All notable changes to Hornbook. The roadmap is in `docs/PLAN.md`.
 
+## Unreleased
+
+- Topics are journal data: an optional `_topics.json` per section holds the
+  cheat-sheet categories and the topics with their categories and tagger
+  patterns; the six bundled topics are the default. "Review topics" appends
+  to that file and writes its report next to it instead of editing source.
+- Setup inside the app: a Local tools section on Application settings shows
+  ffmpeg, whisper.cpp, a whisper model, Ollama and a writing model, each
+  installed or not, with a download that is planned (source, size, SHA-256)
+  before it starts and verified after, or the package-manager line. One
+  button fetches what is missing. A managed Ollama runs as a child of the
+  server. `hornbook doctor` prints the same table.
+- Only the named demo lessons are tracked in the repository journal.
+
 ## 0.1.0 — 2026-09-04
 
 First public version. A conspect journal for 1:1 language lessons that runs

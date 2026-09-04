@@ -11,6 +11,9 @@ import {
   type ConnectionKey,
   type ConnectionView,
 } from '../src/lib/api-types.ts';
+import { toolsDir } from '../scripts/lib/tools.ts';
+import { activeManagedHost } from './managed-ollama.ts';
+import { toolsEnv } from './tools.ts';
 
 export type Secrets = Partial<Record<ConnectionKey, string>>;
 
@@ -61,20 +64,26 @@ export function updateSecrets(
   return next;
 }
 
-/** Environment for a pipeline child: process env, then journal secrets on top. */
+/**
+ * Environment for a pipeline child: process env, journal secrets on top,
+ * then the managed tools filling whatever is still unset.
+ */
 export function pipelineEnv(journalDir: string, base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
-  return { ...base, ...readSecrets(journalDir), HORNBOOK_JOURNAL: journalDir };
+  const merged = { ...base, ...readSecrets(journalDir), HORNBOOK_JOURNAL: journalDir };
+  return toolsEnv(merged, { dir: toolsDir(base), managedOllamaHost: activeManagedHost() });
 }
 
 export function connectionViews(journalDir: string, base: NodeJS.ProcessEnv = process.env): Record<ConnectionKey, ConnectionView> {
   const stored = readSecrets(journalDir);
+  const managed = toolsEnv({}, { dir: toolsDir(base), managedOllamaHost: activeManagedHost() });
   const out = {} as Record<ConnectionKey, ConnectionView>;
   for (const key of CONNECTION_KEYS) {
     const fromJournal = stored[key];
     const fromEnv = base[key];
     const value = fromJournal ?? fromEnv;
     if (!value) {
-      out[key] = { set: false, hint: '' };
+      const fromManaged = managed[key];
+      out[key] = fromManaged ? { set: true, hint: fromManaged, source: 'managed' } : { set: false, hint: '' };
       continue;
     }
     const secret = SECRET_KEYS.includes(key);
