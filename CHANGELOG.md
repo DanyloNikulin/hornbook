@@ -1,0 +1,71 @@
+# Changelog
+
+All notable changes to Hornbook. The roadmap is in `docs/PLAN.md`.
+
+## 0.1.0 — 2026-09-04
+
+First public version. A conspect journal for 1:1 language lessons that runs
+on your own machine: the journal is a folder of JSON files, a Node server
+serves the Angular UI and an API over that folder, and the pipeline that
+turns a recording into a conspect runs inside the server as jobs.
+
+### The journal
+
+- The folder is the database: `journal.config.json`, one sub-folder per
+  language pair (`<target>-<learner>`), lesson JSON as the source of truth,
+  a rendered markdown copy, the cheat sheet, and `_progress.json` with
+  SM-2 state, quiz scores and activity. Derived data (`_derived/`) is
+  regenerated and not backed up.
+- Several language pairs side by side, created on `/setup` from a
+  catalogue of about 40 languages, with progress isolated per pair.
+- `npm run migrate` moves a single-pair journal in the old layout.
+
+### The app
+
+- Lessons, glossary, flashcards with typed answers and an article-aware
+  checker, quiz (multiple choice, fill, translate), search, cheat sheet,
+  and an Add page that takes a hand-written lesson, a pasted transcript, or
+  an audio or video file.
+- Jobs run one at a time inside the server with a live log; the lesson
+  opens when the job ends. The cheat sheet updates from new lessons and
+  Settings can propose new topic tags.
+- Interface in English or Italian, chosen on Application settings.
+- Per-pair look: six colour presets defined for day and night, three
+  display fonts, and an optional backdrop photo served from the pair's
+  folder.
+
+### The pipeline
+
+- Two steps, hear and write, each run in one place: this computer, the
+  home network (Ollama), or an internet API. A readiness probe per step
+  lists what the connection offers.
+- Hearing: `whisper-cli` (whisper.cpp) or OpenAI. Writing: Ollama,
+  Anthropic, OpenAI, or a coding CLI already signed in on this computer
+  (Claude Code, Codex, Grok, Kimi), which stores no key.
+- Zero-cost path verified end to end on a 10-minute and a 15-minute
+  lesson video with whisper.cpp and `qwen2.5:7b`. Small local models get
+  field aliases, one repair round, and salvage of empty vocabulary and
+  junk quotes before validation.
+- Slides in a video are read when the writing model has vision.
+
+### Packaging
+
+- `npm run hornbook` starts the server on 127.0.0.1 and opens the browser;
+  first run creates `~/Hornbook` from the demo journal. `--app` opens a
+  chromeless window in an installed Chromium browser.
+- Hosted mode: `--host 0.0.0.0 --password …` puts HTTP Basic auth on
+  every request; a Dockerfile builds the same server with ffmpeg.
+- Fonts and a flag-emoji subset are bundled; the app makes no network
+  requests of its own.
+
+### Testing
+
+- Unit suites for the app, the scripts and the server, run by the PR gate.
+- A local harness: API smoke, zero-cost pipeline on a 24-second fixture
+  with four real slides, a Playwright browser walk, and a run through every
+  coding CLI found on the machine.
+
+### Not yet
+
+Installers, setup of Ollama and whisper from inside the app, export and
+import of lessons and pairs. See `docs/PLAN.md`, Part 4.

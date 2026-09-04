@@ -1,0 +1,440 @@
+{
+  "id": "2026-01-08-fin-de-semana-preterito",
+  "date": "2026-01-08",
+  "slug": "fin-de-semana-preterito",
+  "title": "El fin de semana: pretérito indefinido",
+  "summary": "A fictional 45-minute lesson: telling what you did at the weekend with the pretérito indefinido, the four irregulars you cannot avoid, and which time markers pick indefinido or perfecto. Demo content only — not a real class.",
+  "article_md": "## Takeaway\n\nTo say what you **did** at a finished moment (ayer, anoche, el sábado pasado), use the **pretérito indefinido**: *fui, comí, hablé*. If the moment includes now (hoy, esta semana, ya), use the **pretérito perfecto**: *he ido, he comido*. The time marker chooses the tense for you.\n\n## What we did\n\nWe started with five minutes of free talk about the weekend. You told the story in the present (\"el sábado voy al mercado\"), which is what most A2 learners do, so the whole lesson was about moving that story into the past. We built the regular endings from three verbs, then the irregulars *ir/ser*, *hacer*, *tener* and *estar*, then went back to your weekend and retold it sentence by sentence. The last ten minutes were a short dialogue: you asked me about my weekend and I answered with the same forms.\n\n## Rules\n\n**Regular endings.** *-ar* verbs take *-é, -aste, -ó, -amos, -asteis, -aron*. *-er* and *-ir* verbs share one set: *-í, -iste, -ió, -imos, -isteis, -ieron*.\n\n- Ayer **hablé** con mi madre.\n- El domingo **comimos** en casa de mis abuelos.\n- ¿**Viviste** en Madrid el año pasado?\n\n**Irregulars.** *Ir* and *ser* share every form: *fui, fuiste, fue, fuimos, fuisteis, fueron*. Context decides which one you mean. *Hacer*, *tener* and *estar* change their stem (*hic-, tuv-, estuv-*) and the *yo* and *él* forms have **no accent**: *hice, hizo; tuve, tuvo; estuve, estuvo*.\n\n- El sábado **fui** al mercado. (ir)\n- La película **fue** muy larga. (ser)\n- ¿Qué **hiciste** el domingo? — No **hice** nada, **estuve** en casa.\n\n**Markers.** A closed period takes the indefinido: *ayer, anoche, el sábado pasado, la semana pasada, hace dos días, el año pasado*. An open period takes the perfecto: *hoy, esta mañana, esta semana, este año, ya, todavía no*.\n\n- **Anoche** llovió mucho.\n- **Esta semana** no he tenido tiempo.\n\n**Accents carry meaning.** *Hablo* is present, *habló* is past. Write the accent every time.\n\n## Useful chunks\n\n- ¿Qué tal el fin de semana?\n- Lo pasamos muy bien.\n- Quedé con unos amigos y dimos un paseo.\n- Me quedé en casa porque llovió.\n- Llegamos agotados.\n- Por fin vi el partido.\n- Tardamos una hora por el atasco.\n- Después de comer hicimos sobremesa hasta las cinco.\n\n## Mistakes to watch\n\n- *Ayer he visto una película* → **Ayer vi una película.** *Ayer* closes the period.\n- *Fui muy cansado* → **Estuve muy cansado** or **Llegué agotado.** *Fui* is *ir/ser*; tiredness is *estar*.\n- *Hació* → **hizo**. There is no *hació*.\n- *Comímos* → **comimos**. The *nosotros* form has no accent.\n- *El sábado voy al mercado* when you mean last Saturday → **El sábado fui al mercado.**\n\n## Spain and Latin America\n\nIn Spain *esta mañana he desayunado* is the norm; in Mexico and much of Latin America *esta mañana desayuné* is just as normal. Both are correct. Pick the one your tutor uses and be consistent.\n\n## Homework\n\nWrite ten sentences about last weekend, each with a time marker, at least three with *ir/ser*, *hacer* or *tener*. Read them aloud before Thursday and mark the stressed syllable.\n",
+  "duration_min": 45,
+  "vocabulary": [
+    {
+      "target": "el fin de semana",
+      "learner": "the weekend",
+      "level": "A1",
+      "example_target": "¿Qué tal el fin de semana?",
+      "example_learner": "How was the weekend?"
+    },
+    {
+      "target": "quedar con alguien",
+      "learner": "to meet up with someone",
+      "level": "A2",
+      "example_target": "El sábado quedé con unos amigos.",
+      "example_learner": "On Saturday I met up with some friends."
+    },
+    {
+      "target": "dar un paseo",
+      "learner": "to go for a walk",
+      "level": "A2",
+      "example_target": "Dimos un paseo por el río.",
+      "example_learner": "We went for a walk along the river."
+    },
+    {
+      "target": "pasarlo bien",
+      "learner": "to have a good time",
+      "level": "A2",
+      "example_target": "Lo pasamos muy bien en la fiesta.",
+      "example_learner": "We had a great time at the party."
+    },
+    {
+      "target": "quedarse en casa",
+      "learner": "to stay at home",
+      "level": "A2",
+      "example_target": "Me quedé en casa porque llovió.",
+      "example_learner": "I stayed at home because it rained."
+    },
+    {
+      "target": "madrugar",
+      "learner": "to get up early",
+      "level": "A2",
+      "example_target": "El domingo no madrugué.",
+      "example_learner": "On Sunday I did not get up early."
+    },
+    {
+      "target": "descansar",
+      "learner": "to rest",
+      "level": "A1",
+      "example_target": "Descansamos toda la tarde.",
+      "example_learner": "We rested all afternoon."
+    },
+    {
+      "target": "el mercado",
+      "learner": "the market",
+      "level": "A1",
+      "example_target": "Fui al mercado con mi hermana.",
+      "example_learner": "I went to the market with my sister."
+    },
+    {
+      "target": "ir de compras",
+      "learner": "to go shopping",
+      "level": "A1",
+      "example_target": "Fuimos de compras al centro.",
+      "example_learner": "We went shopping in the centre."
+    },
+    {
+      "target": "salir a cenar",
+      "learner": "to go out for dinner",
+      "level": "A2",
+      "example_target": "El viernes salimos a cenar.",
+      "example_learner": "On Friday we went out for dinner."
+    },
+    {
+      "target": "la entrada",
+      "learner": "the ticket (for an event)",
+      "level": "A2",
+      "example_target": "Compré dos entradas para el concierto.",
+      "example_learner": "I bought two tickets for the concert."
+    },
+    {
+      "target": "la película",
+      "learner": "the film",
+      "level": "A1",
+      "example_target": "Ayer vi una película muy larga.",
+      "example_learner": "Yesterday I saw a very long film."
+    },
+    {
+      "target": "el partido",
+      "learner": "the match",
+      "level": "A1",
+      "example_target": "Por fin vi el partido.",
+      "example_learner": "I finally saw the match."
+    },
+    {
+      "target": "la sobremesa",
+      "learner": "the conversation at the table after a meal",
+      "level": "B1",
+      "example_target": "Hicimos sobremesa hasta las cinco.",
+      "example_learner": "We sat talking after lunch until five."
+    },
+    {
+      "target": "llover",
+      "learner": "to rain",
+      "level": "A1",
+      "example_target": "Anoche llovió mucho.",
+      "example_learner": "Last night it rained a lot."
+    },
+    {
+      "target": "agotado/a",
+      "learner": "exhausted",
+      "level": "A2",
+      "example_target": "Llegamos agotados a casa.",
+      "example_learner": "We got home exhausted."
+    },
+    {
+      "target": "aburrido/a",
+      "learner": "boring; bored",
+      "level": "A1",
+      "example_target": "La película fue muy aburrida.",
+      "example_learner": "The film was very boring."
+    },
+    {
+      "target": "tardar",
+      "learner": "to take (time)",
+      "level": "A2",
+      "example_target": "Tardamos una hora en llegar.",
+      "example_learner": "It took us an hour to get there."
+    },
+    {
+      "target": "el atasco",
+      "learner": "the traffic jam",
+      "level": "A2",
+      "example_target": "Había un atasco enorme en la autopista.",
+      "example_learner": "There was a huge traffic jam on the motorway."
+    },
+    {
+      "target": "la cola",
+      "learner": "the queue",
+      "level": "A2",
+      "example_target": "Hicimos cola veinte minutos.",
+      "example_learner": "We queued for twenty minutes."
+    },
+    {
+      "target": "anoche",
+      "learner": "last night",
+      "level": "A1",
+      "example_target": "Anoche cenamos muy tarde.",
+      "example_learner": "Last night we had dinner very late."
+    },
+    {
+      "target": "la semana pasada",
+      "learner": "last week",
+      "level": "A1",
+      "example_target": "La semana pasada no tuve clase.",
+      "example_learner": "Last week I had no class."
+    },
+    {
+      "target": "hace dos días",
+      "learner": "two days ago",
+      "level": "A2",
+      "example_target": "Hace dos días llegó mi hermano.",
+      "example_learner": "My brother arrived two days ago."
+    },
+    {
+      "target": "por fin",
+      "learner": "finally, at last",
+      "level": "A2",
+      "example_target": "Por fin encontramos el restaurante.",
+      "example_learner": "We finally found the restaurant."
+    },
+    {
+      "target": "casi",
+      "learner": "almost",
+      "level": "A1",
+      "example_target": "Casi perdimos el tren.",
+      "example_learner": "We almost missed the train."
+    },
+    {
+      "target": "todavía no",
+      "learner": "not yet",
+      "level": "A2",
+      "example_target": "Todavía no he visto esa película.",
+      "example_learner": "I have not seen that film yet."
+    }
+  ],
+  "grammar": [
+    {
+      "rule": "Pretérito indefinido, regular verbs: one set of endings for -ar, one shared set for -er and -ir.",
+      "examples": [
+        "Ayer hablé con mi madre.",
+        "El domingo comimos en casa de mis abuelos.",
+        "¿Viviste en Madrid el año pasado?"
+      ],
+      "table": [
+        ["", "hablar", "comer", "vivir"],
+        ["yo", "hablé", "comí", "viví"],
+        ["tú", "hablaste", "comiste", "viviste"],
+        ["él / ella / usted", "habló", "comió", "vivió"],
+        ["nosotros/as", "hablamos", "comimos", "vivimos"],
+        ["vosotros/as", "hablasteis", "comisteis", "vivisteis"],
+        ["ellos / ellas / ustedes", "hablaron", "comieron", "vivieron"]
+      ]
+    },
+    {
+      "rule": "Four irregulars you cannot avoid: ir and ser share every form; hacer, tener and estar take a new stem and carry no accent in the yo and él forms.",
+      "examples": [
+        "El sábado fui al mercado. (ir)",
+        "La película fue muy larga. (ser)",
+        "¿Qué hiciste el domingo? — No hice nada, estuve en casa."
+      ],
+      "table": [
+        ["", "ir / ser", "hacer", "tener", "estar"],
+        ["yo", "fui", "hice", "tuve", "estuve"],
+        ["tú", "fuiste", "hiciste", "tuviste", "estuviste"],
+        ["él / ella / usted", "fue", "hizo", "tuvo", "estuvo"],
+        ["nosotros/as", "fuimos", "hicimos", "tuvimos", "estuvimos"],
+        ["vosotros/as", "fuisteis", "hicisteis", "tuvisteis", "estuvisteis"],
+        ["ellos / ellas / ustedes", "fueron", "hicieron", "tuvieron", "estuvieron"]
+      ]
+    },
+    {
+      "rule": "Time markers choose the tense: a closed period takes the indefinido, a period that includes now takes the perfecto.",
+      "examples": [
+        "Anoche llovió mucho.",
+        "La semana pasada no tuve clase.",
+        "Esta semana no he tenido tiempo.",
+        "Todavía no he visto esa película."
+      ],
+      "table": [
+        ["indefinido", "perfecto"],
+        ["ayer", "hoy"],
+        ["anoche", "esta mañana"],
+        ["el sábado pasado", "esta semana"],
+        ["la semana pasada", "este año"],
+        ["hace dos días", "ya"],
+        ["el año pasado", "todavía no"]
+      ]
+    },
+    {
+      "rule": "Accent marks carry meaning in the indefinido: hablo is present, habló is past. The nosotros form of -ar and -ir verbs looks like the present, so the marker tells the time.",
+      "examples": [
+        "Hablo con mi madre cada día. / Ayer habló con su madre.",
+        "Hoy comemos aquí. / El domingo comimos aquí.",
+        "Vivimos en Madrid. (now, or last year — the marker decides)"
+      ]
+    },
+    {
+      "rule": "Ser and estar in the past: a finished state of being or feeling is estuve, not fui.",
+      "examples": [
+        "Estuve muy cansado el lunes.",
+        "Llegué agotado, no fui agotado.",
+        "La fiesta fue en casa de Ana. (an event: ser)"
+      ]
+    }
+  ],
+  "quotes": [
+    {
+      "speaker": "teacher",
+      "text": "Hoy hablamos del pasado, pero del pasado que ya terminó.",
+      "gloss": "Today we talk about the past, but the past that is already finished.",
+      "ts": "02:10"
+    },
+    {
+      "speaker": "student",
+      "text": "El sábado fui al mercado con mi hermana.",
+      "gloss": "On Saturday I went to the market with my sister. First correct indefinido of the lesson.",
+      "ts": "06:45"
+    },
+    {
+      "speaker": "teacher",
+      "text": "Ojo: fui sirve para ir y para ser. El contexto decide.",
+      "gloss": "Careful: fui works for both ir and ser. Context decides.",
+      "ts": "09:30"
+    },
+    {
+      "speaker": "teacher",
+      "text": "Con ayer, anoche, la semana pasada: indefinido, siempre.",
+      "gloss": "With ayer, anoche, la semana pasada: indefinido, always.",
+      "ts": "15:20"
+    },
+    {
+      "speaker": "student",
+      "text": "Ayer he visto una película.",
+      "gloss": "Yesterday I have seen a film. The classic mix-up: ayer closes the period.",
+      "ts": "22:05"
+    },
+    {
+      "speaker": "teacher",
+      "text": "Casi. Con ayer decimos: ayer vi una película.",
+      "gloss": "Almost. With ayer we say: ayer vi una película.",
+      "ts": "22:10"
+    },
+    {
+      "speaker": "teacher",
+      "text": "En España decimos esta mañana he desayunado; en México muchos dicen esta mañana desayuné. Las dos están bien.",
+      "gloss": "In Spain we say esta mañana he desayunado; in Mexico many say esta mañana desayuné. Both are fine.",
+      "ts": "31:40"
+    },
+    {
+      "speaker": "student",
+      "text": "Lo pasamos muy bien, pero llegamos agotados.",
+      "gloss": "We had a great time, but we got home exhausted. Two verbs, both right, no hesitation.",
+      "ts": "38:15-38:25"
+    },
+    {
+      "speaker": "teacher",
+      "text": "Para el jueves: escribe diez frases sobre tu fin de semana.",
+      "gloss": "For Thursday: write ten sentences about your weekend.",
+      "ts": "43:50"
+    }
+  ],
+  "quiz": [
+    {
+      "type": "mc",
+      "q": "Ayer ___ al cine con mis amigos.",
+      "options": ["voy", "fui", "he ido", "iba"],
+      "answer": 1,
+      "explanation": "Ayer closes the period, so the indefinido fui. He ido would need an open marker like hoy."
+    },
+    {
+      "type": "mc",
+      "q": "¿Cuál es la forma de hacer para ella en el pretérito indefinido?",
+      "options": ["hació", "hizo", "hace", "hizó"],
+      "answer": 1,
+      "explanation": "Hacer changes its stem to hic- and the él/ella form is hizo, with a z and no accent."
+    },
+    {
+      "type": "fill",
+      "q": "El sábado pasado nosotros ___ (comer) en un restaurante.",
+      "answer": "comimos",
+      "alternatives": []
+    },
+    {
+      "type": "fill",
+      "q": "Anoche ___ (llover) mucho.",
+      "answer": "llovió",
+      "alternatives": ["llovio"]
+    },
+    {
+      "type": "mc",
+      "q": "Which marker usually goes with the pretérito perfecto?",
+      "options": ["anoche", "la semana pasada", "esta mañana", "hace tres días"],
+      "answer": 2,
+      "explanation": "Esta mañana is still part of today, an open period, so he desayunado. The other three are closed."
+    },
+    {
+      "type": "fill",
+      "q": "Mis padres ___ (tener) que trabajar el domingo.",
+      "answer": "tuvieron",
+      "alternatives": []
+    },
+    {
+      "type": "translate",
+      "q": "We had a great time.",
+      "answer_target": "Lo pasamos muy bien.",
+      "alternatives": ["Nos lo pasamos muy bien.", "Lo pasamos genial."],
+      "auto_check": false
+    },
+    {
+      "type": "mc",
+      "q": "Fui can mean…",
+      "options": ["only I went", "only I was", "I went or I was", "I did"],
+      "answer": 2,
+      "explanation": "Ir and ser share the whole indefinido. Fui al mercado is ir; fui profesor is ser."
+    },
+    {
+      "type": "fill",
+      "q": "¿Tú ___ (ver) el partido el domingo?",
+      "answer": "viste",
+      "alternatives": []
+    },
+    {
+      "type": "translate",
+      "q": "I stayed at home because it rained.",
+      "answer_target": "Me quedé en casa porque llovió.",
+      "alternatives": ["Me quedé en casa porque llovía."],
+      "auto_check": false
+    }
+  ],
+  "flashcards": [
+    { "front": "madrugar", "back": "to get up early", "type": "word", "tags": ["A2", "verb"] },
+    { "front": "quedar con alguien", "back": "to meet up with someone", "type": "phrase", "tags": ["A2"] },
+    { "front": "dar un paseo", "back": "to go for a walk", "type": "phrase", "tags": ["A2"] },
+    { "front": "pasarlo bien", "back": "to have a good time", "type": "phrase", "tags": ["A2"] },
+    { "front": "quedarse en casa", "back": "to stay at home", "type": "phrase", "tags": ["A2"] },
+    { "front": "agotado/a", "back": "exhausted", "type": "word", "tags": ["A2"] },
+    { "front": "tardar", "back": "to take (time)", "type": "word", "tags": ["A2", "verb"] },
+    { "front": "la sobremesa", "back": "the conversation at the table after a meal", "type": "word", "tags": ["B1", "culture"] },
+    { "front": "el atasco", "back": "the traffic jam", "type": "word", "tags": ["A2"] },
+    { "front": "anoche", "back": "last night", "type": "word", "tags": ["A1", "marker"] },
+    { "front": "la semana pasada", "back": "last week", "type": "phrase", "tags": ["A1", "marker"] },
+    { "front": "hace dos días", "back": "two days ago", "type": "phrase", "tags": ["A2", "marker"] },
+    { "front": "por fin", "back": "finally, at last", "type": "phrase", "tags": ["A2"] },
+    { "front": "todavía no", "back": "not yet", "type": "phrase", "tags": ["A2", "marker"] },
+    { "front": "ir / ser — yo, indefinido", "back": "fui", "type": "grammar", "tags": ["indefinido", "irregular"] },
+    { "front": "hacer — él/ella, indefinido", "back": "hizo", "type": "grammar", "tags": ["indefinido", "irregular"] },
+    { "front": "tener — ellos, indefinido", "back": "tuvieron", "type": "grammar", "tags": ["indefinido", "irregular"] },
+    { "front": "estar — yo, indefinido", "back": "estuve", "type": "grammar", "tags": ["indefinido", "irregular"] },
+    { "front": "-ar verbs, nosotros, indefinido", "back": "-amos (hablamos)", "type": "grammar", "tags": ["indefinido", "regular"] },
+    { "front": "-er / -ir verbs, él/ella, indefinido", "back": "-ió (comió, vivió)", "type": "grammar", "tags": ["indefinido", "regular"] },
+    { "front": "ayer + ___ (tense)", "back": "indefinido: ayer vi una película", "type": "grammar", "tags": ["indefinido", "marker"] },
+    { "front": "esta mañana + ___ (tense)", "back": "perfecto (Spain): esta mañana he desayunado", "type": "grammar", "tags": ["perfecto", "marker"] }
+  ],
+  "slides": [
+    {
+      "ts": "08:00",
+      "text_md": "# Pretérito indefinido — verbos regulares\n\nUna terminación para -ar, otra para -er / -ir.\n\n**Ojo con los acentos:** hablé, habló · comí, comió",
+      "extracted_table": [
+        ["", "-ar (hablar)", "-er (comer)", "-ir (vivir)"],
+        ["yo", "hablé", "comí", "viví"],
+        ["tú", "hablaste", "comiste", "viviste"],
+        ["él / ella", "habló", "comió", "vivió"],
+        ["nosotros", "hablamos", "comimos", "vivimos"],
+        ["vosotros", "hablasteis", "comisteis", "vivisteis"],
+        ["ellos", "hablaron", "comieron", "vivieron"]
+      ]
+    },
+    {
+      "ts": "18:30",
+      "text_md": "# ¿Indefinido o perfecto?\n\nEl marcador decide.\n\n- Periodo cerrado → **indefinido**\n- Periodo abierto (incluye ahora) → **perfecto**",
+      "extracted_table": [
+        ["indefinido", "perfecto"],
+        ["ayer", "hoy"],
+        ["anoche", "esta mañana"],
+        ["el sábado pasado", "esta semana"],
+        ["la semana pasada", "este año"],
+        ["hace dos días", "ya / todavía no"]
+      ]
+    }
+  ],
+  "related": ["greetings"],
+  "topics": ["grammar", "conversation", "vocabulary"]
+}

@@ -8,7 +8,11 @@ This is a clean engine. It is **not** a fork of anyone's private lesson archive.
 
 ## Install, run, open
 
+Needs Node 22 or newer and git.
+
 ```bash
+git clone https://github.com/DanyloNikulin/hornbook.git
+cd hornbook
 npm install
 npm run build
 npm run hornbook          # or: npm run hornbook:app
@@ -164,3 +168,8 @@ or a paid API: `npm run harness:api` (every endpoint, no model needed), `npm run
 
 Country flags in the catalogue are drawn with a bundled Twemoji subset (CC-BY 4.0), because
 Windows has no flag glyphs of its own.
+
+## License
+
+MIT, see [LICENSE](LICENSE). The bundled display fonts are under the SIL Open Font License and the
+Twemoji flag subset is CC-BY 4.0; both are compatible with the MIT terms.

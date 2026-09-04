@@ -1,6 +1,6 @@
 {
   "name": "hornbook",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "scripts": {
     "ng": "ng",
     "prestart": "tsx scripts/backfill-topics.ts --auto && tsx scripts/build-derived.ts",
