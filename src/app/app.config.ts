@@ -5,6 +5,7 @@ import { RouteReuseStrategy, provideRouter, withComponentInputBinding, withInMem
 import { routes } from './app.routes';
 import { JournalService } from './journal.service';
 import { SectionRouteReuse } from './route-reuse';
+import { UpdateService } from './update.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,5 +19,6 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(ViewportScroller).setOffset([0, 96])),
     // Brand and the section list are needed before the first paint.
     provideAppInitializer(() => inject(JournalService).load()),
+    provideAppInitializer(() => inject(UpdateService).initialize()),
   ],
 };

@@ -66,7 +66,10 @@ export class LocalSetupComponent {
   protected readonly missing = computed<ToolId[]>(() => {
     const v = this.view();
     if (!v) return [];
-    return this.order.filter((id) => !v.tools.find((t) => t.id === id)?.installed);
+    return this.order.filter((id) => {
+      const tool = v.tools.find((candidate) => candidate.id === id);
+      return !tool?.installed || !!tool.update;
+    });
   });
   protected readonly ready = computed(() => this.missing().length === 0);
   protected readonly cudaOffered = computed(() => {

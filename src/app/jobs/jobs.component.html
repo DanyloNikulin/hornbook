@@ -1,0 +1,44 @@
+<section class="il-panel il-jobs-page">
+  <div class="il-panel-inner">
+    <p><a routerLink="/" class="il-lesson-bc-link">{{ 'common.home' | t }}</a></p>
+    <div class="il-jobs-heading">
+      <div>
+        <p class="il-card-kicker">{{ 'jobs.kicker' | t }}</p>
+        <h1 class="il-section-title">{{ 'jobs.title' | t }}</h1>
+        <p class="il-section-sub">{{ 'jobs.sub' | t }}</p>
+      </div>
+      @if (active().length) { <span class="il-jobs-live">{{ 'jobs.active' | t: { n: active().length } }}</span> }
+    </div>
+
+    @if (loading()) {
+      <p>{{ 'common.loading' | t }}</p>
+    } @else if (error()) {
+      <p class="il-error-inline" role="alert">{{ error() }}</p>
+    } @else if (!jobs().length) {
+      <div class="il-empty-state"><h2>{{ 'jobs.empty' | t }}</h2><p>{{ 'jobs.emptySub' | t }}</p></div>
+    } @else {
+      <div class="il-jobs-ledger">
+        @for (job of jobs(); track job.id) {
+          <article class="il-jobs-row" [class.il-jobs-row--active]="job.status === 'queued' || job.status === 'running'">
+            <div class="il-jobs-row-main">
+              <span class="il-job-stage-dot" aria-hidden="true"></span>
+              <div>
+                <h2>{{ job.label }}</h2>
+                <p>
+                  {{ ('job.' + job.status) | t }} · {{ job.createdAt | date:'medium' }}
+                  @if (sectionLink(job); as link) { · <a [routerLink]="link">{{ job.section }}</a> }
+                </p>
+              </div>
+              <strong>{{ percent(job) }}%</strong>
+            </div>
+            <div class="il-job-progress"><span [style.width.%]="percent(job)"></span></div>
+            @if (job.error) { <p class="il-job-error">{{ job.error }}</p> }
+            @if (job.log) {
+              <details><summary>{{ 'jobs.log' | t }}</summary><pre class="il-log">{{ job.log }}</pre></details>
+            }
+          </article>
+        }
+      </div>
+    }
+  </div>
+</section>

@@ -9,6 +9,37 @@
   <!-- Navigation -->
   <nav class="il-nav" [attr.aria-label]="'nav.main' | t">
 
+    @if (updateBanner(); as update) {
+      <aside class="il-update-banner" role="status">
+        <span class="il-update-mark" aria-hidden="true">↑</span>
+        <div class="il-update-copy">
+          <strong>{{ 'update.out' | t: { version: updates.displayVersion(update.release!.version) } }}</strong>
+          @if (update.phase === 'downloading') {
+            <span>{{ 'update.downloading' | t: { pct: update.progress ?? 0 } }}</span>
+          } @else if (update.phase === 'ready') {
+            <span>{{ 'update.ready' | t }}</span>
+          } @else if (!updates.desktop.available()) {
+            <span>{{ 'update.cloneLead' | t }}</span>
+          }
+          <details>
+            <summary>{{ 'update.notes' | t }}</summary>
+            @if (update.release!.notes) { <pre>{{ update.release!.notes }}</pre> }
+            @if (!updates.desktop.available()) {
+              <pre>git pull
+npm install
+npm run build</pre>
+            }
+          </details>
+        </div>
+        @if (update.phase === 'ready') {
+          <button type="button" class="il-update-action" (click)="restartToUpdate()">{{ 'update.restart' | t }}</button>
+        } @else if (update.release!.url) {
+          <a class="il-update-action" [href]="update.release!.url" target="_blank" rel="noopener noreferrer">{{ 'update.openRelease' | t }}</a>
+        }
+        <button type="button" class="il-update-dismiss" (click)="dismissUpdate()" [attr.aria-label]="'update.dismiss' | t">×</button>
+      </aside>
+    }
+
     <!-- Main row: brand + desktop links + mobile controls -->
     <div class="il-nav-row">
       <a routerLink="/" class="il-brand" [attr.aria-label]="'nav.homeAria' | t: { brand: brandName() }">
@@ -47,6 +78,9 @@
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="il-nav-link">{{ 'nav.pairs' | t }}</a>
           <a routerLink="/setup" routerLinkActive="active" class="il-nav-link">{{ 'nav.newPair' | t }}</a>
           <a routerLink="/settings" routerLinkActive="active" class="il-nav-link">{{ 'nav.appSettings' | t }}</a>
+          @if (updates.desktop.available()) {
+            <a routerLink="/jobs" routerLinkActive="active" class="il-nav-link">{{ 'nav.jobs' | t }}</a>
+          }
         }
         <button type="button" (click)="toggleTheme()"
                 class="il-theme-btn"
@@ -141,6 +175,9 @@
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="il-mobile-link">{{ 'nav.pairs' | t }}</a>
           <a routerLink="/setup" routerLinkActive="active" class="il-mobile-link">{{ 'nav.newPair' | t }}</a>
           <a routerLink="/settings" routerLinkActive="active" class="il-mobile-link">{{ 'nav.appSettings' | t }}</a>
+          @if (updates.desktop.available()) {
+            <a routerLink="/jobs" routerLinkActive="active" class="il-mobile-link">{{ 'nav.jobs' | t }}</a>
+          }
         </div>
       </div>
     }

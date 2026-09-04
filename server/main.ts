@@ -11,18 +11,20 @@
 import { createServer } from 'node:http';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { createApi, sendJson } from './api.ts';
 import { FolderStore } from './store.ts';
 import { JobRunner } from './jobs.ts';
 import { pipelineEnv } from './secrets.ts';
 import { isMain } from '../scripts/lib/is-main.ts';
-import { challenge, isAuthorized } from './auth.ts';
+import { challenge, isAuthorized, isLaunchAuthorized } from './auth.ts';
 import { ManagedOllama } from './managed-ollama.ts';
 import { createSetup } from './setup.ts';
 import { DEFAULT_MANAGED_OLLAMA_PORT, managedPaths, toolsDir } from '../scripts/lib/tools.ts';
+import { packageRoot } from '../scripts/lib/runtime.ts';
+import { ReleaseChecker } from './releases.ts';
+import type { JobView } from '../src/lib/api-types.ts';
 
-const repoRoot = fileURLToPath(new URL('..', import.meta.url));
+const repoRoot = packageRoot(import.meta.url);
 
 export interface Options {
   port: number;
@@ -32,6 +34,19 @@ export interface Options {
   serveStatic: boolean;
   /** Basic-auth password for hosted mode; undefined = open (local). */
   password: string | undefined;
+  /** Per-launch secret used by the Electron renderer on every request. */
+  token?: string;
+  shell?: 'browser' | 'electron';
+  version?: string;
+  releasesUrl?: string;
+  updates?: ReleaseChecker;
+  /** Compiled scripts in a packaged app; source mode uses tsx. */
+  scriptDir?: string;
+  childEnv?: NodeJS.ProcessEnv;
+  childCwd?: string;
+  workDir?: string;
+  onJobFinish?: (job: JobView) => void;
+  onJobsChanged?: (active: number) => void;
 }
 
 export function parseArgs(argv: readonly string[]): Options {
@@ -99,16 +114,37 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
   });
   const jobs = new JobRunner({
     repoRoot,
+    cwd: opts.childCwd,
     journalDir: () => store.dir,
-    env: () => pipelineEnv(store.dir),
+    env: () => ({
+      ...pipelineEnv(store.dir),
+      ...opts.childEnv,
+      ...(opts.workDir ? { HORNBOOK_WORK: opts.workDir } : {}),
+      HORNBOOK_APP_ROOT: repoRoot,
+    }),
+    ...(opts.scriptDir
+      ? {
+          runner: (script: string) => ({
+            cmd: process.execPath,
+            args: [join(opts.scriptDir as string, script.replace(/\.ts$/, '.js'))],
+          }),
+        }
+      : {}),
+    onChange: opts.onJobsChanged,
     // A freshly downloaded managed Ollama comes up at once, so the model
     // pull queued behind it finds a server.
     onFinish: (job) => {
       if (job.kind === 'setup' && job.status === 'done' && job.result?.tool === 'ollama') void setup.bootManagedOllama();
+      opts.onJobFinish?.(job);
     },
   });
   const setup = createSetup({ journalDir: () => store.dir, pipelineEnv: () => pipelineEnv(store.dir), jobs, managed });
-  const api = createApi({ store, jobs, setup, mode });
+  const version = opts.version ?? '0.1.0';
+  const updates = opts.updates ?? new ReleaseChecker({
+    currentVersion: version,
+    url: opts.releasesUrl ?? process.env['HORNBOOK_RELEASES_URL'],
+  });
+  const api = createApi({ store, jobs, setup, mode, shell: opts.shell ?? 'browser', version, updates });
   const distRoot = opts.dist;
   const hasDist = opts.serveStatic && existsSync(join(distRoot, 'index.html'));
 
@@ -121,6 +157,10 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
   }
 
   const server = createServer(async (req, res) => {
+    if (opts.token && !isLaunchAuthorized(req, opts.token)) {
+      sendJson(res, 401, { error: 'Hornbook launch token required' });
+      return;
+    }
     if (opts.password && !isAuthorized(req, opts.password)) {
       challenge(res);
       return;

@@ -63,6 +63,20 @@ describe('JobRunner', () => {
     expect(readdirSync(join(dir, '_uploads'))).toHaveLength(0);
   });
 
+  it('can run from a real cwd when the packaged repo root is an archive', async () => {
+    const runner = new JobRunner({
+      repoRoot: join(dir, 'app.asar'),
+      cwd: dir,
+      journalDir: () => dir,
+      env: () => process.env,
+      runner: () => ({ cmd: process.execPath, args: ['-e', 'console.log(process.cwd())', '--'] }),
+    });
+    const job = runner.enqueue('es-en', { kind: 'review-topics' });
+    await runner.idle();
+    expect(runner.get(job.id)).toMatchObject({ status: 'done' });
+    expect(runner.get(job.id)?.log).toContain(dir);
+  });
+
   it('marks the active process stage failed and leaves later stages waiting', async () => {
     const runner = makeRunner({
       'process.ts': 'console.log("HORNBOOK_STAGE "+JSON.stringify({id:"hearing",status:"running"}));console.error("microphone broke");process.exit(1)',

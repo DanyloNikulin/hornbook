@@ -1,7 +1,7 @@
 // Shapes exchanged between the server API and the client. Shared so both
 // sides compile against one definition.
 
-import type { JournalConfigT, ProvidersT, SectionConfigT } from './journal-config';
+import type { JournalConfigT, ProvidersT, SectionConfigT } from './journal-config.js';
 
 export interface SectionSummary extends SectionConfigT {
   /** Explicit title or "Spanish → English". */
@@ -19,6 +19,50 @@ export interface ConfigView {
 export interface ModeView {
   mode: 'local' | 'hosted';
   journal: string;
+  shell: 'browser' | 'electron';
+  version: string;
+}
+
+// ── Application releases / desktop shell ──────────────────────────────────
+
+export interface ReleaseInfo {
+  version: string;
+  name: string;
+  notes: string;
+  url: string;
+  publishedAt?: string;
+}
+
+export interface ReleaseCheckView {
+  currentVersion: string;
+  checkedAt: string;
+  available: boolean;
+  release?: ReleaseInfo;
+  error?: string;
+}
+
+export type UpdatePhase = 'idle' | 'checking' | 'current' | 'available' | 'downloading' | 'ready' | 'error';
+
+export interface DesktopUpdateState {
+  phase: UpdatePhase;
+  currentVersion: string;
+  installable: boolean;
+  release?: ReleaseInfo;
+  progress?: number;
+  checkedAt?: string;
+  error?: string;
+}
+
+export interface DesktopPreferencesView {
+  automaticUpdates: boolean;
+  startWithSystem: boolean;
+}
+
+export interface DesktopState {
+  journal: string;
+  platform: string;
+  preferences: DesktopPreferencesView;
+  update: DesktopUpdateState;
 }
 
 // ── Jobs ────────────────────────────────────────────────────────────────────
@@ -96,6 +140,7 @@ export type StartJob = StartProcessJob | StartCheatsheetJob | StartReviewJob | S
 
 /** Connection values the pipeline reads from the environment. */
 export const CONNECTION_KEYS = [
+  'FFMPEG_BIN',
   'OPENAI_API_KEY',
   'ANTHROPIC_API_KEY',
   'OLLAMA_HOST',
@@ -164,6 +209,8 @@ export interface ToolStatus {
   /** Model files or pulled models, where it applies. */
   models?: string[];
   detail: string;
+  /** A managed executable is usable, but Hornbook now pins a newer build. */
+  update?: { installedVersion: string; targetVersion: string };
 }
 
 export interface MachineInfo {

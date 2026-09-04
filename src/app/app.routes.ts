@@ -17,6 +17,10 @@ export const routes: Routes = [
       import('./settings/app-settings.component').then((m) => m.AppSettingsComponent),
   },
   {
+    path: 'jobs',
+    loadComponent: () => import('./jobs/jobs.component').then((m) => m.JobsComponent),
+  },
+  {
     // Everything inside a language pair. canMatch rejects ids that are not
     // pairs (they fall through to the wildcard below); the guard resolves the
     // section and preloads its manifest and progress before any child activates.

@@ -1,11 +1,11 @@
 // @ts-check
-const eslint = require('@eslint/js');
-const tseslint = require('typescript-eslint');
-const angular = require('@angular-eslint/eslint-plugin');
-const angularTemplate = require('@angular-eslint/eslint-plugin-template');
-const templateParser = require('@angular-eslint/template-parser');
+import eslint from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import angular from '@angular-eslint/eslint-plugin';
+import angularTemplate from '@angular-eslint/eslint-plugin-template';
+import templateParser from '@angular-eslint/template-parser';
 
-module.exports = tseslint.config(
+export default tseslint.config(
   {
     files: ['**/*.ts'],
     extends: [

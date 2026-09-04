@@ -8,25 +8,31 @@ This is a clean engine. It is **not** a fork of anyone's private lesson archive.
 
 ## Install, run, open
 
-Needs Node 22 or newer and git.
+Download the installer for Windows, macOS or Linux from
+[GitHub Releases](https://github.com/DanyloNikulin/hornbook/releases). Hornbook
+opens as a desktop app and stays in the tray while lesson and setup jobs run.
+
+To run from a source clone, use Node 22.12 or newer and git:
 
 ```bash
 git clone https://github.com/DanyloNikulin/hornbook.git
 cd hornbook
 npm install
 npm run build
-npm run hornbook          # or: npm run hornbook:app
+npm run hornbook              # browser
+npm run hornbook:app          # Electron desktop shell
 ```
 
-That starts one server on your machine (127.0.0.1:8787) serving the UI and an API over your
-journal folder, and opens it in your browser. `hornbook:app` opens a chromeless window instead,
-using the Chrome, Edge, Chromium or Brave you already have, so it feels like a desktop app.
+Both run one local server serving the UI and an API over your journal folder.
+The browser command listens on 127.0.0.1:8787; the Electron shell chooses a
+random loopback port protected by a new launch token each time. Closing its
+window leaves it in the tray; Quit stops its jobs, managed Ollama and server.
 
 On first run your journal is created at `~/Hornbook` from the demo journal (a Spanish and an
 Italian pair); delete the demo pairs whenever you like. Options:
 
 ```
-hornbook [--journal <dir>] [--port 8787] [--host 127.0.0.1] [--password …] [--app] [--no-open]
+hornbook [serve] [--journal <dir>] [--port 8787] [--host 127.0.0.1] [--password …] [--app] [--no-open]
 ```
 
 Nothing you do in the app goes through git. Back up by copying the folder.
@@ -181,10 +187,12 @@ npm test               # app
 npm run test:scripts   # pipeline scripts + server
 ```
 
-Three slower checks live in `harness/` and run against throwaway journals, never against yours
+Slower checks live in `harness/` and run against throwaway journals, never against yours
 or a paid API: `npm run harness:api` (every endpoint, no model needed), `npm run harness:pipeline`
 (ffmpeg + whisper.cpp + Ollama on a bundled video with real slides) and `npm run harness:ui`
-(Playwright through the installed Chrome or Edge). See [harness/README.md](harness/README.md).
+(Playwright through the installed Chrome or Edge). `npm run harness:electron`
+walks a packaged app with a local fake release feed and a compiled background
+job. See [harness/README.md](harness/README.md).
 
 Country flags in the catalogue are drawn with a bundled Twemoji subset (CC-BY 4.0), because
 Windows has no flag glyphs of its own.

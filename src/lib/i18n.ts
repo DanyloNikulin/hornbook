@@ -2,8 +2,8 @@
 // layer: they are content, not UI copy. The locale is a chrome choice the
 // user toggles; it does not follow the open pair.
 
-import { EN } from './i18n.en';
-import { IT } from './i18n.it';
+import { EN } from './i18n.en.js';
+import { IT } from './i18n.it.js';
 
 export const DEFAULT_LOCALE = 'en' as const;
 export type LocaleId = 'en' | 'it';

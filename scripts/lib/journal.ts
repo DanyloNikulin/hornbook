@@ -15,6 +15,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { packageRoot } from './runtime.ts';
 import {
   normalizeJournalConfig,
   sectionIdFor,
@@ -30,7 +31,7 @@ import {
 } from '../../src/lib/schema.ts';
 import { buildDerived, type DerivedBundle } from './derived.ts';
 
-const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
+const repoRoot = process.env['HORNBOOK_APP_ROOT']?.trim() || packageRoot(import.meta.url);
 
 let journalOverride: string | null = null;
 

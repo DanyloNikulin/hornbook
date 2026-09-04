@@ -5,7 +5,7 @@
 //                               server on 127.0.0.1:8787, browser tab opened
 //   hornbook --app              same, in a chromeless window (Chrome/Edge/Chromium)
 //   hornbook --journal ./j      another folder
-//   hornbook --no-open          just the server (Docker, services)
+//   hornbook serve              just the server (Docker, services)
 //   hornbook --host 0.0.0.0 --password …   hosted
 //   hornbook doctor             what is installed for the zero-cost path
 //
@@ -14,15 +14,15 @@
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { isMain } from '../scripts/lib/is-main.ts';
 import { parseArgs, startServer } from './main.ts';
 import { countLessons, openUrl, seedJournal } from './launch.ts';
 import { pipelineEnv } from './secrets.ts';
 import { defaultToolsDeps, machineInfo, toolStatuses } from './tools.ts';
 import { DEFAULT_MANAGED_OLLAMA_PORT, recommend, toolsDir } from '../scripts/lib/tools.ts';
+import { packageRoot } from '../scripts/lib/runtime.ts';
 
-const repoRoot = fileURLToPath(new URL('..', import.meta.url));
+const repoRoot = packageRoot(import.meta.url);
 
 export function defaultJournalDir(): string {
   return join(homedir(), 'Hornbook');
@@ -34,10 +34,11 @@ export async function cli(argv: readonly string[]): Promise<void> {
     return;
   }
   if (argv.includes('--help') || argv.includes('-h')) {
-    console.log(`hornbook [--journal <dir>] [--port 8787] [--host 127.0.0.1] [--password …] [--app] [--no-open]
+    console.log(`hornbook [serve] [--journal <dir>] [--port 8787] [--host 127.0.0.1] [--password …] [--app] [--no-open]
 
   --journal   folder that holds your lessons (default ~/Hornbook, seeded from the demo on first run)
   --app       open a chromeless window (needs Chrome, Edge, Chromium or Brave) instead of a tab
+  serve       start the server without opening a window or tab
   --no-open   start the server only
   --host      listen address; anything but 127.0.0.1 is hosted mode — set --password
   --password  Basic-auth password for hosted mode (or HORNBOOK_PASSWORD)
@@ -45,8 +46,11 @@ export async function cli(argv: readonly string[]): Promise<void> {
     return;
   }
 
-  const opts = parseArgs(argv);
+  const serve = argv[0] === 'serve';
+  const effectiveArgv = serve ? argv.slice(1) : argv;
+  const opts = parseArgs(effectiveArgv);
   const journal = resolve(opts.journal ?? defaultJournalDir());
+  const compiledScripts = join(repoRoot, 'dist', 'node', 'scripts');
 
   if (seedJournal(join(repoRoot, 'journal'), journal)) {
     console.log(`Created your journal at ${journal} with ${countLessons(journal)} demo lesson(s). Delete the demo pairs whenever you like.`);
@@ -58,14 +62,18 @@ export async function cli(argv: readonly string[]): Promise<void> {
     return;
   }
 
-  const server = startServer({ ...opts, journal });
+  const server = startServer({
+    ...opts,
+    journal,
+    ...(existsSync(join(compiledScripts, 'process.js')) ? { scriptDir: compiledScripts } : {}),
+  });
   const url = `http://${opts.host === '0.0.0.0' ? '127.0.0.1' : opts.host}:${opts.port}/`;
 
-  if (!argv.includes('--no-open')) {
+  if (!serve && !effectiveArgv.includes('--no-open')) {
     server.once('listening', () => {
-      const cmd = openUrl(url, { app: argv.includes('--app'), journalDir: journal });
+      const cmd = openUrl(url, { app: effectiveArgv.includes('--app'), journalDir: journal });
       console.log(cmd.app ? `Opened Hornbook in an app window.` : `Opened ${url} in your browser.`);
-      if (argv.includes('--app') && !cmd.app) {
+      if (effectiveArgv.includes('--app') && !cmd.app) {
         console.log('No Chromium-family browser found for --app; opened a normal tab instead.');
       }
     });

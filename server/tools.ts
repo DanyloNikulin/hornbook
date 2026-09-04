@@ -3,12 +3,12 @@
 // running elsewhere), and the environment that lets the pipeline scripts find
 // the managed copies without any change to them.
 
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { delimiter, join } from 'node:path';
 import { totalmem } from 'node:os';
 import type { MachineInfo, ToolStatus } from '../src/lib/api-types.ts';
-import { managedPaths, preferredWhisperModel, toolsDir } from '../scripts/lib/tools.ts';
+import { managedPaths, PINS, preferredWhisperModel, toolsDir } from '../scripts/lib/tools.ts';
 import { resolveCli } from '../scripts/lib/cli-path.ts';
 import { ollamaHost } from '../scripts/providers/ollama.ts';
 import { canComplete } from './probe.ts';
@@ -119,16 +119,25 @@ export async function toolStatuses(deps: ToolsDeps, opts: StatusOptions): Promis
   const dir = toolsDir(deps.env, deps.platform);
   const p = managedPaths(dir, deps.platform);
   const [ffmpeg, whisper, whisperModel, ollama] = await Promise.all([
-    ffmpegStatus(deps, p),
+    ffmpegStatus(deps, p, opts.env),
     whisperStatus(deps, p, opts.env),
     whisperModelStatus(deps, p, opts.env),
     ollamaStatus(deps, p, opts),
   ]);
   const ollamaModel = await ollamaModelStatus(deps, ollama);
-  return [ffmpeg, whisper, whisperModel, ollama, ollamaModel];
+  const rows = [ffmpeg, whisper, whisperModel, ollama, ollamaModel];
+  applyManagedUpdates(rows, p.manifest);
+  return rows;
 }
 
-async function ffmpegStatus(deps: ToolsDeps, p: ReturnType<typeof managedPaths>): Promise<ToolStatus> {
+async function ffmpegStatus(deps: ToolsDeps, p: ReturnType<typeof managedPaths>, env: NodeJS.ProcessEnv): Promise<ToolStatus> {
+  const configured = env['FFMPEG_BIN']?.trim();
+  if (configured && configured !== p.ffmpeg) {
+    const found = resolveCli(configured, deps.env, { exists: deps.exists, platform: deps.platform });
+    return found
+      ? { id: 'ffmpeg', installed: true, source: 'configured', path: found, version: await ffmpegVersion(deps, found), detail: 'Set in Settings.' }
+      : { id: 'ffmpeg', installed: false, source: 'configured', path: configured, detail: `Settings point at ${configured}, which is not there.` };
+  }
   if (deps.exists(p.ffmpeg)) {
     return { id: 'ffmpeg', installed: true, source: 'managed', path: p.ffmpeg, version: await ffmpegVersion(deps, p.ffmpeg), detail: 'Managed by Hornbook.' };
   }
@@ -137,6 +146,37 @@ async function ffmpegStatus(deps: ToolsDeps, p: ReturnType<typeof managedPaths>)
     return { id: 'ffmpeg', installed: true, source: 'system', path: onPath, version: await ffmpegVersion(deps, onPath), detail: 'Found on PATH.' };
   }
   return { id: 'ffmpeg', installed: false, source: 'none', detail: 'Needed to read recordings and slides.' };
+}
+
+function applyManagedUpdates(rows: ToolStatus[], manifestPath: string): void {
+  if (!existsSync(manifestPath)) return;
+  try {
+    const entries = JSON.parse(readFileSync(manifestPath, 'utf8')) as { tool?: unknown; version?: unknown }[];
+    if (!Array.isArray(entries)) return;
+    applyManagedUpdateEntries(rows, entries);
+  } catch {
+    // A hand-edited or old manifest must not make an installed tool unusable.
+  }
+}
+
+export function applyManagedUpdateEntries(rows: ToolStatus[], entries: { tool?: unknown; version?: unknown }[]): void {
+  const installed = new Map<string, string>();
+  for (const entry of entries) {
+    if (typeof entry?.tool === 'string' && typeof entry.version === 'string') installed.set(entry.tool, entry.version);
+  }
+  const targets: Partial<Record<ToolStatus['id'], string>> = {
+    ffmpeg: PINS.ffmpeg.version,
+    whisper: PINS.whisper.tag,
+    ollama: PINS.ollama.tag,
+  };
+  for (const row of rows) {
+    if (row.source !== 'managed') continue;
+    const installedVersion = installed.get(row.id);
+    const targetVersion = targets[row.id];
+    if (installedVersion && targetVersion && installedVersion !== targetVersion) {
+      row.update = { installedVersion, targetVersion };
+    }
+  }
 }
 
 async function ffmpegVersion(deps: ToolsDeps, bin: string): Promise<string | undefined> {

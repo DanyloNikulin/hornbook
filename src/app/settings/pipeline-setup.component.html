@@ -104,6 +104,9 @@
                    (ngModelChange)="onDraft(key, $event)"
                    [placeholder]="connView(key)?.set ? ('settings.replacePlaceholder' | t) : (('pipeline.ph.' + key) | t)"
                    autocomplete="off" />
+            @if (desktop.available() && (key === 'WHISPER_BIN' || key === 'WHISPER_MODEL')) {
+              <button type="button" class="il-btn ghost sm" (click)="browsePath(key)">{{ 'desktop.browse' | t }}</button>
+            }
           </span>
         </label>
       }

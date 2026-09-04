@@ -1,4 +1,4 @@
-import type { Catalog } from './i18n';
+import type { Catalog } from './i18n.js';
 
 /** Default chrome copy. Keys are stable; values are what the UI used to hardcode. */
 export const EN = {
@@ -14,6 +14,7 @@ export const EN = {
   'nav.add': 'Add',
   'nav.settings': 'Settings',
   'nav.appSettings': 'Application',
+  'nav.jobs': 'Jobs',
   'nav.pairs': 'Pairs',
   'nav.newPair': 'New pair',
   'nav.themeToDay': 'Switch to day mode',
@@ -29,6 +30,44 @@ export const EN = {
   'brand.defaultTagline': 'conspects from your lessons',
   'footer.source': 'source ↗',
   'app.serverError': 'Cannot reach the Hornbook server ({detail}). Start it with {cmd} and reload.',
+
+  // ── desktop / updates ───────────────────────────────────────────────────
+  'desktop.kicker': 'Desktop shell',
+  'desktop.title': 'This computer',
+  'desktop.sub': 'Hornbook stays available in the tray while long lesson and setup jobs finish.',
+  'desktop.journal': 'Journal folder',
+  'desktop.openFolder': 'Open folder',
+  'desktop.changeFolder': 'Change…',
+  'desktop.startup': 'Start with the system',
+  'desktop.startupSub': 'Off by default. Hornbook opens quietly and remains in the tray.',
+  'desktop.ffmpegPath': 'Custom ffmpeg',
+  'desktop.ffmpegPathSub': 'Optional. Choose an ffmpeg executable instead of the managed copy or PATH.',
+  'desktop.notChosen': 'Use the managed copy or PATH',
+  'desktop.browse': 'Browse…',
+  'update.out': 'Hornbook {version} is out',
+  'update.downloading': 'Downloading in the background · {pct}%',
+  'update.ready': 'Downloaded and ready. Nothing changes until you restart.',
+  'update.cloneLead': 'Pull the new release when you are ready.',
+  'update.notes': 'Release notes',
+  'update.restart': 'Restart to update',
+  'update.openRelease': 'Open release ↗',
+  'update.dismiss': 'Dismiss this update',
+  'update.settingsTitle': 'Updates',
+  'update.settingsSub': 'Hornbook checks the public GitHub release feed at most once a day and sends no journal data.',
+  'update.automatic': 'Check automatically',
+  'update.automaticSub': 'Turn this off to check only when you ask.',
+  'update.check': 'Check for updates',
+  'update.checking': 'Checking…',
+  'update.current': 'You have the newest version.',
+
+  // ── jobs ledger ─────────────────────────────────────────────────────────
+  'jobs.kicker': 'Background work',
+  'jobs.title': 'Jobs',
+  'jobs.sub': 'Lesson processing and local-tool setup continue even when the window is closed.',
+  'jobs.active': '{n} active',
+  'jobs.empty': 'Nothing running yet',
+  'jobs.emptySub': 'A recording, cheat-sheet rebuild, or local-tool download will appear here.',
+  'jobs.log': 'Log',
 
   // ── common ────────────────────────────────────────────────────────────────
   'common.tryAgain': 'Try again',
@@ -436,11 +475,13 @@ export const EN = {
   'setup.tool.ollama-model': 'Writing model',
   'setup.status.installed': 'Installed',
   'setup.status.missing': 'Not installed',
+  'setup.status.update': 'Update {version} available',
   'setup.source.managed': 'managed by Hornbook',
   'setup.source.system': 'on PATH',
   'setup.source.configured': 'from Settings',
   'setup.source.external': 'running elsewhere',
   'setup.action.download': 'Download…',
+  'setup.action.update': 'Update…',
   'setup.action.pull': 'Pull…',
   'setup.action.start': 'Start download',
   'setup.action.startPull': 'Start pull',

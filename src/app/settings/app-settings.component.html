@@ -1,17 +1,59 @@
-<section class="il-panel" style="padding-top: 2rem;">
-  <div class="il-panel-inner" style="max-width: 860px; margin: 0 auto;">
-    <p><a [routerLink]="backHome()" class="il-lesson-bc-link">{{ backLabel() | t }}</a></p>
+<section class="il-panel" style="padding-top: 2rem">
+  <div class="il-panel-inner" style="max-width: 860px; margin: 0 auto">
+    <p>
+      <a [routerLink]="backHome()" class="il-lesson-bc-link">{{ backLabel() | t }}</a>
+    </p>
     <h1 class="il-section-title">{{ 'settings.appTitle' | t }}</h1>
     <p class="il-section-sub">{{ 'settings.appSub' | t }}</p>
     <app-settings-nav />
+
+    @if (desktop.state(); as shell) {
+      <section class="il-desktop-card" aria-labelledby="desktop-shell-title">
+        <div>
+          <p class="il-card-kicker">{{ 'desktop.kicker' | t }}</p>
+          <h2 id="desktop-shell-title">{{ 'desktop.title' | t }}</h2>
+          <p class="il-section-sub">{{ 'desktop.sub' | t }}</p>
+        </div>
+        <div class="il-desktop-journal">
+          <span>{{ 'desktop.journal' | t }}</span>
+          <code>{{ shell.journal }}</code>
+          <div class="il-setup-actions">
+            <button type="button" class="il-btn ghost sm" (click)="openJournal()">
+              {{ 'desktop.openFolder' | t }}
+            </button>
+            <button type="button" class="il-btn ghost sm" (click)="chooseJournal()">
+              {{ 'desktop.changeFolder' | t }}
+            </button>
+          </div>
+        </div>
+        @if (shell.platform === 'win32' || shell.platform === 'darwin') {
+          <label class="il-desktop-toggle">
+            <input
+              type="checkbox"
+              [checked]="shell.preferences.startWithSystem"
+              (change)="setStartWithSystem($any($event.target).checked)"
+            />
+            <span
+              ><strong>{{ 'desktop.startup' | t }}</strong
+              ><small>{{ 'desktop.startupSub' | t }}</small></span
+            >
+          </label>
+        }
+      </section>
+    }
 
     <h2 class="il-compose-h">{{ 'settings.interface' | t }}</h2>
     <p class="il-section-sub">{{ 'settings.interfaceSub' | t }}</p>
     <div class="il-locale-picks" role="radiogroup" [attr.aria-label]="'settings.interface' | t">
       @for (id of locales; track id) {
-        <button type="button" class="il-chip" [class.active]="locale() === id"
-                role="radio" [attr.aria-checked]="locale() === id"
-                (click)="setLocale(id)">
+        <button
+          type="button"
+          class="il-chip"
+          [class.active]="locale() === id"
+          role="radio"
+          [attr.aria-checked]="locale() === id"
+          (click)="setLocale(id)"
+        >
           {{ localeMeta[id].autonym }}
           <span class="il-stat-sub">{{ localeMeta[id].code }}</span>
         </button>
@@ -21,33 +63,96 @@
     @if (loading()) {
       <p class="il-stat-sub">{{ 'common.loading' | t }}</p>
     } @else {
-      <h2 class="il-compose-h" style="margin-top: 24px;">{{ 'settings.providers' | t }}</h2>
+      <h2 class="il-compose-h" style="margin-top: 24px">{{ 'settings.providers' | t }}</h2>
       <p class="il-section-sub">{{ 'pipeline.lead' | t }}</p>
-      <p class="il-settings-help" style="margin-bottom: 12px;">{{ 'pipeline.needBoth' | t }}</p>
+      <p class="il-settings-help" style="margin-bottom: 12px">{{ 'pipeline.needBoth' | t }}</p>
 
       <div class="il-pipe-grid">
         <app-pipeline-setup
           job="transcribe"
           [config]="defaults.transcribe"
           [connections]="settings()?.connections ?? null"
-          [draft]="connectionInput" />
+          [draft]="connectionInput"
+        />
         <app-pipeline-setup
           job="extract"
           [config]="defaults.extract"
           [connections]="settings()?.connections ?? null"
-          [draft]="connectionInput" />
+          [draft]="connectionInput"
+        />
       </div>
 
-      <div style="display:flex; gap:8px; align-items:center; margin: 16px 0 28px;">
-        <button type="button" class="il-btn" [disabled]="saving()" (click)="save()">{{ saving() ? ('settings.saving' | t) : ('settings.save' | t) }}</button>
-        @if (saved()) { <span style="color: var(--success);">{{ saved() }}</span> }
+      @if (desktop.available()) {
+        <div class="il-settings-path-card">
+          <div>
+            <strong>{{ 'desktop.ffmpegPath' | t }}</strong>
+            <p class="il-settings-help">{{ 'desktop.ffmpegPathSub' | t }}</p>
+          </div>
+          <span class="il-native-path-input">
+            <input
+              type="text"
+              [(ngModel)]="connectionInput['FFMPEG_BIN']"
+              [placeholder]="
+                settings()?.connections?.['FFMPEG_BIN']?.hint || ('desktop.notChosen' | t)
+              "
+            />
+            <button type="button" class="il-btn ghost sm" (click)="chooseFfmpeg()">
+              {{ 'desktop.browse' | t }}
+            </button>
+          </span>
+        </div>
+      }
+
+      <div style="display: flex; gap: 8px; align-items: center; margin: 16px 0 28px">
+        <button type="button" class="il-btn" [disabled]="saving()" (click)="save()">
+          {{ saving() ? ('settings.saving' | t) : ('settings.save' | t) }}
+        </button>
+        @if (saved()) {
+          <span style="color: var(--success)">{{ saved() }}</span>
+        }
       </div>
 
       <app-local-setup />
     }
 
+    <section class="il-update-settings" aria-labelledby="update-settings-title">
+      <div>
+        <h2 id="update-settings-title" class="il-compose-h">{{ 'update.settingsTitle' | t }}</h2>
+        <p class="il-section-sub">{{ 'update.settingsSub' | t }}</p>
+      </div>
+      <label class="il-desktop-toggle">
+        <input
+          type="checkbox"
+          [checked]="updates.automatic()"
+          (change)="setAutomaticUpdates($any($event.target).checked)"
+        />
+        <span
+          ><strong>{{ 'update.automatic' | t }}</strong
+          ><small>{{ 'update.automaticSub' | t }}</small></span
+        >
+      </label>
+      <div class="il-update-settings-action">
+        <button
+          type="button"
+          class="il-btn ghost sm"
+          [disabled]="updates.state().phase === 'checking'"
+          (click)="checkUpdates()"
+        >
+          {{
+            updates.state().phase === 'checking' ? ('update.checking' | t) : ('update.check' | t)
+          }}
+        </button>
+        @if (updates.state().phase === 'current') {
+          <span>{{ 'update.current' | t }}</span>
+        }
+        @if (updates.state().phase === 'error') {
+          <span class="il-error-inline">{{ updates.state().error }}</span>
+        }
+      </div>
+    </section>
+
     @if (error()) {
-      <p style="color: #a33; margin-top: 1rem;" role="alert">{{ error() }}</p>
+      <p style="color: #a33; margin-top: 1rem" role="alert">{{ error() }}</p>
     }
   </div>
 </section>

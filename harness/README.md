@@ -1,9 +1,10 @@
 # Local harness
 
-Four scripts that exercise the running application the way a person would,
+Five scripts that exercise the running application the way a person would,
 against throwaway data, without a paid API. They complement the unit suites
-(`npm test`, `npm run test:scripts`) and are run by hand or by a tester agent,
-not by the PR gate.
+(`npm test`, `npm run test:scripts`). The packaged Electron walk runs in the
+PR gate on Windows, macOS and Linux; the others are run by hand or by a tester
+agent.
 
 Every script starts its own server on `127.0.0.1` with the cloud keys blanked,
 on a fresh journal under `work/harness/journals/`. The repo's `journal/` and
@@ -17,6 +18,7 @@ is not present on this machine, never that something is wrong.
 | API smoke | `npm run harness:api` | nothing (Ollama and whisper.cpp are optional) | ~30 s |
 | Zero-cost pipeline | `npm run harness:pipeline` | ffmpeg; whisper.cpp; Ollama with a text model and, for slides, a vision model | 5–15 min |
 | Browser walk | `npm run harness:ui` | `npm run build` first; Chrome or Edge installed | ~1 min |
+| Packaged desktop | `npm run harness:electron` | `npm run package:dir` first | ~1 min |
 | Coding CLIs | `npm run harness:cli` | `npm run build` first; any of Claude Code, Codex, Grok, Kimi installed and signed in | 1–4 min per CLI |
 
 ## API smoke
@@ -73,6 +75,16 @@ loaded, which is what keeps Windows from showing "ES" instead of a flag.
 `HORNBOOK_UI=http://localhost:4200` walks a dev server you already run
 instead (with `HORNBOOK_API` for its server, default `http://127.0.0.1:8787`);
 the throwaway pair is then deleted through that API.
+
+## Packaged desktop
+
+Playwright launches the actual unpacked Electron executable with an isolated
+profile and throwaway demo journal. A one-response local release feed drives
+the update banner without internet access. The walk checks the secure preload
+bridge, per-launch server token, native settings, compiled background-job
+runner, global jobs ledger and close-to-tray behaviour. Set
+`HORNBOOK_ELECTRON_EXE` to test a package outside the default `release/`
+folder.
 
 ## Coding CLIs
 

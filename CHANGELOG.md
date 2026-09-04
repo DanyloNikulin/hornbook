@@ -4,6 +4,18 @@ All notable changes to Hornbook. The roadmap is in `docs/PLAN.md`.
 
 ## Unreleased
 
+- Native Electron shell: one-instance window, tray lifecycle, remembered
+  size, journal and tool pickers, startup setting, native job notifications,
+  and a random-port local server protected by a per-launch token.
+- Daily GitHub release checks show the same update banner in desktop and
+  source-clone runs. Packaged apps download in the background and install
+  only after “Restart to update”; managed local tools flag pin changes.
+- The server and job scripts compile to plain JavaScript for packaging.
+  Frame hashes now use ffmpeg's 8×8 grayscale output, leaving no native Node
+  modules in the production app.
+- Electron Builder targets Windows NSIS and portable apps, macOS DMG/zip,
+  and Linux AppImage/deb, with release-time signing/notarisation. The PR gate
+  walks the packaged app on all three platforms against a fake release feed.
 - Topics are journal data: an optional `_topics.json` per section holds the
   cheat-sheet categories and the topics with their categories and tagger
   patterns; the six bundled topics are the default. "Review topics" appends

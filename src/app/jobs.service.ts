@@ -3,6 +3,7 @@ import type { JobView, SetupPlanRequest, StartJob } from '../lib/api-types';
 import { ApiService } from './api.service';
 import { SectionService } from './section.service';
 import { I18nService } from './i18n.service';
+import { DesktopService } from './desktop.service';
 
 const POLL_MS = 1200;
 
@@ -15,6 +16,7 @@ export class JobsService {
   private readonly api = inject(ApiService);
   private readonly section = inject(SectionService);
   private readonly i18n = inject(I18nService);
+  private readonly desktop = inject(DesktopService);
 
   readonly current = signal<JobView | null>(null);
   /** The setup job being followed (downloads of local tools), apart from lesson jobs. */
@@ -83,11 +85,13 @@ export class JobsService {
   }
 
   private prepareNotifications(): void {
+    if (this.desktop.available()) return;
     if (typeof Notification === 'undefined' || Notification.permission !== 'default') return;
     void Notification.requestPermission().catch(() => undefined);
   }
 
   private notify(job: JobView): void {
+    if (this.desktop.available()) return;
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted' || !document.hidden) return;
     try {
       const bodyKey = job.status === 'done' ? 'job.notificationDone' : 'job.notificationFailed';

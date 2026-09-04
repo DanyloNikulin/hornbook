@@ -23,7 +23,7 @@ export const PINS = {
   whisper: { repo: 'ggml-org/whisper.cpp', tag: 'b4938' },
   ollama: { repo: 'ollama/ollama', tag: 'v0.33.3' },
   // BtbN republishes "latest" in place; the asset name pins the ffmpeg line.
-  ffmpeg: { repo: 'BtbN/FFmpeg-Builds', tag: 'latest' },
+  ffmpeg: { repo: 'BtbN/FFmpeg-Builds', tag: 'latest', version: 'n9.0' },
   whisperModels: { repo: 'ggerganov/whisper.cpp' },
 } as const;
 
@@ -229,7 +229,7 @@ export async function resolveDownload(tool: ToolId, opts: ResolveOptions): Promi
         sizeBytes: asset.size,
         sha256: sha256FromDigest(asset.digest),
         source: `github.com/${pin.repo} ${pin.tag}`,
-        version: pin.tag,
+        version: 'version' in pin ? pin.version : pin.tag,
         variant: tool === 'whisper' ? (opts.variant ?? 'cpu') : undefined,
       };
     }

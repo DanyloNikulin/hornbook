@@ -1,10 +1,7 @@
 name: PR gate
 
-# The single required quality gate for pull requests into main.
-# Everything runs in ONE job so branch protection only needs to require the
-# "gate" check context. Covers: reproducible installs, app lint/test/build,
-# pipeline-script + server typecheck and tests, freshness of tracked generated
-# artifacts, dependency audit, and workflow syntax lint.
+# The final "gate" job is the single branch-protection check. It collects the
+# ordinary quality checks and packaged desktop walks on all three platforms.
 #
 # This is the only workflow. Hornbook's data never goes through git or CI:
 # the journal folder is written by the app itself.
@@ -24,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  gate:
+  checks:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -92,3 +89,49 @@ jobs:
       # yet must not freeze every PR.
       - name: Audit dependencies
         run: npm audit --audit-level=high
+
+  desktop:
+    name: Packaged desktop (${{ matrix.os }})
+    needs: checks
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            harness: xvfb-run -a npm run harness:electron
+          - os: windows-latest
+            harness: npm run harness:electron
+          - os: macos-latest
+            harness: npm run harness:electron
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build app and compiled server
+        run: npm run build
+      - name: Package current platform
+        run: npx electron-builder --dir --config electron-builder.config.cjs
+      - name: Walk packaged app
+        run: ${{ matrix.harness }}
+
+  gate:
+    name: gate
+    if: always()
+    needs: [checks, desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every gate component
+        env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+          DESKTOP_RESULT: ${{ needs.desktop.result }}
+        run: |
+          test "$CHECKS_RESULT" = success
+          test "$DESKTOP_RESULT" = success

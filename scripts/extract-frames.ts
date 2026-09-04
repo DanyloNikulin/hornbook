@@ -13,7 +13,7 @@
 
 import { mkdirSync, readdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { ffmpeg } from './lib/ffmpeg.ts';
+import { ffmpegBuffer } from './lib/ffmpeg.ts';
 import { aHash, hamming } from './lib/phash.ts';
 import { isMain } from './lib/is-main.ts';
 
@@ -38,16 +38,25 @@ export async function extractFrames(inputPath: string, outDir: string): Promise<
   rmSync(framesDir, { recursive: true, force: true });
   mkdirSync(framesDir, { recursive: true });
 
-  // Sample frames as low-quality JPGs (sharp will rehash; we only need recognizable content).
+  // Split one sampled stream into recognizable JPGs and matching 8×8 rasters.
   console.log(`Sampling 1 frame every ${SAMPLE_EVERY_SEC}s...`);
-  await ffmpeg([
+  const rasters = await ffmpegBuffer([
     '-i',
     inputPath,
-    '-vf',
-    `fps=1/${SAMPLE_EVERY_SEC},scale=960:-1`,
+    '-filter_complex',
+    `[0:v]fps=1/${SAMPLE_EVERY_SEC},split=2[images][hashes];[images]scale=960:-1[imageout];[hashes]scale=8:8,format=gray[hashout]`,
+    '-map',
+    '[imageout]',
     '-q:v',
     '6',
     join(framesDir, 'raw-%05d.jpg'),
+    '-map',
+    '[hashout]',
+    '-f',
+    'rawvideo',
+    '-pix_fmt',
+    'gray',
+    'pipe:1',
   ]);
 
   const allFiles = readdirSync(framesDir)
@@ -55,11 +64,19 @@ export async function extractFrames(inputPath: string, outDir: string): Promise<
     .sort();
   console.log(`Sampled ${allFiles.length} frames.`);
 
+  if (rasters.length !== allFiles.length * 64) {
+    console.warn(`ffmpeg returned ${rasters.length} hash bytes for ${allFiles.length} frames; unmatched frames will be kept.`);
+  }
+
   const kept: FrameRef[] = [];
   let lastHash: Uint8Array | null = null;
   for (const [i, file] of allFiles.entries()) {
-    const fullPath = join(framesDir, file);
-    const hash = await aHash(fullPath);
+    if ((i + 1) * 64 > rasters.length) {
+      const ts = i * SAMPLE_EVERY_SEC;
+      kept.push({ ts: timestamp(ts), seconds: ts, file });
+      continue;
+    }
+    const hash = aHash(rasters.subarray(i * 64, (i + 1) * 64));
     if (lastHash === null || hamming(lastHash, hash) >= HAMMING_THRESHOLD) {
       const ts = i * SAMPLE_EVERY_SEC;
       kept.push({ ts: timestamp(ts), seconds: ts, file });

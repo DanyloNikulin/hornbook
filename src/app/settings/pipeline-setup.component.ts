@@ -14,6 +14,7 @@ import {
 } from '../../lib/pipeline';
 import { TPipe } from '../i18n.pipe';
 import { ApiService } from '../api.service';
+import { DesktopService } from '../desktop.service';
 
 type CliState = 'checking' | 'installed' | 'missing';
 
@@ -43,6 +44,7 @@ const MODEL_COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity
 })
 export class PipelineSetupComponent {
   private readonly api = inject(ApiService);
+  protected readonly desktop = inject(DesktopService);
   private listTimer: ReturnType<typeof setTimeout> | undefined;
 
   readonly job = input.required<PipelineJob>();
@@ -225,6 +227,12 @@ export class PipelineSetupComponent {
   protected onDraft(key: ConnectionKey, value: string): void {
     this.draft()[key] = value;
     if (key.endsWith('_KEY') && value.trim().length >= 16) this.scheduleList();
+  }
+
+  protected async browsePath(key: ConnectionKey): Promise<void> {
+    if (key !== 'WHISPER_BIN' && key !== 'WHISPER_MODEL') return;
+    const selected = await this.desktop.chooseToolPath(key);
+    if (selected) this.onDraft(key, selected);
   }
 
   protected connView(key: ConnectionKey): ConnectionView | undefined {

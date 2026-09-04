@@ -2,7 +2,7 @@
 // Places are the three kinds of connector: a local CLI, a box on the LAN
 // (Ollama), or a remote API. Not every job has every place.
 
-import type { ConnectionKey } from './api-types';
+import type { ConnectionKey } from './api-types.js';
 
 export type PipelineJob = 'transcribe' | 'extract';
 export type PlaceId = 'skip' | 'cli' | 'lan' | 'cloud';

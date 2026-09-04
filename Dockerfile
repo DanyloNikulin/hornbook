@@ -26,11 +26,7 @@ WORKDIR /app
 COPY --from=build /app/package.json /app/package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/server ./server
-COPY --from=build /app/scripts ./scripts
-COPY --from=build /app/src/lib ./src/lib
 COPY --from=build /app/journal ./journal
-COPY --from=build /app/tsconfig.json /app/tsconfig.scripts.json ./
 VOLUME ["/journal"]
 EXPOSE 8787
-CMD ["node", "--import", "tsx", "server/cli.ts", "--no-open"]
+CMD ["node", "dist/node/server/cli.js", "serve"]

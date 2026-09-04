@@ -29,6 +29,8 @@ const PROCESS_STAGES: readonly ProcessStageId[] = ['hearing', 'slides', 'writing
 
 export interface JobRunnerOptions {
   repoRoot: string;
+  /** Real directory for child processes; packaged repoRoot may be app.asar. */
+  cwd?: string;
   journalDir: () => string;
   env: () => NodeJS.ProcessEnv;
   /** Injectable for tests. */
@@ -37,6 +39,8 @@ export interface JobRunnerOptions {
   runner?: (script: string) => { cmd: string; args: string[] };
   /** Called once a job has ended, done or failed. */
   onFinish?: (job: JobView) => void;
+  /** Called after queue/running state changes. */
+  onChange?: (active: number) => void;
 }
 
 interface Job extends JobView {
@@ -124,6 +128,7 @@ export class JobRunner {
     this.queue.push(id);
     this.trim();
     this.pump();
+    this.changed();
     return this.view(job);
   }
 
@@ -138,6 +143,10 @@ export class JobRunner {
       .filter((j): j is Job => !!j && (!section || j.section === section))
       .map((j) => this.view(j))
       .reverse();
+  }
+
+  activeCount(): number {
+    return this.queue.length + (this.running ? 1 : 0);
   }
 
   /**
@@ -196,7 +205,7 @@ export class JobRunner {
     let child: ChildProcess;
     try {
       child = this.spawnFn(job.cmd, job.args, {
-        cwd: this.opts.repoRoot,
+        cwd: this.opts.cwd ?? this.opts.repoRoot,
         env: this.opts.env(),
       });
     } catch (err) {
@@ -247,6 +256,11 @@ export class JobRunner {
     if (this.running?.job === job) this.running = null;
     this.opts.onFinish?.(this.view(job));
     this.pump();
+    this.changed();
+  }
+
+  private changed(): void {
+    this.opts.onChange?.(this.activeCount());
   }
 
   private applyStageChunk(job: Job, text: string): void {

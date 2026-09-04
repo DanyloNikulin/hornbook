@@ -35,6 +35,13 @@ export function isAuthorized(req: Pick<IncomingMessage, 'headers'>, password: st
   return !!creds && safeEqual(creds.password, password);
 }
 
+/** Per-launch Electron token carried in a header the renderer cannot forge from another origin. */
+export function isLaunchAuthorized(req: Pick<IncomingMessage, 'headers'>, token: string): boolean {
+  const header = req.headers['x-hornbook-token'];
+  const value = Array.isArray(header) ? header[0] : header;
+  return typeof value === 'string' && safeEqual(value, token);
+}
+
 export function challenge(res: ServerResponse): void {
   res.writeHead(401, {
     'WWW-Authenticate': `Basic realm="${REALM}", charset="UTF-8"`,

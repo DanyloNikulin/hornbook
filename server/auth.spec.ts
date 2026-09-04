@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { credentialsFromHeader, isAuthorized } from './auth.ts';
+import { credentialsFromHeader, isAuthorized, isLaunchAuthorized } from './auth.ts';
 
 const basic = (user: string, pass: string): string => `Basic ${Buffer.from(`${user}:${pass}`).toString('base64')}`;
 
@@ -17,5 +17,11 @@ describe('Basic auth', () => {
     expect(isAuthorized({ headers: { authorization: basic('anyone', 'pw ') } }, 'pw')).toBe(false);
     expect(isAuthorized({ headers: { authorization: basic('anyone', '') } }, 'pw')).toBe(false);
     expect(isAuthorized({ headers: {} }, 'pw')).toBe(false);
+  });
+
+  it('checks the per-launch Electron token without accepting near misses', () => {
+    expect(isLaunchAuthorized({ headers: { 'x-hornbook-token': 'launch-secret' } }, 'launch-secret')).toBe(true);
+    expect(isLaunchAuthorized({ headers: { 'x-hornbook-token': 'launch-secret ' } }, 'launch-secret')).toBe(false);
+    expect(isLaunchAuthorized({ headers: {} }, 'launch-secret')).toBe(false);
   });
 });

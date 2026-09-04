@@ -11,6 +11,8 @@ import { SectionService } from '../section.service';
 import { SettingsNavComponent } from './settings-nav.component';
 import { PipelineSetupComponent } from './pipeline-setup.component';
 import { LocalSetupComponent } from './local-setup.component';
+import { DesktopService } from '../desktop.service';
+import { UpdateService } from '../update.service';
 
 /**
  * Journal-wide settings: interface language, default models, connection keys.
@@ -26,6 +28,8 @@ export class AppSettingsComponent {
   private readonly api = inject(ApiService);
   private readonly i18n = inject(I18nService);
   private readonly route = inject(ActivatedRoute);
+  protected readonly desktop = inject(DesktopService);
+  protected readonly updates = inject(UpdateService);
 
   protected readonly locales = SUPPORTED_LOCALES;
   protected readonly localeMeta = LOCALE_META;
@@ -58,6 +62,31 @@ export class AppSettingsComponent {
 
   protected setLocale(id: LocaleId): void {
     this.i18n.set(id);
+  }
+
+  protected async chooseJournal(): Promise<void> {
+    await this.desktop.chooseJournal();
+  }
+
+  protected async openJournal(): Promise<void> {
+    await this.desktop.openJournal();
+  }
+
+  protected async chooseFfmpeg(): Promise<void> {
+    const path = await this.desktop.chooseToolPath('FFMPEG_BIN');
+    if (path) this.connectionInput['FFMPEG_BIN'] = path;
+  }
+
+  protected async setStartWithSystem(value: boolean): Promise<void> {
+    await this.desktop.setPreferences({ startWithSystem: value });
+  }
+
+  protected async setAutomaticUpdates(value: boolean): Promise<void> {
+    await this.updates.setAutomatic(value);
+  }
+
+  protected checkUpdates(): void {
+    void this.updates.check(true);
   }
 
   private async load(): Promise<void> {

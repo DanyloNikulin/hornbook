@@ -8,6 +8,7 @@ import { TPipe } from './i18n.pipe';
 import { JournalService } from './journal.service';
 import { SectionService } from './section.service';
 import { ThemeService } from './theme.service';
+import { UpdateService } from './update.service';
 
 @Component({
   selector: 'app-root',
@@ -24,6 +25,8 @@ export class AppComponent {
   protected readonly stockTagline = computed(() => isStockTagline(this.tagline()));
   protected readonly sections = computed(() => this.journal.sections());
   protected readonly serverError = computed(() => this.journal.loadError());
+  protected readonly updates = inject(UpdateService);
+  protected readonly updateBanner = this.updates.banner;
 
   private readonly themeService = inject(ThemeService);
   protected readonly theme = this.themeService.mode;
@@ -59,6 +62,14 @@ export class AppComponent {
 
   protected toggleMenu(): void {
     this.menuOpen.update((v) => !v);
+  }
+
+  protected dismissUpdate(): void {
+    this.updates.dismiss();
+  }
+
+  protected restartToUpdate(): void {
+    void this.updates.restart();
   }
 
   /** Switch to another section, keeping the same page when it exists there. */

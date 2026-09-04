@@ -82,7 +82,9 @@ function parseArgs(argv: string[]): Args {
     date: args.date,
     title: args.title,
     from,
-    workdir: args.workdir ?? join(repoRootDir(), 'work', basename(args.input, extname(args.input))),
+    workdir:
+      args.workdir ??
+      join(process.env['HORNBOOK_WORK']?.trim() || join(repoRootDir(), 'work'), basename(args.input, extname(args.input))),
   };
 }
 

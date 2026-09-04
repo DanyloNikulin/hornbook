@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { languageName, speechLocale } from './languages';
+import { languageName, speechLocale } from './languages.js';
 
-export { languageName, speechLocale, LANGUAGE_CODES as SETUP_LANGUAGE_CODES } from './languages';
+export { languageName, speechLocale, LANGUAGE_CODES as SETUP_LANGUAGE_CODES } from './languages.js';
 
 const Iso639 = z
   .string()

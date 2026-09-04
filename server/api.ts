@@ -8,6 +8,7 @@ import { FolderStore, HttpError, type DerivedKind } from './store.ts';
 import type { JobRunner } from './jobs.ts';
 import { SETUP_SECTION, type SetupApi } from './setup.ts';
 import type { StartJob } from '../src/lib/api-types.ts';
+import type { ReleaseChecker } from './releases.ts';
 
 const MAX_BODY_BYTES = 512 * 1024 * 1024; // base64 uploads of lesson video
 
@@ -25,6 +26,9 @@ export interface ApiContext {
   jobs: JobRunner;
   setup: SetupApi;
   mode: 'local' | 'hosted';
+  shell: 'browser' | 'electron';
+  version: string;
+  updates: ReleaseChecker;
 }
 
 type Handler = (req: IncomingMessage, res: ServerResponse, params: Record<string, string>, body: () => Promise<unknown>) => Promise<unknown> | unknown;
@@ -53,8 +57,12 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
   };
   const { store } = ctx;
 
-  on('GET', '/api/mode', () => ({ mode: ctx.mode, journal: store.dir }));
+  on('GET', '/api/mode', () => ({ mode: ctx.mode, journal: store.dir, shell: ctx.shell, version: ctx.version }));
   on('GET', '/api/config', () => store.config());
+  on('GET', '/api/update', (req) => {
+    const force = new URL(req.url ?? '/', 'http://localhost').searchParams.get('force') === '1';
+    return ctx.updates.check(force);
+  });
 
   on('POST', '/api/sections', async (_r, _s, _p, body) => store.createSection(await body()));
   on('PATCH', '/api/sections/:id', async (_r, _s, p, body) => store.updateSection(p['id'], await body()));
@@ -129,6 +137,7 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
     if (!job) throw new HttpError(404, `No job "${p['id']}"`);
     return job;
   });
+  on('GET', '/api/jobs', () => ctx.jobs.list());
 
   on('GET', '/api/sections/:id/files', (_r, _s, p) => store.listFiles(p['id']));
 

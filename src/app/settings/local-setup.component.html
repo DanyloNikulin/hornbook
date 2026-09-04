@@ -32,6 +32,9 @@
             @if (s.installed && s.source !== 'none') { · {{ ('setup.source.' + s.source) | t }} }
             @if (s.version) { · {{ s.version }} }
           </span>
+          @if (s.update) {
+            <span class="il-setup-pill il-setup-pill--update">{{ 'setup.status.update' | t: { version: s.update.targetVersion } }}</span>
+          }
         </div>
         <p class="il-settings-help" style="margin: 4px 0 0;">{{ s.detail }}</p>
         @if (s.path) { <p class="il-setup-path">{{ s.path }}</p> }
@@ -73,11 +76,11 @@
         }
 
         @if (row(id); as r) {
-          @if (!s.installed || isModelRow(id)) {
+          @if (!s.installed || s.update || isModelRow(id)) {
             <div class="il-setup-actions">
               @if (r.phase === 'idle' || r.phase === 'failed' || r.phase === 'done') {
                 <button type="button" class="il-btn ghost sm" [disabled]="allRunning() || (id === 'ollama-model' && !v.ollama.running)" (click)="prepare(id)">
-                  {{ (id === 'ollama-model' ? 'setup.action.pull' : 'setup.action.download') | t }}
+                  {{ (s.update ? 'setup.action.update' : id === 'ollama-model' ? 'setup.action.pull' : 'setup.action.download') | t }}
                 </button>
               }
               @if (v.commands[id]; as cmd) {

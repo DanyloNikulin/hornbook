@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { machineInfo, managedWhisperModels, toolStatuses, toolsEnv, type ToolsDeps } from './tools.ts';
+import { applyManagedUpdateEntries, machineInfo, managedWhisperModels, toolStatuses, toolsEnv, type ToolsDeps } from './tools.ts';
+import type { ToolStatus } from '../src/lib/api-types.ts';
 
 const DIR = 'C:\\t';
 const win = (over: Partial<ToolsDeps> = {}): ToolsDeps => ({
@@ -52,6 +53,24 @@ describe('toolsEnv', () => {
 describe('managedWhisperModels', () => {
   it('reads model names from ggml file names only', () => {
     expect(managedWhisperModels(['ggml-large-v3-turbo.bin', 'ggml-small.bin.part', 'README'])).toEqual(['large-v3-turbo']);
+  });
+});
+
+describe('managed tool updates', () => {
+  it('marks only Hornbook-managed tools whose pinned release moved', () => {
+    const rows: ToolStatus[] = [
+      { id: 'ffmpeg', installed: true, source: 'managed', detail: '' },
+      { id: 'whisper', installed: true, source: 'system', detail: '' },
+      { id: 'ollama', installed: true, source: 'managed', detail: '' },
+    ];
+    applyManagedUpdateEntries(rows, [
+      { tool: 'ffmpeg', version: 'old-ffmpeg' },
+      { tool: 'whisper', version: 'old-whisper' },
+      { tool: 'ollama', version: '0.0.1' },
+    ]);
+    expect(rows[0].update).toMatchObject({ installedVersion: 'old-ffmpeg', targetVersion: 'n9.0' });
+    expect(rows[1].update).toBeUndefined();
+    expect(rows[2].update).toMatchObject({ installedVersion: '0.0.1' });
   });
 });
 
