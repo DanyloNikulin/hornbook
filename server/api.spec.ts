@@ -63,6 +63,52 @@ describe('API — sections and errors', () => {
   });
 });
 
+describe('API — lesson transfers', () => {
+  const lesson = {
+    id: '2026-09-04-api-transfer',
+    date: '2026-09-04',
+    slug: 'api-transfer',
+    title: 'API transfer',
+    summary: 'A lesson for the transfer routes.',
+    article_md: '# Transfer',
+    vocabulary: [{ target: 'ciao', learner: 'hello' }],
+  };
+
+  it('exports canonical JSON and returns a structured conflict on re-import', async () => {
+    expect((await api('/api/sections/it-en/lessons/import', post({ lesson }))).status).toBe(200);
+
+    const exported = await api('/api/sections/it-en/lessons/api-transfer/export');
+    expect(exported.status).toBe(200);
+    expect(exported.headers.get('content-type')).toContain('application/json');
+    expect(exported.headers.get('content-disposition')).toContain('2026-09-04-api-transfer.json');
+    const canonical = (await exported.json()) as { vocabulary: { id: string }[] };
+    expect(canonical.vocabulary[0].id).toBe('2026-09-04-api-transfer:vocab:001');
+
+    const conflict = await api('/api/sections/it-en/lessons/import', post({ lesson: canonical }));
+    expect(conflict.status).toBe(409);
+    expect((await conflict.json()) as unknown).toMatchObject({
+      details: { conflicts: [{ slug: 'api-transfer', incomingId: '2026-09-04-api-transfer' }] },
+    });
+
+    const kept = await json<{ lesson: { slug: string } }>(
+      '/api/sections/it-en/lessons/import',
+      post({ lesson: canonical, conflict: 'keep-both' }),
+    );
+    expect(kept.lesson.slug).toBe('api-transfer-2');
+    await api('/api/sections/it-en/lessons/api-transfer', { method: 'DELETE' });
+    await api('/api/sections/it-en/lessons/api-transfer-2', { method: 'DELETE' });
+  });
+
+  it('streams a pair ZIP', async () => {
+    const exported = await api('/api/sections/it-en/export');
+    expect(exported.status).toBe(200);
+    expect(exported.headers.get('content-type')).toBe('application/zip');
+    expect(exported.headers.get('content-disposition')).toContain('it-en.hornbook.zip');
+    const bytes = new Uint8Array(await exported.arrayBuffer());
+    expect([...bytes.slice(0, 2)]).toEqual([0x50, 0x4b]);
+  });
+});
+
 describe('API — backdrop image', () => {
   it('404s until an image is uploaded', async () => {
     expect((await api('/api/sections/it-en/backdrop')).status).toBe(404);

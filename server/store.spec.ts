@@ -106,6 +106,22 @@ describe('FolderStore — lessons and derived data', () => {
     expect(JSON.parse(store.derived('es-en', 'search-index'))).toHaveLength(2);
   });
 
+  it('rebuilds derived data created before the current format', () => {
+    store.saveLesson('es-en', lesson('greetings'));
+    rmSync(join(dir, 'es-en', '_derived', 'format.json'));
+    writeFileSync(
+      join(dir, 'es-en', '_derived', 'vocab.json'),
+      JSON.stringify([{ target: 'hola', learner: 'hello', first_seen: 'greetings' }]),
+    );
+
+    const vocab = JSON.parse(store.derived('es-en', 'vocab')) as { id: string; source_ids: string[] }[];
+    expect(vocab[0]).toMatchObject({
+      id: '2026-01-01-greetings:vocab:001',
+      source_ids: ['2026-01-01-greetings:vocab:001'],
+    });
+    expect(JSON.parse(readFileSync(join(dir, 'es-en', '_derived', 'format.json'), 'utf8'))).toEqual({ version: 2 });
+  });
+
   it('rejects an invalid lesson and a slug taken by another date', () => {
     expect(() => store.saveLesson('es-en', { id: 'x' })).toThrow(HttpError);
     store.saveLesson('es-en', lesson('greetings', '2026-01-01'));
@@ -113,6 +129,33 @@ describe('FolderStore — lessons and derived data', () => {
     // Same date + slug is an overwrite, not a conflict.
     store.saveLesson('es-en', lesson('greetings', '2026-01-01', { title: 'Updated' }));
     expect(store.lesson('es-en', 'greetings').title).toBe('Updated');
+  });
+
+  it('imports a lesson only after an explicit conflict choice', () => {
+    store.saveLesson('es-en', lesson('greetings', '2026-01-01', { title: 'Existing' }));
+    const incoming = lesson('greetings', '2026-02-02', { title: 'Imported' });
+
+    expect(() => store.importLesson('es-en', { lesson: incoming })).toThrow(HttpError);
+    expect(store.lesson('es-en', 'greetings').title).toBe('Existing');
+
+    const kept = store.importLesson('es-en', { lesson: incoming, conflict: 'keep-both' });
+    expect(kept.action).toBe('kept-both');
+    expect(kept.lesson.slug).toBe('greetings-2');
+    expect(kept.lesson.vocabulary[0].id).toBe('2026-02-02-greetings-2:vocab:001');
+
+    const replaced = store.importLesson('es-en', { lesson: incoming, conflict: 'replace' });
+    expect(replaced.action).toBe('replaced');
+    expect(store.lesson('es-en', 'greetings').title).toBe('Imported');
+    expect(existsSync(join(dir, 'es-en', '2026-01-01-greetings.json'))).toBe(false);
+  });
+
+  it('exports a lesson as canonical JSON with stable content ids', () => {
+    store.saveLesson('es-en', lesson('greetings'));
+    const exported = store.exportLesson('es-en', 'greetings');
+    const body = JSON.parse(exported.data.toString('utf8')) as { id: string; vocabulary: { id: string }[] };
+    expect(exported.filename).toBe('2026-01-01-greetings.json');
+    expect(body.id).toBe('2026-01-01-greetings');
+    expect(body.vocabulary[0].id).toBe('2026-01-01-greetings:vocab:001');
   });
 
   it('returns 404-style errors for unknown sections and lessons', () => {
@@ -128,6 +171,81 @@ describe('FolderStore — lessons and derived data', () => {
     store.saveLesson('es-en', lesson('old', '2026-01-01'));
     store.saveLesson('es-en', lesson('new', '2026-03-01'));
     expect(store.lessonMetas('es-en').map((m) => m.slug)).toEqual(['new', 'old']);
+  });
+});
+
+describe('FolderStore — pair transfers', () => {
+  it('restores a pair into a fresh journal and reports conflicts before a merge', () => {
+    store.createSection({ target: 'it', learner: 'en', title: 'Italiano' });
+    const saved = store.saveLesson('it-en', lesson('saluti', '2026-03-04'));
+    store.saveProgress('it-en', {
+      sm2: {
+        [`${saved.vocabulary[0].id}:target-learner`]: {
+          interval: 6,
+          ef: 2.5,
+          repetitions: 2,
+          due: '2026-03-10',
+        },
+      },
+      daily: null,
+      quiz: { saluti: { best_score: 2, total: 3, attempts: 1, last_at: '2026-03-04T12:00:00Z' } },
+      activity: { '2026-03-04': 3 },
+    });
+    writeFileSync(
+      join(dir, 'it-en', '_cheatsheet.json'),
+      JSON.stringify({ processed_lessons: ['saluti'], categories: [] }),
+    );
+    writeFileSync(
+      join(dir, 'it-en', '_topics.json'),
+      JSON.stringify({ categories: [], topics: [{ id: 'remote', categories: [], patterns: [] }] }),
+    );
+    store.saveBackdrop('it-en', { filename: 'remote.png', base64: Buffer.from([1, 2, 3]).toString('base64') });
+    const archive = store.exportSection('it-en', true);
+
+    const destination = mkdtempSync(join(tmpdir(), 'hornbook-import-'));
+    try {
+      const importedStore = new FolderStore(destination);
+      const imported = importedStore.importSection({ base64: archive.data.toString('base64') });
+      expect(imported).toMatchObject({ created: true, imported: 1, keptBoth: 0, progressImported: true });
+      expect(importedStore.lesson('it-en', 'saluti')).toEqual(saved);
+      expect(importedStore.progress('it-en').quiz['saluti']?.best_score).toBe(2);
+      expect(existsSync(join(destination, 'it-en', '_derived', 'cards.json'))).toBe(true);
+      expect(readFileSync(importedStore.backdropPath('it-en')!)).toEqual(Buffer.from([1, 2, 3]));
+
+      expect(() => importedStore.importSection({ base64: archive.data.toString('base64') })).toThrow(HttpError);
+      expect(importedStore.config().sections[0].lessonCount).toBe(1);
+
+      importedStore.updateSection('it-en', { title: 'Local pair', theme: { primary: '#123456' } });
+      writeFileSync(
+        join(destination, 'it-en', '_cheatsheet.json'),
+        JSON.stringify({ processed_lessons: ['local-only'], categories: [] }),
+      );
+      writeFileSync(
+        join(destination, 'it-en', '_topics.json'),
+        JSON.stringify({ categories: [], topics: [{ id: 'local', categories: [], patterns: [] }] }),
+      );
+      importedStore.saveBackdrop('it-en', {
+        filename: 'local.png',
+        base64: Buffer.from([9, 8, 7]).toString('base64'),
+      });
+
+      const kept = importedStore.importSection({ base64: archive.data.toString('base64'), conflict: 'keep-both' });
+      expect(kept.keptBoth).toBe(1);
+      expect(importedStore.lesson('it-en', 'saluti-2').id).toBe('2026-03-04-saluti-2');
+      expect(Object.keys(importedStore.progress('it-en').sm2)).toEqual([
+        '2026-03-04-saluti:vocab:001:target-learner',
+      ]);
+      expect(importedStore.section('it-en')).toMatchObject({ title: 'Local pair', theme: { primary: '#123456' } });
+      expect(importedStore.cheatsheet('it-en').processed_lessons).toEqual(['local-only']);
+      const localTopics = JSON.parse(readFileSync(join(destination, 'it-en', '_topics.json'), 'utf8')) as {
+        topics: { id: string }[];
+      };
+      expect(localTopics.topics.map((topic) => topic.id)).toEqual(['local']);
+      expect(readFileSync(importedStore.backdropPath('it-en')!)).toEqual(Buffer.from([9, 8, 7]));
+    } finally {
+      rmSync(destination, { recursive: true, force: true });
+      setJournalDir(dir);
+    }
   });
 });
 
@@ -154,5 +272,15 @@ describe('FolderStore — progress', () => {
     mkdirSync(join(dir, 'es-en'), { recursive: true });
     writeFileSync(join(dir, 'es-en', '_progress.json'), JSON.stringify({ sm2: 'nope' }));
     expect(store.progress('es-en').sm2).toEqual({});
+  });
+
+  it('maps legacy content-hash card state onto lesson-scoped card ids', () => {
+    store.saveLesson('es-en', lesson('greetings'));
+    const cards = JSON.parse(store.derived('es-en', 'cards')) as { id: string; legacy_id?: string }[];
+    const card = cards.find((entry) => entry.legacy_id);
+    expect(card?.legacy_id).toBeTruthy();
+    const state = { interval: 6, ef: 2.5, repetitions: 2, due: '2026-01-07' };
+    store.saveProgress('es-en', { sm2: { [card!.legacy_id!]: state }, daily: null, quiz: {}, activity: {} });
+    expect(store.progress('es-en').sm2[card!.id]).toEqual(state);
   });
 });

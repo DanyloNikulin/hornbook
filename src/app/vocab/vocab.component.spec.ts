@@ -3,6 +3,8 @@ import type { DerivedVocabT } from '../../lib/schema';
 import { sortVocabEntries, vocabInitial } from './vocab.component';
 
 const entry = (target: string, learner = target): DerivedVocabT => ({
+  id: `2026-09-04-lesson-one:vocab:${target}`,
+  source_ids: [`2026-09-04-lesson-one:vocab:${target}`],
   target,
   learner,
   level: null,

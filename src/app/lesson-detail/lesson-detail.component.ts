@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, resource } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, resource, signal } from '@angular/core';
 import { SectionService } from '../section.service';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -9,6 +9,8 @@ import { TPipe } from '../i18n.pipe';
 import { QuizComponent } from '../quiz/quiz.component';
 import { REPO_URL } from '../constants';
 import type { LessonT, LessonMetaT } from '../../lib/schema';
+import { ApiService, saveBrowserDownload } from '../api.service';
+import { I18nService } from '../i18n.service';
 
 @Component({
   selector: 'app-lesson-detail',
@@ -20,6 +22,11 @@ export class LessonDetailComponent {
   protected readonly sec = inject(SectionService);
   private readonly lessons = inject(LessonsService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly api = inject(ApiService);
+  private readonly i18n = inject(I18nService);
+
+  protected readonly exporting = signal(false);
+  protected readonly exportError = signal<string | null>(null);
 
   readonly slug = input.required<string>();
 
@@ -96,6 +103,22 @@ export class LessonDetailComponent {
 
   protected reload(): void {
     this.lessonResource.reload();
+  }
+
+  protected async exportLesson(): Promise<void> {
+    const lesson = this.lesson();
+    if (!lesson || this.exporting()) return;
+    this.exporting.set(true);
+    this.exportError.set(null);
+    try {
+      const path = `${this.sec.apiBase()}/lessons/${encodeURIComponent(lesson.slug)}/export`;
+      const download = await this.api.download(path);
+      saveBrowserDownload(download.blob, download.filename ?? `${lesson.id}.json`);
+    } catch (error) {
+      this.exportError.set((error as Error).message);
+    } finally {
+      this.exporting.set(false);
+    }
   }
 
   protected flagUrl(): string {

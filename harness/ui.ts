@@ -192,6 +192,7 @@ async function main(): Promise<void> {
     await page.getByRole('link', { name: /New pair/i }).first().click();
     await seen('New language pair');
     r.rec('setup catalogue has the bundled languages', (await page.locator('.il-lang-option').count()) > 40);
+    r.rec('setup offers pair archive import', await page.getByRole('heading', { name: /Import a language pair/i }).isVisible());
     await shot('02-setup');
 
     r.section('application settings');
@@ -313,6 +314,7 @@ async function main(): Promise<void> {
     await seen('Takeaway');
     r.rec('lesson article renders', (await page.locator('.il-lesson-article').count()) > 0);
     r.rec('glossary cards render', (await page.locator('.il-vocab-card').count()) >= 3);
+    r.rec('lesson page offers canonical JSON export', await page.getByRole('button', { name: /Export JSON/i }).isVisible());
     const lessonRail = page.locator('.il-lesson-rail');
     r.rec('lesson page has the sticky section rail', await lessonRail.isVisible());
     r.rec('lesson number counts from the oldest lesson', /lesson 2/i.test(await page.locator('.il-lesson-num').innerText()));
@@ -403,6 +405,8 @@ async function main(): Promise<void> {
       const letter = String.fromCharCode(97 + (index % 26));
       const target = index === 0 ? 'hola' : index === 1 ? 'gusto' : `${letter} parola ${String(index + 1).padStart(3, '0')}`;
       return {
+        id: `2026-09-04-lesson-one:vocab:${String(index + 1).padStart(3, '0')}`,
+        source_ids: [`2026-09-04-lesson-one:vocab:${String(index + 1).padStart(3, '0')}`],
         target,
         learner: index === 0 ? 'hello' : index === 1 ? 'taste' : `word ${index + 1}`,
         level: ['A1', 'A2', 'B1', 'B2'][index % 4],
@@ -572,7 +576,7 @@ async function main(): Promise<void> {
     await goto('/es-en/compose');
     await seen('Add a conspect');
     const composeTabs = page.getByRole('tab');
-    r.rec('Add presents three input tabs', (await composeTabs.count()) === 3, `n=${await composeTabs.count()}`);
+    r.rec('Add presents four explicit input tabs', (await composeTabs.count()) === 4, `n=${await composeTabs.count()}`);
     const setupState = page.locator('.il-compose-setup-state');
     r.rec(
       'pipeline-not-ready state points at Local tools',
@@ -585,6 +589,23 @@ async function main(): Promise<void> {
     r.rec('file choice shows all five preflight stages', (await page.locator('.il-compose-steps li').count()) === 5);
     r.rec('file choice waits for Start', (await page.locator('.il-job').count()) === 0 && /Ready\. This is what Start will do/.test(await body()));
     await shot('12-es-compose');
+
+    await page.getByRole('tab', { name: /Import a lesson/i }).click();
+    const demoLessonFile = join(repoRoot, 'journal', 'es-en', '2026-01-01-greetings.json');
+    await page.locator('#compose-panel-import input[type=file]').setInputFiles(demoLessonFile);
+    const beforeExpectedConflict = pageErrors.length;
+    await page.getByRole('button', { name: /^Import lesson$/i }).click();
+    await page.getByText(/already here/i).waitFor({ timeout: 10_000 });
+    r.rec(
+      'lesson import stops on a clash and offers both choices',
+      await page.getByRole('button', { name: /^Keep both$/i }).isVisible() &&
+        await page.getByRole('button', { name: /Replace existing/i }).isVisible(),
+    );
+    const unexpectedImportErrors = pageErrors
+      .slice(beforeExpectedConflict)
+      .filter((message) => !/status of 409 \(Conflict\)/i.test(message));
+    pageErrors.splice(beforeExpectedConflict, pageErrors.length - beforeExpectedConflict, ...unexpectedImportErrors);
+    await page.getByRole('tab', { name: /recording/i }).click();
 
     const jobStart = new Date(Date.now() - 72_000).toISOString();
     const writingStart = new Date(Date.now() - 24_000).toISOString();
@@ -669,6 +690,7 @@ async function main(): Promise<void> {
     await seen('This pair');
     const presets = page.locator('.il-preset');
     r.rec('pair settings show the theme presets', (await presets.count()) >= 6, `n=${await presets.count()}`);
+    r.rec('pair settings offer ZIP export with optional progress', await page.getByRole('button', { name: /Export pair/i }).isVisible() && await page.getByText(/Include study progress/i).isVisible());
     await presets.nth(2).click();
     await page.waitForTimeout(300);
     await shot('13-es-pair-settings');

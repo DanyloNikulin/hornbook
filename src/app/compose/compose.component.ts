@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Lesson, type LessonT } from '../../lib/schema';
 import type { JobStageView, JobView } from '../../lib/api-types';
+import type { ImportConflictStrategy, LessonImportConflict, LessonImportResult } from '../../lib/api-types';
 import { LessonsService } from '../lessons.service';
 import { VocabService } from '../vocab.service';
 import { CardsService } from '../cards.service';
@@ -14,9 +15,10 @@ import { JournalService } from '../journal.service';
 import { TPipe } from '../i18n.pipe';
 import { I18nService } from '../i18n.service';
 import { JobsService } from '../jobs.service';
+import { ApiError, ApiService, fileToBase64 } from '../api.service';
 
 type From = 'video' | 'audio' | 'transcript' | 'json';
-type ComposeMode = 'hand' | 'transcript' | 'recording';
+type ComposeMode = 'hand' | 'transcript' | 'recording' | 'import';
 
 const ACCEPTED_EXTENSIONS = new Set([
   '.mp4',
@@ -31,7 +33,6 @@ const ACCEPTED_EXTENSIONS = new Set([
   '.txt',
   '.vtt',
   '.srt',
-  '.json',
 ]);
 
 @Component({
@@ -51,6 +52,7 @@ export class ComposeComponent {
   private readonly router = inject(Router);
   private readonly i18n = inject(I18nService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly api = inject(ApiService);
 
   protected title = '';
   protected date = new Date().toISOString().slice(0, 10);
@@ -63,6 +65,8 @@ export class ComposeComponent {
   protected readonly busy = signal(false);
   protected readonly activeMode = signal<ComposeMode>('recording');
   protected readonly pickedFile = signal<File | null>(null);
+  protected readonly importFile = signal<File | null>(null);
+  protected readonly importConflict = signal<LessonImportConflict | null>(null);
   protected readonly dragActive = signal(false);
   protected readonly now = signal(Date.now());
   protected readonly logCopied = signal(false);
@@ -221,10 +225,53 @@ export class ComposeComponent {
     this.ok.set(null);
     this.busy.set(true);
     try {
-      const base64 = await toBase64(file);
+      const base64 = await fileToBase64(file);
       await this.runProcess(file.name, base64, inferFrom(file.name));
     } catch (err) {
       this.error.set((err as Error).message);
+      this.busy.set(false);
+    }
+  }
+
+  protected onImportFile(ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) {
+      this.importFile.set(file);
+      this.importConflict.set(null);
+      this.error.set(null);
+      this.ok.set(null);
+    }
+    input.value = '';
+  }
+
+  protected clearImportFile(): void {
+    this.importFile.set(null);
+    this.importConflict.set(null);
+    this.error.set(null);
+  }
+
+  protected async importLesson(strategy: ImportConflictStrategy = 'error'): Promise<void> {
+    const file = this.importFile();
+    if (!file || this.busy()) return;
+    this.busy.set(true);
+    this.error.set(null);
+    this.ok.set(null);
+    try {
+      const lesson: unknown = JSON.parse(await file.text());
+      const result = await this.api.post<LessonImportResult>(`${this.sec.apiBase()}/lessons/import`, {
+        lesson,
+        conflict: strategy,
+      });
+      await this.lessons.reload();
+      this.invalidate();
+      this.importConflict.set(null);
+      await this.router.navigate(this.sec.link('lesson', result.lesson.slug));
+    } catch (error) {
+      const conflict = error instanceof ApiError && error.status === 409 ? firstConflict(error.details) : null;
+      this.importConflict.set(conflict);
+      if (!conflict) this.error.set((error as Error).message);
+    } finally {
       this.busy.set(false);
     }
   }
@@ -362,19 +409,22 @@ function extensionOf(name: string): string {
   return dot <= 0 ? '' : name.toLowerCase().slice(dot);
 }
 
-function toBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
 export function formatJobElapsed(job: Pick<JobView, 'createdAt' | 'startedAt' | 'finishedAt'>, now = Date.now()): string {
   const start = Date.parse(job.startedAt ?? job.createdAt);
   const end = job.finishedAt ? Date.parse(job.finishedAt) : now;
   return formatDuration(Math.max(0, end - start));
+}
+
+function firstConflict(details: unknown): LessonImportConflict | null {
+  if (!details || typeof details !== 'object') return null;
+  const conflicts = (details as { conflicts?: unknown }).conflicts;
+  if (!Array.isArray(conflicts) || conflicts.length === 0) return null;
+  const first: unknown = conflicts[0];
+  if (!first || typeof first !== 'object') return null;
+  const value = first as Record<string, unknown>;
+  return typeof value['slug'] === 'string' && typeof value['incomingId'] === 'string' && typeof value['existingId'] === 'string'
+    ? { slug: value['slug'], incomingId: value['incomingId'], existingId: value['existingId'] }
+    : null;
 }
 
 export function formatStageElapsed(stage: Pick<JobStageView, 'status' | 'startedAt' | 'finishedAt'>, now = Date.now()): string {

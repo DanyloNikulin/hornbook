@@ -91,6 +91,22 @@ describe('schema — Lesson shape', () => {
       expect(result.data.quiz).toEqual([]);
     }
   });
+
+  it('canonicalises the lesson id and gives vocab and cards lesson-scoped ids', () => {
+    const result = Lesson.parse({
+      id: 'ignored',
+      date: '2026-05-23',
+      slug: 'stable-ids',
+      title: 'Stable ids',
+      summary: 'A summary',
+      article_md: '# Notes',
+      vocabulary: [{ target: 'casa', learner: 'house' }],
+      flashcards: [{ front: 'ciao', back: 'hello', type: 'word' }],
+    });
+    expect(result.id).toBe('2026-05-23-stable-ids');
+    expect(result.vocabulary[0].id).toBe('2026-05-23-stable-ids:vocab:001');
+    expect(result.flashcards[0].id).toBe('2026-05-23-stable-ids:card:001');
+  });
 });
 
 describe('schema — multiple-choice questions', () => {
@@ -210,6 +226,8 @@ describe('schema — committed vocab', () => {
 
 describe('schema — DerivedVocab shape', () => {
   const validEntry = {
+    id: '2026-05-01-lesson-one:vocab:001',
+    source_ids: ['2026-05-01-lesson-one:vocab:001'],
     target: 'casa',
     learner: 'house',
     level: 'A1' as const,
@@ -296,6 +314,7 @@ describe('schema — committed derived cards', () => {
 describe('schema — DerivedCard shape', () => {
   const valid = {
     id: 'abc123',
+    source_ids: ['abc123'],
     front: 'la casa',
     back: 'будинок',
     direction: 'target-learner' as const,

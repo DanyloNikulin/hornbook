@@ -18,6 +18,7 @@ import {
 } from '../../src/lib/schema.ts';
 import { deriveExpectedFromBack } from '../../src/lib/card-text.ts';
 import { cardId } from '../../src/lib/sm2.ts';
+import { studyCardId } from '../../src/lib/content-ids.ts';
 import { articleRegexFor } from '../../src/lib/articles.ts';
 
 export interface SearchDoc {
@@ -71,8 +72,8 @@ export function lessonMeta(l: LessonT): LessonMetaT {
 export function buildDerived(lessons: readonly LessonT[], targetLang: string): DerivedBundle {
   assertUniqueSlugs(lessons);
 
-  const lessonsAsc = [...lessons].sort((a, b) => (a.date < b.date ? -1 : 1));
-  const lessonsDesc = [...lessons].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const lessonsAsc = [...lessons].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  const lessonsDesc = [...lessons].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
 
   // ── metas ──
   const metas = lessonsDesc.map(lessonMeta);
@@ -88,6 +89,8 @@ export function buildDerived(lessons: readonly LessonT[], targetLang: string): D
       const existing = vocabByKey.get(key);
       if (!existing) {
         vocabByKey.set(key, {
+          id: v.id,
+          source_ids: [v.id],
           target: v.target,
           learner: v.learner,
           level: v.level ?? null,
@@ -99,6 +102,7 @@ export function buildDerived(lessons: readonly LessonT[], targetLang: string): D
         });
       } else {
         existing.seen_in.push(lesson.slug);
+        existing.source_ids.push(v.id);
       }
     }
   }
@@ -114,31 +118,36 @@ export function buildDerived(lessons: readonly LessonT[], targetLang: string): D
   );
 
   // ── cards ──
-  // Newest lesson first, vocabulary in global alphabetical order inside each
-  // lesson, then that lesson's AI cards. Untouched cards use pool order as
-  // their stable tie-breaker, so this keeps a learner's next-card sequence.
-  const cardsById = new Map<string, DerivedCardT>();
+  // Newest lesson first, then source order. The canonical ID comes from the
+  // first lesson-scoped source, while identical study content stays one card.
+  const cardsByContent = new Map<string, DerivedCardT>();
   const mergeCard = (card: DerivedCardT): void => {
-    const existing = cardsById.get(card.id);
+    const contentId = card.legacy_id ?? cardId(card.front, card.back);
+    const existing = cardsByContent.get(contentId);
     if (!existing) {
-      cardsById.set(card.id, card);
+      cardsByContent.set(contentId, card);
       return;
     }
-    cardsById.set(card.id, {
+    cardsByContent.set(contentId, {
       ...existing,
+      source_ids: dedupe([...existing.source_ids, ...card.source_ids]),
       source: existing.source === 'ai' || card.source === 'ai' ? 'ai' : existing.source,
       tags: dedupe([...existing.tags, ...card.tags]),
       lessons: dedupe([...existing.lessons, ...card.lessons]),
     });
   };
 
+  const addedVocab = new Set<string>();
   for (const lesson of lessonsDesc) {
     for (const v of vocab) {
-      if (!v.seen_in.includes(lesson.slug)) continue;
+      if (!v.seen_in.includes(lesson.slug) || addedVocab.has(v.id)) continue;
+      addedVocab.add(v.id);
       const tags = v.level ? [v.level] : [];
       const forwardBack = v.example_target ? `${v.learner}\n\n${v.example_target}` : v.learner;
       mergeCard({
-        id: cardId(v.target, forwardBack),
+        id: studyCardId(v.id, 'target-learner'),
+        source_ids: v.source_ids.map((id) => studyCardId(id, 'target-learner')),
+        legacy_id: cardId(v.target, forwardBack),
         front: v.target,
         back: forwardBack,
         direction: 'target-learner',
@@ -150,7 +159,9 @@ export function buildDerived(lessons: readonly LessonT[], targetLang: string): D
       });
       const reverseBack = v.example_target ? `${v.target}\n\n${v.example_target}` : v.target;
       mergeCard({
-        id: cardId(v.learner, reverseBack),
+        id: studyCardId(v.id, 'learner-target'),
+        source_ids: v.source_ids.map((id) => studyCardId(id, 'learner-target')),
+        legacy_id: cardId(v.learner, reverseBack),
         front: v.learner,
         back: reverseBack,
         direction: 'learner-target',
@@ -163,7 +174,9 @@ export function buildDerived(lessons: readonly LessonT[], targetLang: string): D
     }
     for (const flashcard of lesson.flashcards) {
       mergeCard({
-        id: cardId(flashcard.front, flashcard.back),
+        id: studyCardId(flashcard.id, 'target-learner'),
+        source_ids: [studyCardId(flashcard.id, 'target-learner')],
+        legacy_id: cardId(flashcard.front, flashcard.back),
         front: flashcard.front,
         back: flashcard.back,
         direction: 'target-learner',
@@ -175,7 +188,7 @@ export function buildDerived(lessons: readonly LessonT[], targetLang: string): D
       });
     }
   }
-  const cards = [...cardsById.values()];
+  const cards = [...cardsByContent.values()];
 
   // ── search docs ──
   const searchDocs: SearchDoc[] = [];

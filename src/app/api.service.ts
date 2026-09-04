@@ -37,6 +37,14 @@ export class ApiService {
     return this.request<T>('DELETE', path);
   }
 
+  async download(path: string): Promise<{ blob: Blob; filename: string | null }> {
+    const res = await fetch(path, { headers: { Accept: 'application/octet-stream' } });
+    await this.assertOk(res);
+    const disposition = res.headers.get('Content-Disposition') ?? '';
+    const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? null;
+    return { blob: await res.blob(), filename };
+  }
+
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const init: RequestInit = { method, headers: { Accept: 'application/json' } };
     if (body !== undefined) {
@@ -44,18 +52,39 @@ export class ApiService {
       init.body = JSON.stringify(body);
     }
     const res = await fetch(path, init);
-    if (!res.ok) {
-      let message = res.statusText || 'request failed';
-      let details: unknown;
-      try {
-        const payload = (await res.json()) as { error?: string; details?: unknown };
-        if (payload.error) message = payload.error;
-        details = payload.details;
-      } catch {
-        // non-JSON error body
-      }
-      throw new ApiError(res.status, message, details);
-    }
+    await this.assertOk(res);
     return (await res.json()) as T;
   }
+
+  private async assertOk(res: Response): Promise<void> {
+    if (res.ok) return;
+    let message = res.statusText || 'request failed';
+    let details: unknown;
+    try {
+      const payload = (await res.json()) as { error?: string; details?: unknown };
+      if (payload.error) message = payload.error;
+      details = payload.details;
+    } catch {
+      // non-JSON error body
+    }
+    throw new ApiError(res.status, message, details);
+  }
+}
+
+export function saveBrowserDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }

@@ -86,6 +86,19 @@
         @if (saved()) { <span style="color: var(--success);">{{ saved() }}</span> }
       </div>
 
+      <h2 class="il-compose-h">{{ 'transfer.pairExportTitle' | t }}</h2>
+      <p class="il-section-sub">{{ 'transfer.pairExportSub' | t }}</p>
+      <div class="il-transfer-card il-transfer-card--compact">
+        <span class="il-transfer-mark" aria-hidden="true">ZIP</span>
+        <label class="il-settings-check il-transfer-progress">
+          <input type="checkbox" [(ngModel)]="includeProgress" />
+          <span><strong>{{ 'transfer.includeProgress' | t }}</strong><small>{{ 'transfer.includeProgressSub' | t }}</small></span>
+        </label>
+        <button type="button" class="il-btn" [disabled]="exporting()" (click)="exportPair()">
+          {{ exporting() ? ('transfer.exporting' | t) : ('transfer.exportPairAction' | t) }}
+        </button>
+      </div>
+
       <h2 class="il-compose-h">{{ 'settings.maintenance' | t }}</h2>
       <p class="il-section-sub">{{ 'settings.maintenanceSub' | t }}</p>
       <button type="button" class="il-btn ghost" [disabled]="jobRunning()" (click)="reviewTopics()">{{ jobRunning() ? ('settings.running' | t) : ('settings.review' | t) }}</button>

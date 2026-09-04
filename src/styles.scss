@@ -2222,7 +2222,7 @@ h1, h2, h3, h4 {
 .il-compose-sub { margin: 0 0 22px; }
 .il-compose-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
   padding: 4px;
   margin-bottom: 26px;
@@ -2387,6 +2387,87 @@ h1, h2, h3, h4 {
 .il-compose-message { margin-top: 16px; font-size: 14px; }
 .il-compose-message--error { color: #a33; }
 .il-compose-message--ok { color: var(--success); }
+.il-transfer-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 8px 18px;
+  overflow: hidden;
+  padding: 22px;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--line));
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 8%, var(--paper)) 0%, var(--paper-2) 68%);
+}
+.il-transfer-card::after {
+  position: absolute;
+  right: -44px;
+  bottom: -78px;
+  width: 180px;
+  height: 180px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+}
+.il-transfer-card > * { position: relative; z-index: 1; }
+.il-transfer-mark {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  color: var(--paper);
+  background: var(--primary);
+  font: 700 10px var(--font-mono);
+  letter-spacing: .09em;
+}
+.il-transfer-card h2 { margin: 2px 0 4px; color: var(--ink); font: 600 24px var(--font-display); }
+.il-transfer-card p { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.55; }
+.il-transfer-card > .il-file,
+.il-transfer-card > .il-transfer-file,
+.il-transfer-card > .il-btn,
+.il-transfer-card > .il-transfer-conflict,
+.il-transfer-card > .il-compose-message { grid-column: 2; justify-self: start; margin-top: 8px; }
+.il-transfer-file { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.il-transfer-file > span { display: grid; gap: 2px; }
+.il-transfer-file strong { overflow-wrap: anywhere; color: var(--ink); font-size: 14px; }
+.il-transfer-file small { color: var(--muted); font: 12px var(--font-mono); }
+.il-transfer-conflict {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, #a33 35%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, #a33 7%, var(--paper));
+}
+.il-transfer-conflict > strong { color: var(--ink); font-family: var(--font-display); font-size: 18px; }
+.il-transfer-conflict p { margin: 5px 0 10px; }
+.il-transfer-conflict ul { margin: 8px 0 12px; padding-left: 20px; color: var(--ink-2); font-size: 12px; }
+.il-transfer-conflict code { font-family: var(--font-mono); }
+.il-btn.danger { border-color: color-mix(in srgb, #a33 50%, var(--line)); color: #923434; }
+.il-btn.danger:hover { color: #fff; background: #923434; }
+.il-transfer-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 28px 0 10px;
+  color: var(--muted);
+  font: 600 10px var(--font-mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.il-transfer-divider::before,
+.il-transfer-divider::after { height: 1px; background: var(--line); content: ''; flex: 1; }
+.il-transfer-card--pair { margin-top: 22px; }
+.il-transfer-card--compact {
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  align-items: center;
+  margin: 12px 0 28px;
+}
+.il-transfer-card--compact > .il-transfer-progress { grid-column: 2; margin: 0; }
+.il-transfer-card--compact > .il-btn { grid-column: 3; margin: 0; }
+.il-transfer-progress span { display: grid; gap: 2px; }
+.il-transfer-progress small { color: var(--muted); font-size: 12px; font-weight: 400; }
 @media (max-width: 640px) {
   .il-compose-page { padding-top: 24px; }
   .il-compose-tabs { grid-template-columns: 1fr; }
@@ -2399,6 +2480,12 @@ h1, h2, h3, h4 {
   .il-compose-settings-link { width: 100%; margin: 4px 0 0; }
   .il-compose-setup-state { grid-template-columns: 38px 1fr; }
   .il-compose-setup-state .il-btn { grid-column: 2; justify-self: start; }
+  .il-transfer-card { grid-template-columns: 46px minmax(0, 1fr); padding: 17px; }
+  .il-transfer-mark { width: 42px; height: 42px; font-size: 9px; }
+  .il-transfer-card h2 { font-size: 21px; }
+  .il-transfer-card--compact { grid-template-columns: 46px minmax(0, 1fr); }
+  .il-transfer-card--compact > .il-transfer-progress,
+  .il-transfer-card--compact > .il-btn { grid-column: 2; justify-self: start; }
 }
 
 /* ---------- Cards: deck-first study surface ---------- */

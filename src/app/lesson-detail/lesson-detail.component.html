@@ -127,10 +127,16 @@
         @if (l.quiz.length > 0) {
           <a [routerLink]="[]" fragment="lesson-quiz" class="il-btn ghost">{{ 'lesson.takeQuiz' | t }}</a>
         }
+        <button type="button" class="il-btn ghost sm" [disabled]="exporting()" (click)="exportLesson()">
+          {{ exporting() ? ('transfer.exporting' | t) : ('transfer.lessonExport' | t) }}
+        </button>
         <a [href]="flagUrl()" target="_blank" rel="noopener noreferrer" class="il-btn ghost sm">
           {{ 'lesson.report' | t }}
         </a>
       </div>
+      @if (exportError()) {
+        <p class="il-compose-message il-compose-message--error" role="alert">{{ exportError() }}</p>
+      }
     </div>
 
     <!-- Article body (markdown) -->

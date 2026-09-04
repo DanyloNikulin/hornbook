@@ -83,6 +83,7 @@ describe('CardsService — SM-2 state', () => {
     const todayKey = new Date().toISOString().slice(0, 10);
     const card = {
       id: 'c1',
+      source_ids: ['c1'],
       front: 'hola',
       back: 'hello',
       direction: 'target-learner' as const,

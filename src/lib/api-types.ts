@@ -2,12 +2,36 @@
 // sides compile against one definition.
 
 import type { JournalConfigT, ProvidersT, SectionConfigT } from './journal-config.js';
+import type { LessonT } from './schema.js';
 
 export interface SectionSummary extends SectionConfigT {
   /** Explicit title or "Spanish → English". */
   label: string;
   flags: { target: string; learner: string };
   lessonCount: number;
+}
+
+export type ImportConflictStrategy = 'error' | 'keep-both' | 'replace';
+
+export interface LessonImportConflict {
+  slug: string;
+  incomingId: string;
+  existingId: string;
+}
+
+export interface LessonImportResult {
+  lesson: LessonT;
+  action: 'imported' | 'kept-both' | 'replaced';
+  originalId: string;
+}
+
+export interface SectionImportResult {
+  section: SectionSummary;
+  created: boolean;
+  imported: number;
+  keptBoth: number;
+  replaced: number;
+  progressImported: boolean;
 }
 
 export interface ConfigView {

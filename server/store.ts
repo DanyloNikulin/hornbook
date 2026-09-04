@@ -4,7 +4,7 @@
 // the HTTP-facing rules (404/409) and keeps derived files fresh on writes.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import {
   Cheatsheet,
   EMPTY_PROGRESS,
@@ -15,6 +15,8 @@ import {
   type LessonMetaT,
   type LessonT,
   type ProgressT,
+  type DerivedCardT,
+  type TopicCatalogT,
 } from '../src/lib/schema.ts';
 import {
   SectionConfig,
@@ -32,12 +34,23 @@ import {
   type ConfigView,
   type SettingsView,
   type ProbeResult,
+  type ImportConflictStrategy,
+  type LessonImportConflict,
+  type LessonImportResult,
+  type SectionImportResult,
 } from '../src/lib/api-types.ts';
 import { connectionViews, updateSecrets } from './secrets.ts';
 import { parseProbeInput, probePipeline } from './probe.ts';
 import * as journal from '../scripts/lib/journal.ts';
 import { lessonToMarkdown } from '../scripts/lib/markdown.ts';
 import { z } from 'zod';
+import { remapLessonScopedId } from '../src/lib/content-ids.ts';
+import {
+  BACKDROP_EXTENSIONS,
+  buildSectionArchive,
+  MAX_SECTION_ARCHIVE_BYTES,
+  readSectionArchive,
+} from './transfers.ts';
 
 export class HttpError extends Error {
   constructor(
@@ -75,7 +88,6 @@ const UpdateSectionInput = z.object({
   providers: Providers.partial().nullable().optional(),
 });
 
-const BACKDROP_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif']);
 const MAX_BACKDROP_BYTES = 8 * 1024 * 1024;
 const BS = String.fromCharCode(92);
 
@@ -89,6 +101,16 @@ const SettingsUpdateInput = z.object({
   connections: z
     .object(Object.fromEntries(CONNECTION_KEYS.map((k) => [k, z.string().max(4096).nullable().optional()])))
     .optional(),
+});
+
+const ConflictStrategy = z.enum(['error', 'keep-both', 'replace']);
+const LessonImportInput = z.object({
+  lesson: z.unknown(),
+  conflict: ConflictStrategy.default('error'),
+});
+const SectionImportInput = z.object({
+  base64: z.string().min(1),
+  conflict: ConflictStrategy.default('error'),
 });
 
 export class FolderStore {
@@ -186,7 +208,14 @@ export class FolderStore {
   // ── lessons ──────────────────────────────────────────────────────────────
 
   private ensureDerived(id: string): void {
-    if (!existsSync(join(journal.derivedDir(id), 'meta.json'))) journal.writeDerived(id);
+    const dir = journal.derivedDir(id);
+    let version = 0;
+    try {
+      version = (JSON.parse(readFileSync(join(dir, 'format.json'), 'utf8')) as { version?: number }).version ?? 0;
+    } catch {
+      // A missing or malformed marker belongs to an older derived format.
+    }
+    if (version !== journal.DERIVED_FORMAT_VERSION || !existsSync(join(dir, 'meta.json'))) journal.writeDerived(id);
   }
 
   lessonMetas(id: string): LessonMetaT[] {
@@ -234,12 +263,26 @@ export class FolderStore {
     if (existing && !existing.endsWith(`${stem}.json`)) {
       throw new HttpError(409, `Slug "${lesson.slug}" is already used by another lesson (${existing})`);
     }
-    const dir = journal.sectionDir(id);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, `${stem}.json`), JSON.stringify(lesson, null, 2) + '\n', 'utf8');
-    writeFileSync(join(dir, `${stem}.md`), lessonToMarkdown(lesson), 'utf8');
+    this.writeLessonFiles(id, lesson);
     this.rebuild(id);
     return lesson;
+  }
+
+  exportLesson(id: string, slug: string): { filename: string; data: Buffer } {
+    const lesson = this.lesson(id, slug);
+    return {
+      filename: `${lesson.id}.json`,
+      data: Buffer.from(`${JSON.stringify(lesson, null, 2)}\n`, 'utf8'),
+    };
+  }
+
+  importLesson(id: string, input: unknown): LessonImportResult {
+    this.section(id);
+    const parsed = LessonImportInput.safeParse(input);
+    if (!parsed.success) throw new HttpError(400, 'Invalid lesson import', parsed.error.format());
+    const incoming = Lesson.safeParse(parsed.data.lesson);
+    if (!incoming.success) throw new HttpError(400, 'Invalid lesson', incoming.error.format());
+    return this.importOneLesson(id, incoming.data, parsed.data.conflict, true);
   }
 
   deleteLesson(id: string, slug: string): void {
@@ -257,6 +300,182 @@ export class FolderStore {
     } catch (err) {
       throw new HttpError(500, `Derived data rebuild failed: ${(err as Error).message}`);
     }
+  }
+
+  private writeLessonFiles(id: string, lesson: LessonT): void {
+    const stem = journal.lessonFileStem(lesson);
+    const dir = journal.sectionDir(id);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, `${stem}.json`), `${JSON.stringify(lesson, null, 2)}\n`, 'utf8');
+    writeFileSync(join(dir, `${stem}.md`), lessonToMarkdown(lesson), 'utf8');
+  }
+
+  private importOneLesson(
+    sectionId: string,
+    incoming: LessonT,
+    strategy: ImportConflictStrategy,
+    rebuild: boolean,
+    reserved = new Set<string>(),
+  ): LessonImportResult {
+    const existingPath = this.lessonFileFor(sectionId, incoming.slug);
+    const originalId = incoming.id;
+    let lesson = incoming;
+    let action: LessonImportResult['action'] = 'imported';
+    if (existingPath) {
+      const conflict = this.lessonConflict(existingPath, incoming);
+      if (strategy === 'error') {
+        throw new HttpError(409, `Lesson "${incoming.slug}" already exists`, { conflicts: [conflict] });
+      }
+      if (strategy === 'keep-both') {
+        const slug = this.availableSlug(sectionId, incoming.slug, reserved);
+        lesson = Lesson.parse({ ...incoming, slug, id: `${incoming.date}-${slug}` });
+        action = 'kept-both';
+      } else {
+        rmSync(existingPath, { force: true });
+        rmSync(existingPath.replace(/\.json$/, '.md'), { force: true });
+        action = 'replaced';
+      }
+    }
+    reserved.add(lesson.slug);
+    this.writeLessonFiles(sectionId, lesson);
+    if (rebuild) this.rebuild(sectionId);
+    return { lesson, action, originalId };
+  }
+
+  private lessonConflict(existingPath: string, incoming: LessonT): LessonImportConflict {
+    const existing = Lesson.parse(JSON.parse(readFileSync(existingPath, 'utf8')));
+    return { slug: incoming.slug, incomingId: incoming.id, existingId: existing.id };
+  }
+
+  private availableSlug(sectionId: string, base: string, reserved: ReadonlySet<string>): string {
+    const used = journal.existingSlugs(sectionId);
+    let n = 2;
+    while (used.has(`${base}-${n}`) || reserved.has(`${base}-${n}`)) n += 1;
+    return `${base}-${n}`;
+  }
+
+  exportSection(id: string, includeProgress: boolean): { filename: string; data: Buffer } {
+    const section = structuredClone(this.section(id));
+    const lessons = journal.readSectionLessons(id).map((entry) => entry.lesson);
+    const topicsPath = journal.topicsPath(id);
+    const backdropPath = this.backdropPath(id);
+    if (section.theme?.backdrop && !backdropPath) {
+      delete section.theme.backdrop;
+      if (Object.keys(section.theme).length === 0) delete section.theme;
+    }
+    const data = buildSectionArchive({
+      section,
+      lessons,
+      cheatsheet: existsSync(journal.cheatsheetPath(id)) ? this.cheatsheet(id) : undefined,
+      topics: existsSync(topicsPath) ? journal.readTopicCatalog(id) : undefined,
+      progress: includeProgress ? this.progress(id) : undefined,
+      backdrop: backdropPath ? { name: basename(backdropPath), data: readFileSync(backdropPath) } : undefined,
+    });
+    return { filename: `${id}.hornbook.zip`, data };
+  }
+
+  importSection(input: unknown): SectionImportResult {
+    const parsed = SectionImportInput.safeParse(input);
+    if (!parsed.success) throw new HttpError(400, 'Invalid pair import', parsed.error.format());
+    const archiveBytes = Buffer.from(parsed.data.base64, 'base64');
+    if (archiveBytes.length > MAX_SECTION_ARCHIVE_BYTES) throw new HttpError(413, 'Pair archive is too large');
+    let archive: ReturnType<typeof readSectionArchive>;
+    try {
+      archive = readSectionArchive(archiveBytes);
+    } catch (error) {
+      throw new HttpError(400, `Invalid pair archive: ${(error as Error).message}`);
+    }
+    const existing = this.config().sections.find((section) => section.id === archive.section.id);
+    if (existing && (existing.target !== archive.section.target || existing.learner !== archive.section.learner)) {
+      throw new HttpError(409, `Pair "${archive.section.id}" uses different languages in this journal`);
+    }
+
+    const conflicts = this.sectionConflicts(archive.section.id, archive.lessons);
+    if (conflicts.length > 0 && parsed.data.conflict === 'error') {
+      throw new HttpError(409, `${conflicts.length} imported lesson${conflicts.length === 1 ? '' : 's'} already exist`, { conflicts });
+    }
+
+    const created = !existing;
+    if (created) {
+      this.createSection({
+        id: archive.section.id,
+        target: archive.section.target,
+        learner: archive.section.learner,
+        title: archive.section.title,
+      });
+    }
+    if (created) this.applyImportedSectionConfig(archive.section);
+
+    const reserved = new Set<string>();
+    const results = archive.lessons.map((lesson) =>
+      this.importOneLesson(archive.section.id, lesson, parsed.data.conflict, false, reserved),
+    );
+    if (created) {
+      this.writeImportedSectionFiles(archive.section.id, archive.cheatsheet, archive.topics, archive.backdrop);
+    }
+    this.rebuild(archive.section.id);
+    if (archive.progress) this.mergeImportedProgress(archive.section.id, archive.progress, results);
+    return {
+      section: this.summarize(this.section(archive.section.id)),
+      created,
+      imported: results.filter((result) => result.action === 'imported').length,
+      keptBoth: results.filter((result) => result.action === 'kept-both').length,
+      replaced: results.filter((result) => result.action === 'replaced').length,
+      progressImported: archive.progress !== undefined,
+    };
+  }
+
+  private sectionConflicts(sectionId: string, lessons: readonly LessonT[]): LessonImportConflict[] {
+    if (!this.config().sections.some((section) => section.id === sectionId)) return [];
+    return lessons.flatMap((lesson) => {
+      const path = this.lessonFileFor(sectionId, lesson.slug);
+      return path ? [this.lessonConflict(path, lesson)] : [];
+    });
+  }
+
+  private applyImportedSectionConfig(imported: SectionConfigT): void {
+    const config = journal.loadJournalConfig();
+    journal.saveJournalConfig({
+      ...config,
+      sections: config.sections.map((section) => (section.id === imported.id ? imported : section)),
+    });
+  }
+
+  private writeImportedSectionFiles(
+    id: string,
+    cheatsheet: CheatsheetT | undefined,
+    topics: TopicCatalogT | undefined,
+    backdrop: { name: string; data: Uint8Array } | undefined,
+  ): void {
+    if (cheatsheet) writeFileSync(journal.cheatsheetPath(id), `${JSON.stringify(cheatsheet, null, 2)}\n`, 'utf8');
+    if (topics) journal.writeTopicCatalog(id, topics);
+    this.clearBackdropFiles(id);
+    if (backdrop) writeFileSync(join(journal.sectionDir(id), backdrop.name), backdrop.data);
+  }
+
+  private mergeImportedProgress(id: string, imported: ProgressT, lessons: readonly LessonImportResult[]): void {
+    const current = this.progress(id);
+    const remappedSm2: ProgressT['sm2'] = {};
+    for (const [key, state] of Object.entries(imported.sm2)) {
+      let next = key;
+      for (const lesson of lessons) next = remapLessonScopedId(next, lesson.originalId, lesson.lesson.id);
+      remappedSm2[next] = state;
+    }
+    const remappedQuiz: ProgressT['quiz'] = {};
+    for (const [slug, result] of Object.entries(imported.quiz)) {
+      const lesson = lessons.find((entry) => entry.originalId === `${entry.lesson.date}-${slug}`);
+      remappedQuiz[lesson?.lesson.slug ?? slug] = result;
+    }
+    const activity = { ...current.activity };
+    for (const [date, count] of Object.entries(imported.activity)) {
+      activity[date] = Math.max(activity[date] ?? 0, count);
+    }
+    this.saveProgress(id, {
+      sm2: { ...current.sm2, ...remappedSm2 },
+      daily: newerDaily(current.daily, imported.daily),
+      quiz: { ...current.quiz, ...remappedQuiz },
+      activity,
+    });
   }
 
   /** Raw JSON text of a derived file, served as-is. */
@@ -288,7 +507,18 @@ export class FolderStore {
       writeFileSync(backup, readFileSync(path));
       return { ...EMPTY_PROGRESS };
     }
-    return result.data;
+    const cards = JSON.parse(this.derived(id, 'cards')) as DerivedCardT[];
+    const sm2 = { ...result.data.sm2 };
+    const migrated = new Set<string>();
+    for (const card of cards) {
+      for (const alias of [...card.source_ids, ...(card.legacy_id ? [card.legacy_id] : [])]) {
+        if (alias === card.id || !sm2[alias]) continue;
+        if (!sm2[card.id]) sm2[card.id] = sm2[alias];
+        migrated.add(alias);
+      }
+    }
+    for (const legacyId of migrated) delete sm2[legacyId];
+    return { ...result.data, sm2 };
   }
 
   saveProgress(id: string, input: unknown): ProgressT {
@@ -393,4 +623,16 @@ export class FolderStore {
     const dir = journal.sectionDir(id);
     return existsSync(dir) ? readdirSync(dir) : [];
   }
+}
+
+function newerDaily(a: ProgressT['daily'], b: ProgressT['daily']): ProgressT['daily'] {
+  if (!a) return b;
+  if (!b) return a;
+  if (a.date !== b.date) return a.date > b.date ? a : b;
+  return {
+    date: a.date,
+    target_learner: Math.max(a.target_learner, b.target_learner),
+    learner_target: Math.max(a.learner_target, b.learner_target),
+    pairs: Math.max(a.pairs, b.pairs),
+  };
 }

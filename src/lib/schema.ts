@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { lessonContentId } from './content-ids.js';
 
 export const Level = z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']);
 
@@ -12,6 +13,7 @@ const SlugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const Topic = z.string().regex(SlugRegex);
 
 export const Vocab = z.object({
+  id: z.string().min(1).optional(),
   target: z.string().min(1),
   learner: z.string().min(1),
   level: Level.nullable().optional(),
@@ -20,6 +22,8 @@ export const Vocab = z.object({
 });
 
 export const DerivedVocab = z.object({
+  id: z.string().min(1),
+  source_ids: z.array(z.string().min(1)).min(1),
   target: z.string().min(1),
   learner: z.string().min(1),
   level: Level.nullable(),
@@ -34,6 +38,8 @@ export const CardDirection = z.enum(['target-learner', 'learner-target']);
 
 export const DerivedCard = z.object({
   id: z.string().min(1),
+  source_ids: z.array(z.string().min(1)).min(1),
+  legacy_id: z.string().min(1).optional(),
   front: z.string().min(1),
   back: z.string().min(1),
   direction: CardDirection,
@@ -96,6 +102,7 @@ export const QuizTranslate = z.object({
 export const QuizQuestion = z.discriminatedUnion('type', [QuizMC, QuizFill, QuizTranslate]);
 
 export const Flashcard = z.object({
+  id: z.string().min(1).optional(),
   front: z.string().min(1),
   back: z.string().min(1),
   type: z.enum(['word', 'phrase', 'grammar']),
@@ -108,7 +115,7 @@ export const Slide = z.object({
   extracted_table: z.array(z.array(z.string())).optional(),
 });
 
-export const Lesson = z.object({
+const LessonShape = z.object({
   id: z.string().min(1),
   date: z.string().regex(DateRegex),
   slug: z.string().regex(SlugRegex),
@@ -124,6 +131,22 @@ export const Lesson = z.object({
   slides: z.array(Slide).default([]),
   related: z.array(z.string().regex(SlugRegex)).default([]),
   topics: z.array(Topic).default([]),
+});
+
+export const Lesson = LessonShape.transform((lesson) => {
+  const id = `${lesson.date}-${lesson.slug}`;
+  return {
+    ...lesson,
+    id,
+    vocabulary: lesson.vocabulary.map((entry, index) => ({
+      ...entry,
+      id: lessonContentId(id, 'vocab', index),
+    })),
+    flashcards: lesson.flashcards.map((entry, index) => ({
+      ...entry,
+      id: lessonContentId(id, 'card', index),
+    })),
+  };
 });
 
 export const LessonMeta = z.object({

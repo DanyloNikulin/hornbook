@@ -75,15 +75,8 @@ export function rate(prev: Sm2State, rating: Rating, now: string = today()): Sm2
   };
 }
 
-// Stable card id from front + back. Non-cryptographic FNV-1a-ish, plenty
-// of distribution for typical card counts (a few thousand).
-//
-// Known limitation: front and back are concatenated with no separator, so
-// ('ab','c') and ('a','bc') hash to the same id. Adding a separator would
-// re-key every card and detach all existing SM-2 progress, so it is
-// deliberately left as-is until the stable-content-ID migration re-keys
-// cards anyway. build-derived.ts and the runtime share this function, so ids
-// are at least consistent between the two.
+// Pre-Phase-18 card id. Kept so progress written by earlier releases can be
+// mapped to lesson-scoped ids when it is first read.
 export function cardId(front: string, back: string): string {
   const s = front + '' + back;
   let h = 0x811c9dc5;

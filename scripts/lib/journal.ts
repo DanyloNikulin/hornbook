@@ -32,6 +32,7 @@ import {
 import { buildDerived, type DerivedBundle } from './derived.ts';
 
 const repoRoot = process.env['HORNBOOK_APP_ROOT']?.trim() || packageRoot(import.meta.url);
+export const DERIVED_FORMAT_VERSION = 2;
 
 let journalOverride: string | null = null;
 
@@ -212,6 +213,7 @@ export function writeDerived(id: string): DerivedBundle {
   writeFileSync(join(dir, 'vocab.json'), JSON.stringify(bundle.vocab, null, 2), 'utf8');
   writeFileSync(join(dir, 'cards.json'), JSON.stringify(bundle.cards), 'utf8');
   writeFileSync(join(dir, 'search-index.json'), JSON.stringify(bundle.searchDocs), 'utf8');
+  writeFileSync(join(dir, 'format.json'), JSON.stringify({ version: DERIVED_FORMAT_VERSION }), 'utf8');
   return bundle;
 }
 

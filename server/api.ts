@@ -73,6 +73,11 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
 
   on('GET', '/api/sections/:id/lessons', (_r, _s, p) => store.lessonMetas(p['id']));
   on('POST', '/api/sections/:id/lessons', async (_r, _s, p, body) => store.saveLesson(p['id'], await body()));
+  on('POST', '/api/sections/:id/lessons/import', async (_r, _s, p, body) => store.importLesson(p['id'], await body()));
+  on('GET', '/api/sections/:id/lessons/:slug/export', (_r, res, p) => {
+    const file = store.exportLesson(p['id'], p['slug']);
+    sendDownload(res, file.data, 'application/json; charset=utf-8', file.filename);
+  });
   on('GET', '/api/sections/:id/lessons/:slug', (_r, _s, p) => store.lesson(p['id'], p['slug']));
   on('PUT', '/api/sections/:id/lessons/:slug', async (_r, _s, p, body) => {
     const raw = (await body()) as Record<string, unknown>;
@@ -95,6 +100,13 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
     });
   }
   on('GET', '/api/sections/:id/cheatsheet', (_r, _s, p) => store.cheatsheet(p['id']));
+
+  on('GET', '/api/sections/:id/export', (req, res, p) => {
+    const includeProgress = new URL(req.url ?? '/', 'http://localhost').searchParams.get('progress') === '1';
+    const file = store.exportSection(p['id'], includeProgress);
+    sendDownload(res, file.data, 'application/zip', file.filename);
+  });
+  on('POST', '/api/sections/import', async (_r, _s, _p, body) => store.importSection(await body()));
 
   on('GET', '/api/sections/:id/progress', (_r, _s, p) => store.progress(p['id']));
   on('PUT', '/api/sections/:id/progress', async (_r, _s, p, body) => store.saveProgress(p['id'], await body()));
@@ -228,6 +240,16 @@ export function sendJson(res: ServerResponse, status: number, body: unknown): vo
     'Cache-Control': 'no-store',
   });
   res.end(json);
+}
+
+function sendDownload(res: ServerResponse, data: Uint8Array, contentType: string, filename: string): void {
+  res.writeHead(200, {
+    'Content-Type': contentType,
+    'Content-Length': data.byteLength,
+    'Content-Disposition': `attachment; filename="${filename.replace(/["\\]/g, '_')}"`,
+    'Cache-Control': 'no-store',
+  });
+  res.end(data);
 }
 
 function readJson(req: IncomingMessage): Promise<unknown> {

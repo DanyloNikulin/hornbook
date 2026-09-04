@@ -1,13 +1,10 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { LessonsService } from './lessons.service';
-import { VocabService } from './vocab.service';
 import { ProgressService } from './progress.service';
 import { ProgressStore } from './progress-store.service';
 import { SectionService } from './section.service';
 import { ApiService } from './api.service';
 import { DerivedCard, type DailyStateT } from '../lib/schema';
-import { deriveExpectedFromBack } from '../lib/card-text';
-import { INITIAL, type Sm2State, type Rating, cardId, rate, today, isDue } from '../lib/sm2';
+import { INITIAL, type Sm2State, type Rating, rate, today, isDue } from '../lib/sm2';
 import { articleRegexFor } from '../lib/articles';
 
 export { deriveExpectedFromBack } from '../lib/card-text';
@@ -50,8 +47,6 @@ function emptyDaily(): DailyStateT {
  */
 @Injectable({ providedIn: 'root' })
 export class CardsService {
-  private readonly lessonsSvc = inject(LessonsService);
-  private readonly vocabSvc = inject(VocabService);
   private readonly progress = inject(ProgressService);
   private readonly store = inject(ProgressStore);
   private readonly section = inject(SectionService);
@@ -112,74 +107,7 @@ export class CardsService {
   }
 
   private async buildLessonCards(slug: string): Promise<readonly Card[]> {
-    const [lesson, vocab] = await Promise.all([this.lessonsSvc.bySlug(slug), this.vocabSvc.all()]);
-    if (!lesson) return [];
-
-    const byId = new Map<string, Card>();
-
-    // 1. Vocab cards — only entries seen in this lesson. Each entry produces
-    //    two cards (forward + reverse). cardId is hashed from front+back so
-    //    the reverse direction naturally gets its own SM-2 state.
-    for (const v of vocab) {
-      if (!v.seen_in.includes(slug)) continue;
-      const tags = v.level ? [v.level] : [];
-
-      const fwdBack = v.example_target ? `${v.learner}\n\n${v.example_target}` : v.learner;
-      const fwdId = cardId(v.target, fwdBack);
-      byId.set(fwdId, {
-        id: fwdId,
-        front: v.target,
-        back: fwdBack,
-        direction: 'target-learner',
-        source: 'vocab',
-        type: 'word',
-        tags,
-        lessons: v.seen_in,
-        expected: v.learner,
-      });
-
-      const revBack = v.example_target ? `${v.target}\n\n${v.example_target}` : v.target;
-      const revId = cardId(v.learner, revBack);
-      byId.set(revId, {
-        id: revId,
-        front: v.learner,
-        back: revBack,
-        direction: 'learner-target',
-        source: 'vocab',
-        type: 'word',
-        tags,
-        lessons: v.seen_in,
-        expected: v.target,
-      });
-    }
-
-    // 2. AI-curated flashcards from this lesson. One-directional.
-    for (const fc of lesson.flashcards) {
-      const id = cardId(fc.front, fc.back);
-      const existing = byId.get(id);
-      if (existing) {
-        byId.set(id, {
-          ...existing,
-          source: 'ai',
-          tags: dedupe([...existing.tags, ...fc.tags]),
-          lessons: dedupe([...existing.lessons, lesson.slug]),
-        });
-      } else {
-        byId.set(id, {
-          id,
-          front: fc.front,
-          back: fc.back,
-          direction: 'target-learner',
-          source: 'ai',
-          type: fc.type,
-          tags: fc.tags,
-          lessons: [lesson.slug],
-          expected: deriveExpectedFromBack(fc.back),
-        });
-      }
-    }
-
-    return [...byId.values()];
+    return (await this.all()).filter((card) => card.lessons.includes(slug));
   }
 
   // ── SM-2 state ───────────────────────────────────────────────────────────
@@ -301,10 +229,6 @@ export class CardsService {
     const d = this.store.daily();
     return d && d.date === today() ? d : emptyDaily();
   }
-}
-
-function dedupe<T>(arr: readonly T[]): readonly T[] {
-  return [...new Set(arr)];
 }
 
 // Normalize a string for forgiving typed-answer comparison: lowercase, trim,

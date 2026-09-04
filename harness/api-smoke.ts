@@ -12,6 +12,7 @@
 
 import { existsSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import type { JournalConfigT } from '../src/lib/journal-config.ts';
 import type { ProbeResult } from '../src/lib/api-types.ts';
 import {
@@ -163,6 +164,31 @@ async function main(): Promise<void> {
     r.rec('invalid lesson → 400', (await api('POST', `/api/sections/${TEST}/lessons`, { title: 'no' })).status === 400);
     const patched = await api('PATCH', `/api/sections/${TEST}`, { title: 'Renamed harness pair', theme: { preset: 'ink' } });
     r.rec(`PATCH ${TEST} title + theme`, patched.status === 200 && obj(patched)['title'] === 'Renamed harness pair', patched.text.slice(0, 160));
+
+    r.section('transfer');
+    const exportedPair = await fetch(`${server.api}/api/sections/${TEST}/export?progress=1`);
+    const pairBytes = Buffer.from(await exportedPair.arrayBuffer());
+    r.rec('pair export is a ZIP download', exportedPair.status === 200 && pairBytes[0] === 0x50 && pairBytes[1] === 0x4b, `${pairBytes.length} bytes`);
+    const importedJournal = throwawayJournal('api-smoke-import');
+    const importedServer = await startServer({ journal: importedJournal, port: PORT + 1, env: { HORNBOOK_TOOLS: join(importedJournal, 'tools') } });
+    try {
+      const importedApi = client(importedServer.api);
+      const importedPair = await importedApi('POST', '/api/sections/import', { base64: pairBytes.toString('base64') });
+      const importedLesson = await importedApi('GET', `/api/sections/${TEST}/lessons/harness-smoke`);
+      r.rec(
+        'pair imports into a fresh journal with the same lesson',
+        importedPair.status === 200 && importedLesson.status === 200 && isDeepStrictEqual(importedLesson.json, saved.json),
+        importedPair.text.slice(0, 180),
+      );
+      const duplicate = await importedApi('POST', `/api/sections/${TEST}/lessons/import`, { lesson: importedLesson.json });
+      const conflictCount = ((obj(duplicate)['details'] as { conflicts?: unknown[] } | undefined)?.conflicts ?? []).length;
+      r.rec('importing the same lesson twice returns a conflict choice', duplicate.status === 409 && conflictCount === 1, duplicate.text.slice(0, 180));
+      const files = await importedApi('GET', `/api/sections/${TEST}/files`);
+      r.rec('derived data is rebuilt, not carried in the archive', files.status === 200 && !files.text.includes('hornbook-section'), files.text);
+    } finally {
+      importedServer.stop();
+    }
+
     r.rec('DELETE section with lessons → 409', (await api('DELETE', `/api/sections/${TEST}`)).status === 409);
     r.rec(`DELETE ${TEST} lesson`, (await api('DELETE', `/api/sections/${TEST}/lessons/harness-smoke`)).status === 200);
     r.rec(`DELETE empty ${TEST}`, (await api('DELETE', `/api/sections/${TEST}`)).status === 200);

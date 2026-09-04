@@ -6,7 +6,7 @@ import { DEFAULT_PRESET_ID, DISPLAY_FONTS, THEME_PRESETS, type ThemePreset } fro
 import { type JobView, type SectionSummary, type SettingsView } from '../../lib/api-types';
 import { TPipe } from '../i18n.pipe';
 import { I18nService } from '../i18n.service';
-import { ApiService } from '../api.service';
+import { ApiService, saveBrowserDownload } from '../api.service';
 import { JournalService } from '../journal.service';
 import { SectionService } from '../section.service';
 import { JobsService } from '../jobs.service';
@@ -40,6 +40,8 @@ export class SettingsComponent {
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly saved = signal<string | null>(null);
+  protected readonly exporting = signal(false);
+  protected includeProgress = false;
 
   // Journal defaults (read-only here; edited on the application page).
   protected defaults: ProvidersT = {
@@ -205,6 +207,21 @@ export class SettingsComponent {
       if (job.status !== 'done') this.error.set(job.error ?? this.i18n.t('settings.reviewFailed'));
     } catch (err) {
       this.error.set((err as Error).message);
+    }
+  }
+
+  protected async exportPair(): Promise<void> {
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    this.error.set(null);
+    try {
+      const suffix = this.includeProgress ? '?progress=1' : '';
+      const download = await this.api.download(`${this.sec.apiBase()}/export${suffix}`);
+      saveBrowserDownload(download.blob, download.filename ?? `${this.sec.id()}.hornbook.zip`);
+    } catch (error) {
+      this.error.set((error as Error).message);
+    } finally {
+      this.exporting.set(false);
     }
   }
 }

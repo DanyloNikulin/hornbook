@@ -32,18 +32,29 @@
         aria-controls="compose-panel-recording"
         (click)="setMode('recording')"
       >{{ 'compose.fromRecording' | t }}</button>
+      <button
+        type="button"
+        role="tab"
+        id="compose-tab-import"
+        [class.active]="activeMode() === 'import'"
+        [attr.aria-selected]="activeMode() === 'import'"
+        aria-controls="compose-panel-import"
+        (click)="setMode('import')"
+      >{{ 'transfer.lessonImport' | t }}</button>
     </div>
 
-    <div class="il-compose-basics">
-      <label class="il-compose-field">
-        <span>{{ 'compose.date' | t }}</span>
-        <input type="date" [(ngModel)]="date" />
-      </label>
-      <label class="il-compose-field">
-        <span>{{ 'compose.lessonTitle' | t }} <small>{{ 'compose.titleOptional' | t }}</small></span>
-        <input type="text" [(ngModel)]="title" maxlength="200" [placeholder]="'compose.titlePlaceholder' | t" />
-      </label>
-    </div>
+    @if (activeMode() !== 'import') {
+      <div class="il-compose-basics">
+        <label class="il-compose-field">
+          <span>{{ 'compose.date' | t }}</span>
+          <input type="date" [(ngModel)]="date" />
+        </label>
+        <label class="il-compose-field">
+          <span>{{ 'compose.lessonTitle' | t }} <small>{{ 'compose.titleOptional' | t }}</small></span>
+          <input type="text" [(ngModel)]="title" maxlength="200" [placeholder]="'compose.titlePlaceholder' | t" />
+        </label>
+      </div>
+    }
 
     @if (activeMode() === 'hand') {
       <div id="compose-panel-hand" role="tabpanel" aria-labelledby="compose-tab-hand" class="il-compose-tabpanel">
@@ -91,7 +102,7 @@
               type="file"
               [disabled]="busy()"
               (change)="onFile($event)"
-              accept=".mp4,.mov,.webm,.m4a,.mp3,.wav,.ogg,.opus,.aac,.txt,.vtt,.srt,.json"
+              accept=".mp4,.mov,.webm,.m4a,.mp3,.wav,.ogg,.opus,.aac,.txt,.vtt,.srt"
             />
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" /></svg>
             <strong>{{ 'compose.dropTitle' | t }}</strong>
@@ -117,7 +128,7 @@
                   type="file"
                   [disabled]="busy()"
                   (change)="onFile($event)"
-                  accept=".mp4,.mov,.webm,.m4a,.mp3,.wav,.ogg,.opus,.aac,.txt,.vtt,.srt,.json"
+                  accept=".mp4,.mov,.webm,.m4a,.mp3,.wav,.ogg,.opus,.aac,.txt,.vtt,.srt"
                 />
                 <span>{{ 'compose.changeFile' | t }}</span>
               </label>
@@ -171,6 +182,44 @@
             </div>
           </div>
         }
+      </div>
+    }
+
+    @if (activeMode() === 'import') {
+      <div id="compose-panel-import" role="tabpanel" aria-labelledby="compose-tab-import" class="il-compose-tabpanel">
+        <div class="il-transfer-card">
+          <span class="il-transfer-mark" aria-hidden="true">JSON</span>
+          <div>
+            <h2>{{ 'transfer.lessonImportTitle' | t }}</h2>
+            <p>{{ 'transfer.lessonImportSub' | t: { pair: sec.label() } }}</p>
+          </div>
+          @if (!importFile()) {
+            <label class="il-file">
+              <input class="il-file-native" type="file" accept=".json,application/json" [disabled]="busy()" (change)="onImportFile($event)" />
+              <span class="il-btn">{{ 'file.choose' | t }}</span>
+              <span class="il-file-name">{{ 'file.none' | t }}</span>
+            </label>
+          } @else if (importFile(); as file) {
+            <div class="il-transfer-file">
+              <span><strong>{{ file.name }}</strong><small>{{ fileSize(file) }}</small></span>
+              <button type="button" class="il-btn ghost sm" [disabled]="busy()" (click)="clearImportFile()">{{ 'compose.changeFile' | t }}</button>
+            </div>
+            @if (importConflict(); as conflict) {
+              <aside class="il-transfer-conflict" role="alert">
+                <strong>{{ 'transfer.lessonConflictTitle' | t }}</strong>
+                <p>{{ 'transfer.lessonConflictSub' | t: { slug: conflict.slug } }}</p>
+                <div class="il-compose-actions">
+                  <button type="button" class="il-btn" [disabled]="busy()" (click)="importLesson('keep-both')">{{ 'transfer.keepBoth' | t }}</button>
+                  <button type="button" class="il-btn danger" [disabled]="busy()" (click)="importLesson('replace')">{{ 'transfer.replace' | t }}</button>
+                </div>
+              </aside>
+            } @else {
+              <button type="button" class="il-btn" [disabled]="busy()" (click)="importLesson()">
+                {{ busy() ? ('transfer.importing' | t) : ('transfer.importLessonAction' | t) }}
+              </button>
+            }
+          }
+        </div>
       </div>
     }
 
