@@ -1,6 +1,10 @@
 name: Release
 
 on:
+  workflow_run:
+    workflows: ['PR gate']
+    branches: [main]
+    types: [completed]
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
@@ -13,14 +17,70 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+permissions:
+  contents: read
 
 concurrency:
-  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+  group: hornbook-release
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      ready: ${{ steps.automatic.outputs.ready || steps.manual.outputs.ready }}
+      tag: ${{ steps.automatic.outputs.tag || steps.manual.outputs.tag }}
+      revision: ${{ steps.automatic.outputs.revision || steps.manual.outputs.revision }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || inputs.tag || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: github.event_name == 'workflow_run'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install release validation dependencies
+        if: github.event_name == 'workflow_run'
+        run: npm ci --no-audit --no-fund
+      - name: Create tag for a new version on verified main
+        if: github.event_name == 'workflow_run'
+        id: automatic
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: npx tsx scripts/auto-release.ts
+      - name: Resolve an explicit release tag
+        if: github.event_name != 'workflow_run'
+        id: manual
+        env:
+          REQUESTED_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          [[ "$REQUESTED_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          revision=$(git rev-parse "refs/tags/${REQUESTED_TAG}^{commit}")
+          {
+            echo "ready=true"
+            echo "tag=$REQUESTED_TAG"
+            echo "revision=$revision"
+          } >> "$GITHUB_OUTPUT"
+
   verify:
+    needs: prepare
+    if: needs.prepare.outputs.ready == 'true'
+    env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -32,7 +92,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ needs.prepare.outputs.revision }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -69,7 +129,7 @@ jobs:
 
   desktop:
     name: Build ${{ matrix.name }} distribution
-    needs: verify
+    needs: [prepare, verify]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 35
     permissions:
@@ -91,6 +151,7 @@ jobs:
             harness: xvfb-run -a npm run harness:electron
             updates: release/latest-linux.yml
     env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
       CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CSC_LINK != '' }}
       CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
       CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
@@ -106,7 +167,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ needs.prepare.outputs.revision }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -141,7 +202,9 @@ jobs:
             release/*.zip
 
   docker:
-    needs: verify
+    needs: [prepare, verify]
+    env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -150,7 +213,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ needs.prepare.outputs.revision }}
       - uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
         with:
           platforms: arm64
@@ -166,7 +229,7 @@ jobs:
           images: ${{ needs.verify.outputs.image }}
           tags: |
             type=raw,value=${{ needs.verify.outputs.version }}
-            type=raw,value=latest,enable=${{ github.event_name == 'push' && !startsWith(env.RELEASE_TAG, 'v0.') }}
+            type=raw,value=latest,enable=${{ github.event_name != 'workflow_dispatch' && !startsWith(env.RELEASE_TAG, 'v0.') }}
       - uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: .
@@ -180,7 +243,9 @@ jobs:
             SOURCE=${{ github.server_url }}/${{ github.repository }}
 
   publish:
-    needs: [verify, desktop, docker]
+    needs: [prepare, verify, desktop, docker]
+    env:
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

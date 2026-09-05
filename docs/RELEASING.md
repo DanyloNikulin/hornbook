@@ -25,22 +25,41 @@ artifact, Docker image and release note.
    npm run harness:ui
    ```
 
-5. Commit the release preparation and let the PR gate finish.
+5. Commit the release preparation, let the PR gate finish, and merge into `main`.
 
 ## Publish
 
-Create and push the version tag only after the release commit is on `main`:
+Publishing is automatic. When the `PR gate` workflow succeeds for a push to
+`main`, `Release` checks the verified commit against the current main head.
+If its package version increased from its first parent, it validates the
+lockfile and dated changelog, creates `v<version>`, and builds and publishes
+the release in the same workflow. No manual tag or extra token is needed.
+
+Ordinary merges without a version bump and superseded main runs are skipped.
+An existing tag is never moved: a conflicting tag requires a new version.
+Re-running the same verified release commit can resume an unpublished tag;
+an already published version is skipped. Release runs are serialized.
+
+The first automation-only merge keeps version 0.9.1 and publishes nothing;
+the next release PR should increase the version and add its dated notes.
+
+Manual tags remain supported. For an explicit release, create and push its tag
+only after the release commit is on `main`:
 
 ```bash
 git tag -s v0.9.0 -m "Hornbook 0.9.0"
 git push origin v0.9.0
 ```
 
-An unsigned tag may be used until signing is configured, but never move or
-reuse a published tag. The `Release` workflow validates the tag against the
+Automatic tags are unsigned; manually signed tags remain supported. Never
+move or reuse a published tag. The `Release` workflow validates the tag against the
 package and changelog, repeats deterministic and smoke checks, builds Windows,
 macOS and Linux distributions, publishes the multi-architecture GHCR image,
 and creates or repairs the GitHub Release from the changelog section.
+
+To retry a failed release, re-run its failed jobs in Actions, or dispatch
+`Release` manually with the existing tag. An explicit dispatch also supports
+repairing artifacts for an existing release; it does not update Docker `latest`.
 
 Versions below 1.0 are published as GitHub pre-releases and only receive a
 versioned Docker tag. Stable releases also update the Docker `latest` tag.
