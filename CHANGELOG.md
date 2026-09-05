@@ -6,9 +6,9 @@ All notable changes to Hornbook.
 
 - Nothing yet.
 
-## 0.9.0 — 2026-09-04
+## 0.9.0 — 2026-09-05
 
-Product preview: the complete local-first lesson workflow is packaged for
+Alpha preview: the complete local-first lesson workflow is packaged for
 desktop and Docker, with transfer tools and an automated release path. This
 is deliberately 0.9; the next phase is hardening and refactoring before 1.0.
 
@@ -51,6 +51,10 @@ is deliberately 0.9; the next phase is hardening and refactoring before 1.0.
   button fetches what is missing. A managed Ollama runs as a child of the
   server. `hornbook doctor` prints the same table.
 - Only the named demo lessons are tracked in the repository journal.
+- Hardened journal writes, progress recovery and retryable job cleanup;
+  improved provider setup and desktop onboarding.
+- Main-branch pushes run the full gate automatically. Releases below 1.0
+  are marked as pre-releases and do not replace the Docker `latest` image.
 
 ## 0.1.0 — 2026-09-04
 

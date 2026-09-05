@@ -160,7 +160,7 @@ jobs:
           images: ${{ needs.verify.outputs.image }}
           tags: |
             type=raw,value=${{ needs.verify.outputs.version }}
-            type=raw,value=latest,enable=${{ github.event_name == 'push' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && !startsWith(env.RELEASE_TAG, 'v0.') }}
       - uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: .
@@ -196,11 +196,15 @@ jobs:
           set -euo pipefail
           test -n "$(find release-files -maxdepth 1 -type f -print -quit)"
           (cd release-files && sha256sum ./* > SHA256SUMS.txt)
+          release_flags=()
+          if [[ "$RELEASE_TAG" == v0.* ]]; then
+            release_flags+=(--prerelease --latest=false)
+          fi
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" release-files/* --clobber
-            gh release edit "$RELEASE_TAG" --title "Hornbook ${{ needs.verify.outputs.version }}" --notes-file release-metadata/release-notes.md
+            gh release edit "$RELEASE_TAG" --title "Hornbook ${{ needs.verify.outputs.version }}" --notes-file release-metadata/release-notes.md "${release_flags[@]}"
           else
             gh release create "$RELEASE_TAG" release-files/* --verify-tag \
               --title "Hornbook ${{ needs.verify.outputs.version }}" \
-              --notes-file release-metadata/release-notes.md
+              --notes-file release-metadata/release-notes.md "${release_flags[@]}"
           fi

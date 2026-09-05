@@ -6,6 +6,8 @@ name: PR gate
 # Hornbook's data never goes through git or CI: the journal folder is written
 # by the app itself. The separate release workflow runs only from version tags.
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch: {}

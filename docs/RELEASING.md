@@ -42,6 +42,9 @@ package and changelog, repeats deterministic and smoke checks, builds Windows,
 macOS and Linux distributions, publishes the multi-architecture GHCR image,
 and creates or repairs the GitHub Release from the changelog section.
 
+Versions below 1.0 are published as GitHub pre-releases and only receive a
+versioned Docker tag. Stable releases also update the Docker `latest` tag.
+
 ## Signing secrets
 
 Unsigned preview artifacts build without repository secrets. Signed releases
