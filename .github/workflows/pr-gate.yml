@@ -4,7 +4,7 @@ name: PR gate
 # ordinary quality checks and packaged desktop walks on all three platforms.
 #
 # Hornbook's data never goes through git or CI: the journal folder is written
-# by the app itself. The separate release workflow runs only from version tags.
+# by the app itself. A successful main gate can release a newly bumped version.
 on:
   push:
     branches: [main]

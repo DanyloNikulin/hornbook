@@ -4,7 +4,8 @@ All notable changes to Hornbook.
 
 ## Unreleased
 
-- Nothing yet.
+- Version bumps merged into main now create their release tag and publish
+  installers and Docker images automatically after the main gate succeeds.
 
 ## 0.9.1 — 2026-09-05
 
