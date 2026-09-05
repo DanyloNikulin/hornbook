@@ -95,6 +95,7 @@ export const ES = {
   'update.settingsTitle': 'Actualizaciones',
   'update.settingsSub':
     'Hornbook comprueba las versiones públicas de GitHub como máximo una vez al día y no envía datos del diario.',
+  'update.installedVersion': 'Versión instalada',
   'update.automatic': 'Comprobar automáticamente',
   'update.automaticSub': 'Desactívalo para comprobar solo cuando lo pidas.',
   'update.check': 'Buscar actualizaciones',

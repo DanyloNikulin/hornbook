@@ -84,6 +84,7 @@ export const IT = {
   'update.dismiss': 'Ignora questo aggiornamento',
   'update.settingsTitle': 'Aggiornamenti',
   'update.settingsSub': 'Hornbook controlla il feed pubblico delle release GitHub al massimo una volta al giorno e non invia dati del diario.',
+  'update.installedVersion': 'Versione installata',
   'update.automatic': 'Controlla automaticamente',
   'update.automaticSub': 'Disattiva per controllare solo quando lo chiedi.',
   'update.check': 'Controlla aggiornamenti',

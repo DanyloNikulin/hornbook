@@ -4,6 +4,10 @@ All notable changes to Hornbook.
 
 ## Unreleased
 
+## 0.9.2 — 2026-09-06
+
+- Show the exact installed Hornbook version in Application settings and in the
+  desktop tray menu and tooltip.
 - Version bumps merged into main now create their release tag and publish
   installers and Docker images automatically after the main gate succeeds.
 

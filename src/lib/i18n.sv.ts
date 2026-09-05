@@ -94,6 +94,7 @@ export const SV = {
   'update.settingsTitle': 'Uppdateringar',
   'update.settingsSub':
     'Hornbook söker efter offentliga GitHub-versioner högst en gång om dagen och skickar inga journaldata.',
+  'update.installedVersion': 'Installerad version',
   'update.automatic': 'Kontrollera automatiskt',
   'update.automaticSub': 'Stäng av för att bara kontrollera när du ber om det.',
   'update.check': 'Sök efter uppdateringar',

@@ -30,6 +30,7 @@ import { packageRoot } from '../scripts/lib/runtime.ts';
 import { countLessons, seedJournal } from '../server/launch.ts';
 import { DEMO_JOURNAL } from '../scripts/lib/demo-journal.ts';
 import { loadPreferences, savePreferences, type DesktopPreferences } from './preferences.ts';
+import { trayVersionCopy } from './tray-version.ts';
 
 const APP_ID = 'io.github.danylonikulin.hornbook';
 const UPDATE_POLL_MS = 60 * 60 * 1000;
@@ -212,10 +213,13 @@ function trayImage(withDot: boolean): Electron.NativeImage {
 function rebuildTray(): void {
   if (!tray) return;
   const updateWaiting = updateState.phase === 'available' || updateState.phase === 'downloading' || updateState.phase === 'ready';
+  const versionCopy = trayVersionCopy(app.getVersion(), updateWaiting);
   tray.setImage(trayImage(updateWaiting));
-  tray.setToolTip(updateWaiting ? 'Hornbook · update available' : 'Hornbook');
+  tray.setToolTip(versionCopy.tooltip);
   tray.setContextMenu(
     Menu.buildFromTemplate([
+      { label: versionCopy.label, enabled: false },
+      { type: 'separator' },
       { label: 'Open', click: () => showWindow('/') },
       { label: `Jobs (${activeJobs} running)`, click: () => showWindow('/jobs') },
       { type: 'separator' },

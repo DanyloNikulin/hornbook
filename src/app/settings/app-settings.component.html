@@ -129,6 +129,12 @@
       <div>
         <h2 id="update-settings-title" class="il-compose-h">{{ 'update.settingsTitle' | t }}</h2>
         <p class="il-section-sub">{{ 'update.settingsSub' | t }}</p>
+        @if (updates.state().currentVersion; as version) {
+          <p class="il-installed-version">
+            <span>{{ 'update.installedVersion' | t }}</span>
+            <code>Hornbook {{ version }}</code>
+          </p>
+        }
       </div>
       <label class="il-desktop-toggle">
         <input

@@ -137,6 +137,8 @@ body:has(.il-titlebar) .il-page { min-height: calc(100vh - 36px); }
 .il-native-path-input input { flex: 1; width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); }
 .il-update-settings { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr); gap: 18px 28px; }
 .il-update-settings .il-compose-h { margin: 0; }
+.il-installed-version { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 11px 0 0; color: var(--muted); font-size: 11px; font-weight: 700; }
+.il-installed-version code { padding: 3px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--primary-ink); font: 700 11px var(--font-mono); }
 .il-update-settings .il-desktop-toggle { grid-column: auto; border: 0; padding: 0; }
 .il-update-settings-action { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; min-width: 0; gap: 10px; color: var(--success); font-size: 12px; }
 .il-update-settings-action .il-error-inline { flex-basis: 100%; min-width: 0; overflow-wrap: anywhere; }
