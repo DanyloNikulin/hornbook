@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Hornbook. The roadmap is in `docs/PLAN.md`.
+All notable changes to Hornbook.
 
 ## Unreleased
 
@@ -117,5 +117,5 @@ turns a recording into a conspect runs inside the server as jobs.
 
 ### Deferred after 0.1
 
-Packaged installers and release automation arrive with 0.9.0. The 1.0 release
-follows the hardening work in `docs/PLAN.md`, Part 4.
+Packaged installers and release automation arrive with 0.9.0. Further
+hardening and release verification remain planned for 1.0.
