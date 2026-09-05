@@ -26,6 +26,8 @@ export async function localesScenario({ r, page, goto, shot }: UiScenario): Prom
       });
       await radio.click();
       await page.waitForFunction((id) => document.documentElement.lang === id, choice.id);
+      await page.locator('.il-setup-guide > .il-setup-actions').waitFor();
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
       r.rec(
         `${width}px: ${choice.name} translates the page`,
         (await page.locator('h1').innerText()) === choice.title,
@@ -48,11 +50,24 @@ export async function localesScenario({ r, page, goto, shot }: UiScenario): Prom
         bounds.content <= bounds.width + 1 && bounds.right <= bounds.viewport + 1,
         JSON.stringify(bounds),
       );
+      const pageBounds = await page.evaluate(() => ({
+        content: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth,
+        overflowing: Array.from(document.body.querySelectorAll('*'))
+          .filter(
+            (element) =>
+              element.getBoundingClientRect().right > document.documentElement.clientWidth,
+          )
+          .map((element) => ({
+            tag: element.tagName,
+            class: element.className,
+            text: element.textContent?.trim().slice(0, 120),
+          })),
+      }));
       r.rec(
         `${width}px: ${choice.name} page fits`,
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-        ),
+        pageBounds.content <= pageBounds.viewport,
+        JSON.stringify(pageBounds),
       );
       if (width < 640) {
         const menu = page.locator('.il-hamburger');

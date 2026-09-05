@@ -16,7 +16,8 @@ All notable changes to Hornbook.
 - Load additional translations on demand, restore the saved interface language
   at startup, and keep the current language when a download fails so it can be
   retried. Rapid language changes keep the most recent selection.
-- Keep the mobile navigation accessible with longer translated header text.
+- Keep the mobile navigation accessible with longer translated header text,
+  and wrap long setup button labels within the screen width.
 
 ## 0.9.0 — 2026-09-05
 

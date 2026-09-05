@@ -276,6 +276,7 @@
 .il-setup-pill { font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; opacity: 0.75; }
 .il-setup-pill--ok { color: var(--success); opacity: 1; }
 .il-setup-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.il-setup-actions .il-btn { max-width: 100%; white-space: normal; padding-block: 8px; text-align: center; }
 .il-setup-actions .il-btn[disabled] { opacity: 0.55; cursor: default; transform: none; }
 .il-setup-plan { font-size: 13.5px; margin: 8px 0 0; }
 .il-setup-progress { display: block; width: 100%; height: 8px; margin-top: 10px; accent-color: var(--primary); }
