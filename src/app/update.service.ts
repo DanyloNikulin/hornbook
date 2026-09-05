@@ -1,5 +1,5 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import type { DesktopUpdateState, ReleaseCheckView } from '../lib/api-types';
+import type { DesktopUpdateState, ModeView, ReleaseCheckView } from '../lib/api-types';
 import { ApiService } from './api.service';
 import { DesktopService } from './desktop.service';
 
@@ -37,6 +37,7 @@ export class UpdateService {
       this.state.set(desktopState.update);
       return;
     }
+    void this.loadCurrentVersion();
     const checked = Date.parse(this.saved(CHECKED_KEY) ?? '');
     if (this.automatic() && (!Number.isFinite(checked) || Date.now() - checked >= DAY_MS)) void this.check(false);
   }
@@ -85,6 +86,17 @@ export class UpdateService {
 
   displayVersion(version: string): string {
     return version.endsWith('.0') ? version.slice(0, -2) : version;
+  }
+
+  private async loadCurrentVersion(): Promise<void> {
+    try {
+      const mode = await this.api.get<ModeView>('/api/mode');
+      this.state.update((state) =>
+        state.currentVersion ? state : { ...state, currentVersion: mode.version },
+      );
+    } catch {
+      // The rest of the application reports server connectivity failures.
+    }
   }
 
   private saved(key: string): string | null {

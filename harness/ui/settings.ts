@@ -116,6 +116,9 @@ export async function settingsScenario({
   await goto('/settings');
   await seen('Application');
   await seen('Interface');
+  const mode = await page.evaluate(async () => (await fetch('/api/mode')).json() as Promise<{ version: string }>);
+  await seen(`Hornbook ${mode.version}`);
+  r.rec('application settings show the installed version', true, mode.version);
   await shot('03-settings-en');
   await page.getByRole('radio', { name: /Italiano/i }).click();
   await page.waitForTimeout(400);

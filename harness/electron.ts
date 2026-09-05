@@ -145,6 +145,11 @@ async function main(): Promise<void> {
     await page.goto(`${origin}/settings`);
     await page.getByRole('heading', { name: 'This computer' }).waitFor();
     report.rec('Application settings expose native journal controls', await page.getByRole('button', { name: 'Open folder' }).isVisible() && await page.getByRole('button', { name: 'Change…' }).isVisible());
+    report.rec(
+      'packaged Application settings show the installed version',
+      (await page.locator('.il-installed-version').innerText()).includes(`Hornbook ${mode.version}`),
+      mode.version,
+    );
 
     await page.goto(`${origin}/jobs`);
     await page.getByRole('heading', { name: 'Jobs' }).waitFor();

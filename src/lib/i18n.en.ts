@@ -86,6 +86,7 @@ export const EN = {
   'update.dismiss': 'Dismiss this update',
   'update.settingsTitle': 'Updates',
   'update.settingsSub': 'Hornbook checks the public GitHub release feed at most once a day and sends no journal data.',
+  'update.installedVersion': 'Installed version',
   'update.automatic': 'Check automatically',
   'update.automaticSub': 'Turn this off to check only when you ask.',
   'update.check': 'Check for updates',

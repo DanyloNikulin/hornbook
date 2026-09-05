@@ -96,6 +96,7 @@ export const UK = {
   'update.settingsTitle': 'Оновлення',
   'update.settingsSub':
     'Hornbook перевіряє публічні випуски на GitHub щонайбільше раз на день і не надсилає дані щоденника.',
+  'update.installedVersion': 'Встановлена версія',
   'update.automatic': 'Перевіряти автоматично',
   'update.automaticSub': 'Вимкніть, щоб перевіряти лише за вашим запитом.',
   'update.check': 'Перевірити оновлення',

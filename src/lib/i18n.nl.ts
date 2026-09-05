@@ -96,6 +96,7 @@ export const NL = {
   'update.settingsTitle': 'Updates',
   'update.settingsSub':
     'Hornbook controleert de openbare GitHub-releases maximaal eenmaal per dag en verstuurt geen logboekgegevens.',
+  'update.installedVersion': 'Geïnstalleerde versie',
   'update.automatic': 'Automatisch controleren',
   'update.automaticSub': 'Schakel dit uit om alleen op jouw verzoek te controleren.',
   'update.check': 'Controleren op updates',

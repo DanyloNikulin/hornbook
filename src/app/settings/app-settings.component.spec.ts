@@ -6,6 +6,7 @@ import { ApiService } from '../api.service';
 import { I18nService } from '../i18n.service';
 import { AppSettingsComponent } from './app-settings.component';
 import { JournalService } from '../journal.service';
+import { UpdateService } from '../update.service';
 import type { LocaleId } from '../../lib/i18n';
 
 const emptyConnections = Object.fromEntries(
@@ -80,6 +81,21 @@ describe('AppSettingsComponent', () => {
     expect(root.textContent).toContain('Applicazione');
     expect(root.textContent).toContain('Interfaccia');
     expect(TestBed.inject(I18nService).locale()).toBe('it');
+  });
+
+  it('shows the exact installed version in application settings', async () => {
+    TestBed.inject(UpdateService).state.set({
+      phase: 'current',
+      currentVersion: '0.9.2',
+      installable: false,
+    });
+    const fixture = TestBed.createComponent(AppSettingsComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const version = fixture.nativeElement.querySelector('.il-installed-version') as HTMLElement;
+    expect(version.textContent).toContain('Installed version');
+    expect(version.textContent).toContain('Hornbook 0.9.2');
   });
 
   it('publishes enabled, changed and disabled defaults after successful saves', async () => {
