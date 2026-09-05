@@ -91,7 +91,9 @@ export class UpdateService {
   private async loadCurrentVersion(): Promise<void> {
     try {
       const mode = await this.api.get<ModeView>('/api/mode');
-      this.state.update((state) => ({ ...state, currentVersion: mode.version }));
+      this.state.update((state) =>
+        state.currentVersion ? state : { ...state, currentVersion: mode.version },
+      );
     } catch {
       // The rest of the application reports server connectivity failures.
     }
