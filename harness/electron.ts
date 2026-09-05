@@ -98,11 +98,18 @@ async function main(): Promise<void> {
     report.rec('fake release feed produces a compact update toast', /9\.9/.test(await page.locator('.il-update-toast').innerText()));
     const chrome = await electronApp.evaluate(({ BrowserWindow }) => {
       const window = BrowserWindow.getAllWindows()[0];
-      return { menu: window.isMenuBarVisible(), minimizable: window.isMinimizable(), maximizable: window.isMaximizable(), resizable: window.isResizable() };
+      return {
+        // macOS has an application menu; the window-menu API only supports Windows/Linux.
+        menu: process.platform === 'darwin' ? null : window.isMenuBarVisible(),
+        minimizable: window.isMinimizable(),
+        maximizable: window.isMaximizable(),
+        resizable: window.isResizable(),
+      };
     });
-    report.rec('desktop uses a draggable title area with native window controls and no menu strip', !chrome.menu && chrome.minimizable && chrome.maximizable && chrome.resizable && await page.locator('.il-titlebar').isVisible());
+    report.rec('desktop uses a draggable title area with native window controls and no window menu strip', !chrome.menu && chrome.minimizable && chrome.maximizable && chrome.resizable && await page.locator('.il-titlebar').isVisible(), JSON.stringify(chrome));
     await page.getByRole('button', { name: 'Dismiss', exact: false }).click();
-    report.rec('update toast dismisses without losing settings access', await page.locator('.il-update-toast').count() === 0);
+    await page.locator('.il-update-toast').waitFor({ state: 'detached' });
+    report.rec('update toast dismisses without losing settings access', await page.locator('.il-nav-links a[href="/settings"]').isVisible());
     report.rec('automatic release check makes one feed request', releaseGets === 1, releaseGets);
 
     const demo = JSON.parse(readFileSync(join(repoRoot, 'journal', 'es-en', '2026-01-01-greetings.json'), 'utf8')) as Record<string, unknown>;
