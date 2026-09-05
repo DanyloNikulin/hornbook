@@ -116,9 +116,15 @@ jobs:
       - name: Build application
         run: npm run build
       - name: Build installers
-        run: npx electron-builder --config electron-builder.config.cjs --publish never
+        shell: bash
+        run: |
+          if [[ -z "${CSC_LINK:-}" ]]; then
+            unset CSC_LINK CSC_KEY_PASSWORD
+          fi
+          npx electron-builder --config electron-builder.config.cjs --publish never \
+            --config.linux.maintainer="Danylo Nikulin <83497040+DanyloNikulin@users.noreply.github.com>"
       - name: Require updater metadata
-        run: node -e "const fs=require('node:fs');const manifest=process.argv[1];const files=fs.readdirSync('release');if(!fs.existsSync(manifest)||!files.some((name)=>name.endsWith('.blockmap')))throw new Error('Missing updater metadata for ${{ matrix.name }}')" "${{ matrix.updates }}"
+        run: node -e "const fs=require('node:fs');const manifest=process.argv[1];const files=fs.readdirSync('release');if(!fs.existsSync(manifest))throw new Error('Missing updater manifest');const differential=process.platform==='linux'?files.some((name)=>name.endsWith('.AppImage'))&&/blockMapSize:\s*[1-9]\d*/.test(fs.readFileSync(manifest,'utf8')):files.some((name)=>name.endsWith('.blockmap'));if(!differential)throw new Error('Missing updater block maps for ${{ matrix.name }}')" "${{ matrix.updates }}"
       - name: Walk packaged application
         run: ${{ matrix.harness }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
