@@ -1,6 +1,6 @@
 import type { ReleaseCheckView, ReleaseInfo } from '../src/lib/api-types.ts';
 
-export const DEFAULT_RELEASES_URL = 'https://api.github.com/repos/DanyloNikulin/hornbook/releases/latest';
+export const DEFAULT_RELEASES_URL = 'https://api.github.com/repos/DanyloNikulin/hornbook/releases?per_page=100';
 export const UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 export const FORCED_UPDATE_INTERVAL_MS = 60 * 1000;
 
@@ -37,11 +37,11 @@ export class ReleaseChecker {
         signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok) throw new Error(`release feed returned HTTP ${response.status}`);
-      const release = parseRelease(await response.json());
+      const release = selectRelease(await response.json(), this.opts.currentVersion);
       this.cached = {
         currentVersion: this.opts.currentVersion,
         checkedAt,
-        available: compareVersions(release.version, this.opts.currentVersion) > 0,
+        available: !!release && compareVersions(release.version, this.opts.currentVersion) > 0,
         release,
       };
     } catch (error) {
@@ -54,6 +54,27 @@ export class ReleaseChecker {
     }
     return this.cached;
   }
+}
+
+/** Versions below 1.0 are published as GitHub previews even without a suffix. */
+export function allowsPrereleases(version: string): boolean {
+  const normalized = normalizeVersion(version);
+  return !!normalized && (normalized.startsWith('0.') || normalized.includes('-'));
+}
+
+function selectRelease(raw: unknown, currentVersion: string): ReleaseInfo | undefined {
+  // Keep single-release responses supported for custom feeds and desktop fixtures.
+  if (!Array.isArray(raw)) return parseRelease(raw);
+  const previews = allowsPrereleases(currentVersion);
+  let latest: ReleaseInfo | undefined;
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object' || entry.draft) continue;
+    const version = typeof entry.tag_name === 'string' ? normalizeVersion(entry.tag_name) : null;
+    if (!version || (!previews && (entry.prerelease || version.includes('-')))) continue;
+    const release = parseRelease(entry);
+    if (!latest || compareVersions(release.version, latest.version) > 0) latest = release;
+  }
+  return latest;
 }
 
 export function parseRelease(raw: unknown): ReleaseInfo {

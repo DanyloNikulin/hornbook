@@ -25,7 +25,7 @@ import type { DesktopState, DesktopUpdateState, JobView } from '../src/lib/api-t
 import type { DesktopToolPath } from '../src/lib/desktop.ts';
 import { startServer } from '../server/main.ts';
 import { defaultJournalDir } from '../server/cli.ts';
-import { compareVersions, ReleaseChecker, UPDATE_INTERVAL_MS } from '../server/releases.ts';
+import { allowsPrereleases, compareVersions, ReleaseChecker, UPDATE_INTERVAL_MS } from '../server/releases.ts';
 import { packageRoot } from '../scripts/lib/runtime.ts';
 import { countLessons, seedJournal } from '../server/launch.ts';
 import { DEMO_JOURNAL } from '../scripts/lib/demo-journal.ts';
@@ -275,7 +275,7 @@ function configureUpdater(): void {
   });
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = false;
-  autoUpdater.allowPrerelease = false;
+  autoUpdater.allowPrerelease = allowsPrereleases(app.getVersion());
   autoUpdater.on('update-available', (info) => updater.available(info.version));
   autoUpdater.on('update-not-available', () => updater.unavailable());
   autoUpdater.on('download-progress', (progress) => updater.progress(progress.percent));
