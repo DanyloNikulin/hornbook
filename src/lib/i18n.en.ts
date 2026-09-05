@@ -76,6 +76,9 @@ export const EN = {
   'jobs.empty': 'Nothing running yet',
   'jobs.emptySub': 'A recording, cheat-sheet rebuild, or local-tool download will appear here.',
   'jobs.log': 'Log',
+  'jobs.cleanupFailed': 'Cleanup needs attention.',
+  'jobs.retryCleanup': 'Retry cleanup',
+  'jobs.cleanupPending': 'Finishing cleanup…',
 
   // ── common ────────────────────────────────────────────────────────────────
   'common.tryAgain': 'Try again',

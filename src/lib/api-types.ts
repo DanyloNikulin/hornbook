@@ -123,6 +123,7 @@ export interface JobView {
   /** Set by a successful process job (slug, id) or setup job (tool, path, version). */
   result?: { slug?: string; id?: string; tool?: string; path?: string; version?: string };
   error?: string;
+  cleanup?: { status: 'pending' } | { status: 'failed'; error: string };
   /** Last progress line of a setup job. */
   progress?: JobProgress;
   /** Structured progress for lesson-processing jobs. */

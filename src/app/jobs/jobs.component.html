@@ -33,6 +33,16 @@
             </div>
             <div class="il-job-progress"><span [style.width.%]="percent(job)"></span></div>
             @if (job.error) { <p class="il-job-error">{{ job.error }}</p> }
+            @if (job.cleanup; as cleanup) {
+              <div role="status">
+                @if (cleanup.status === 'failed') {
+                  <p class="il-job-error">{{ 'jobs.cleanupFailed' | t }} {{ cleanup.error }}</p>
+                  <button type="button" [disabled]="retrying() !== null" (click)="retryCleanup(job)">{{ 'jobs.retryCleanup' | t }}</button>
+                } @else {
+                  <p>{{ 'jobs.cleanupPending' | t }}</p>
+                }
+              </div>
+            }
             @if (job.log) {
               <details><summary>{{ 'jobs.log' | t }}</summary><pre class="il-log">{{ job.log }}</pre></details>
             }

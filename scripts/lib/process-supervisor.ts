@@ -35,6 +35,9 @@ export async function terminateProcessTree(child: ChildProcess, ownsProcessGroup
 }
 
 export class ProcessSupervisor {
+  /** Work result may fail before descendants can be released. */
+  readonly result: Promise<ProcessExit>;
+  /** Resolves only when the owned process tree can safely be released. */
   readonly completion: Promise<ProcessExit>;
   private ending?: Promise<void>;
   private exit?: ProcessExit;
@@ -42,6 +45,7 @@ export class ProcessSupervisor {
   private reason?: string;
   private timer?: ReturnType<typeof setTimeout>;
   private resolve!: (exit: ProcessExit) => void;
+  private resolveResult!: (exit: ProcessExit) => void;
 
   constructor(readonly child: ChildProcess, private readonly options: {
     ownsProcessGroup: boolean;
@@ -50,6 +54,7 @@ export class ProcessSupervisor {
     onTerminationError?: (error: Error) => void;
     terminate?: typeof terminateProcessTree;
   }) {
+    this.result = new Promise((resolve) => { this.resolveResult = resolve; });
     this.completion = new Promise<ProcessExit>((resolve) => {
       this.resolve = resolve;
       child.once('error', (error) => { this.reason ??= error.message; });
@@ -71,6 +76,7 @@ export class ProcessSupervisor {
       this.ending = Promise.resolve().then(() => (this.options.terminate ?? terminateProcessTree)(this.child, this.options.ownsProcessGroup))
         .then(() => { this.cleanupFailed = false; }, (error: Error) => {
           this.cleanupFailed = true;
+          this.resolveResult({ code: 1, error: `Process cleanup failed: ${error.message}` });
           this.options.onTerminationError?.(error);
           throw error;
         }).finally(() => { this.ending = undefined; this.complete(); });
@@ -80,7 +86,18 @@ export class ProcessSupervisor {
   }
 
   private complete(): void {
-    if (this.exit && !this.ending && !this.cleanupFailed)
-      this.resolve({ code: this.reason ? 1 : this.exit.code, ...(this.reason ? { error: this.reason } : {}) });
+    if (this.exit && !this.ending && !this.cleanupFailed) {
+      const result = { code: this.reason ? 1 : this.exit.code, ...(this.reason ? { error: this.reason } : {}) };
+      this.resolveResult(result);
+      this.resolve(result);
+    }
   }
+
+  get cleanupPending(): boolean { return !this.exit || !!this.ending || this.cleanupFailed; }
+}
+
+/** The caller can report failure without abandoning the process or its scratch files. */
+export class ProcessCleanupError extends Error {
+  constructor(message: string, readonly owner: ProcessSupervisor) { super(message); }
+  async retryCleanup(): Promise<void> { await this.owner.stop('retry process cleanup'); }
 }

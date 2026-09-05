@@ -13,6 +13,7 @@
 //   tsx scripts/review-vocab.ts --section es-en          # call the model, write report
 //   tsx scripts/review-vocab.ts --section es-en --dry    # compute stats only, no API call
 
+import { retainFailedCleanup } from './lib/cli-failure.ts';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { TopicCatalogT } from '../src/lib/schema.ts';
@@ -152,5 +153,6 @@ async function main(): Promise<void> {
 
 main().catch((err: unknown) => {
   console.error(err);
+  retainFailedCleanup(err);
   process.exitCode = 1;
 });

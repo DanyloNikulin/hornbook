@@ -163,6 +163,11 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
     return job;
   });
   on('GET', '/api/jobs', () => ctx.jobs.list());
+  on('POST', '/api/jobs/:id/cleanup', async (_r, _s, p) => {
+    if (!ctx.jobs.get(p['id'])) throw new HttpError(404, `No job "${p['id']}"`);
+    try { return await ctx.jobs.retryCleanup(p['id']); }
+    catch (error) { throw new HttpError(409, (error as Error).message); }
+  });
 
   on('GET', '/api/sections/:id/files', (_r, _s, p) => store.listFiles(p['id']));
 

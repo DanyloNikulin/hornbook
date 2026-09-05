@@ -17,10 +17,12 @@ export class JobsComponent {
   protected readonly jobs = signal<JobView[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
+  protected readonly retrying = signal<string | null>(null);
   protected readonly active = computed(() => this.jobs().filter((job) => job.status === 'queued' || job.status === 'running'));
   protected readonly finished = computed(() => this.jobs().filter((job) => job.status === 'done' || job.status === 'failed'));
   private timer: ReturnType<typeof setTimeout> | undefined;
   private alive = true;
+  private generation = 0;
 
   constructor() {
     inject(SectionService).set(null);
@@ -42,15 +44,40 @@ export class JobsComponent {
     return stages.length ? Math.round((stages.filter((stage) => stage.status === 'done' || stage.status === 'skipped').length / stages.length) * 100) : 0;
   }
 
-  private async load(): Promise<void> {
+  protected async retryCleanup(job: JobView): Promise<void> {
+    if (this.retrying()) return;
+    this.generation++;
+    clearTimeout(this.timer);
+    this.retrying.set(job.id);
     try {
-      this.jobs.set(await this.api.get<JobView[]>('/api/jobs'));
+      const updated = await this.api.post<JobView>(`/api/jobs/${encodeURIComponent(job.id)}/cleanup`, {});
+      if (this.alive) this.jobs.update((jobs) => jobs.map((entry) => entry.id === job.id ? updated : entry));
+    } catch (error) {
+      if (this.alive) this.jobs.update((jobs) => jobs.map((entry) => entry.id === job.id ? { ...entry, cleanup: { status: 'failed', error: (error as Error).message } } : entry));
+    } finally {
+      this.retrying.set(null);
+      this.schedule();
+    }
+  }
+
+  private async load(): Promise<void> {
+    const generation = ++this.generation;
+    try {
+      const jobs = await this.api.get<JobView[]>('/api/jobs');
+      if (!this.alive || generation !== this.generation) return;
+      this.jobs.set(jobs);
       this.error.set(null);
     } catch (error) {
-      this.error.set((error as Error).message);
+      if (this.alive && generation === this.generation) this.error.set((error as Error).message);
     } finally {
-      this.loading.set(false);
+      if (generation === this.generation) this.loading.set(false);
     }
-    if (this.alive && this.active().length > 0) this.timer = setTimeout(() => void this.load(), 1200);
+    if (generation === this.generation) this.schedule();
+  }
+
+  private schedule(): void {
+    clearTimeout(this.timer);
+    if (this.alive && (this.active().length > 0 || this.jobs().some((job) => job.cleanup?.status === 'pending')))
+      this.timer = setTimeout(() => void this.load(), 1200);
   }
 }

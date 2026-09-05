@@ -22,6 +22,7 @@
 // sheet size, hitting truncation around 30-40 lessons. With patches, output
 // stays bounded regardless of cheat sheet size.
 
+import { retainFailedCleanup } from './lib/cli-failure.ts';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import {
   Cheatsheet,
@@ -425,5 +426,5 @@ main().catch((err: unknown) => {
   const e = err as Error;
   console.error('\n✘', e.message);
   if (e.stack) console.error(e.stack);
-  process.exit(1);
+  if (!retainFailedCleanup(err)) process.exit(1);
 });

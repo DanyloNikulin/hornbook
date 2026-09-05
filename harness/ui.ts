@@ -26,6 +26,7 @@ import { progressScenario } from './ui/progress.ts';
 import { mutationsScenario } from './ui/mutations.ts';
 import { keyboardScenario } from './ui/keyboard.ts';
 import { appearanceScenario } from './ui/appearance.ts';
+import { jobsScenario } from './ui/jobs.ts';
 import {
   Report,
   launchBrowser,
@@ -42,6 +43,7 @@ import {
 const PORT = Number(process.env['HORNBOOK_HARNESS_PORT'] ?? 8796);
 const SCREENS = join(outDir, 'screens');
 const SCENARIOS = {
+  jobs: jobsScenario,
   keyboard: keyboardScenario,
   appearance: appearanceScenario,
   mutations: mutationsScenario,
@@ -96,7 +98,7 @@ async function runScenario(scenario: Scenario): Promise<Report> {
       locale: 'en-US',
     });
     await context.addInitScript(() => {
-      localStorage.setItem('hornbook-locale', 'en');
+      if (!localStorage.getItem('hornbook-locale')) localStorage.setItem('hornbook-locale', 'en');
       localStorage.setItem('hornbook-theme', 'day');
       const state = window as Window & {
         __hornbookHidden?: boolean;

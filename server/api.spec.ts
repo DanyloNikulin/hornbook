@@ -1,10 +1,11 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { AddressInfo } from 'node:net';
 import { startServer } from './main.ts';
 import type { SetupView } from '../src/lib/api-types.ts';
+import { JobRunner } from './jobs.ts';
 
 // A real server on an ephemeral port, driven with fetch. Static serving is
 // off (--no-static equivalent) so no build is needed.
@@ -46,6 +47,21 @@ afterAll(async () => {
 });
 
 describe('API — sections and errors', () => {
+  it('exposes cleanup retry with missing-job and retry-failure responses', async () => {
+    expect((await api('/api/jobs/missing/cleanup', post({}))).status).toBe(404);
+    const job = { id: 'cleanup-test', section: 'it-en', kind: 'process' as const, status: 'done' as const, label: 'Saved', log: '', createdAt: '' };
+    const get = vi.spyOn(JobRunner.prototype, 'get').mockReturnValue(job);
+    const retry = vi.spyOn(JobRunner.prototype, 'retryCleanup').mockRejectedValueOnce(new Error('cleanup blocked')).mockResolvedValueOnce(job);
+    try {
+      const failed = await api('/api/jobs/cleanup-test/cleanup', post({}));
+      expect(failed.status).toBe(409);
+      expect(await failed.json()).toEqual({ error: 'cleanup blocked' });
+      const success = await api('/api/jobs/cleanup-test/cleanup', post({}));
+      expect(success.status).toBe(200);
+      expect(await success.json()).toMatchObject({ status: 'done' });
+      expect(retry).toHaveBeenLastCalledWith('cleanup-test');
+    } finally { get.mockRestore(); retry.mockRestore(); }
+  });
   it('lists the created section', async () => {
     const config = await json<{ sections: { id: string; label: string }[] }>('/api/config');
     expect(config.sections.map((s) => s.id)).toEqual(['it-en']);

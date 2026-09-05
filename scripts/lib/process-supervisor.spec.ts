@@ -36,3 +36,18 @@ it('does not terminate again when the child exited before shutdown began', async
   child.emit('close', 0); await supervisor.stop('shutdown');
   expect(terminate).not.toHaveBeenCalled();
 });
+
+it('reports automatic termination failure while retaining retryable cleanup ownership', async () => {
+  const child = new EventEmitter() as ChildProcess;
+  const terminate = vi.fn().mockRejectedValueOnce(new Error('denied')).mockImplementationOnce(async () => { child.emit('close', 0); });
+  const supervisor = new ProcessSupervisor(child, { ownsProcessGroup: false, timeoutMs: 5, terminate });
+  let cleaned = false;
+  void supervisor.completion.then(() => { cleaned = true; });
+  await expect(supervisor.result).resolves.toMatchObject({ code: 1, error: expect.stringContaining('denied') });
+  child.emit('close', 0);
+  await Promise.resolve();
+  expect(cleaned).toBe(false);
+  await supervisor.stop('retry cleanup');
+  expect(cleaned).toBe(true);
+  expect(terminate).toHaveBeenCalledTimes(2);
+});

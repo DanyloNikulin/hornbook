@@ -5,6 +5,7 @@
 //
 // Usage: tsx scripts/extract.ts <work_dir> <date_hint>
 
+import { retainFailedCleanup } from './lib/cli-failure.ts';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { serializeLesson } from './lib/lesson-storage.ts';
 import { ensureUniqueSlug } from './lib/slug.ts';
@@ -303,6 +304,6 @@ async function cli(): Promise<void> {
 if (isMain(import.meta.url)) {
   cli().catch((err: unknown) => {
     console.error(err);
-    process.exit(1);
+    if (!retainFailedCleanup(err)) process.exit(1);
   });
 }

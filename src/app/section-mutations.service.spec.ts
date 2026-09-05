@@ -9,6 +9,7 @@ import { CardsService } from './cards.service';
 import { VocabService } from './vocab.service';
 import { SearchService } from './search.service';
 import { SectionMutations } from './section-mutations.service';
+import { JobsService } from './jobs.service';
 
 let id: string;
 let word: string;
@@ -96,6 +97,19 @@ beforeEach(() => {
   });
 });
 afterEach(() => TestBed.resetTestingModule());
+
+it('refreshes saved content when a successful job has a cleanup warning', async () => {
+  const lessons = TestBed.inject(LessonsService);
+  await lessons.load('es-en');
+  expect((await lessons.bySlug('shared'))?.title).toBe('orbit');
+  vi.spyOn(TestBed.inject(JobsService), 'run').mockImplementation(async () => {
+    word = 'mountain';
+    return { id: 'job', section: 'es-en', kind: 'process', status: 'done', label: 'Saved', log: '', createdAt: '', result: { slug: 'shared' }, cleanup: { status: 'failed', error: 'Upload cleanup failed' } };
+  });
+  const job = await TestBed.inject(SectionMutations).runJob('es-en', { kind: 'process', filename: 'saved.json', base64: 'e30=', date: '2099-01-01' });
+  expect(job.status).toBe('done');
+  expect((await lessons.bySlug('shared'))?.title).toBe('mountain');
+});
 
 it('pair import invalidates cached lesson details, cards, vocabulary and search for the destination', async () => {
   const lessons = TestBed.inject(LessonsService);

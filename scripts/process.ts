@@ -9,6 +9,7 @@
 // Usage: tsx scripts/process.ts <input> --date YYYY-MM-DD [--title title] [--section es-en]
 //        [--from video|audio|transcript|json] [--workdir dir]
 
+import { retainFailedCleanup } from './lib/cli-failure.ts';
 import { writeFileSync, mkdirSync, rmSync, existsSync, readFileSync, copyFileSync } from 'node:fs';
 import { join, basename, extname } from 'node:path';
 import { transcribe } from './transcribe.ts';
@@ -188,6 +189,6 @@ if (isMain(import.meta.url)) {
     const e = err as Error;
     console.error('\n✘', e.message);
     if (e.stack) console.error(e.stack);
-    process.exit(1);
+    if (!retainFailedCleanup(err)) process.exit(1);
   });
 }

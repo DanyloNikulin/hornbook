@@ -73,6 +73,9 @@ export const IT = {
   'jobs.empty': 'Nessuna attività in corso',
   'jobs.emptySub': 'Qui appariranno registrazioni, ricostruzioni del formulario o download di strumenti locali.',
   'jobs.log': 'Registro',
+  'jobs.cleanupFailed': 'La pulizia richiede attenzione.',
+  'jobs.retryCleanup': 'Riprova la pulizia',
+  'jobs.cleanupPending': 'Pulizia in corso…',
 
   'common.tryAgain': 'Riprova',
   'common.loading': 'Caricamento…',

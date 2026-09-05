@@ -14,7 +14,7 @@
 //                 prompt.txt from its working folder; stream-json keeps
 //                 stdout to one JSON line per message
 
-import { ProcessSupervisor } from '../lib/process-supervisor.ts';
+import { ProcessSupervisor, ProcessCleanupError } from '../lib/process-supervisor.ts';
 import { spawnProcess } from '../lib/process.ts';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -70,6 +70,7 @@ export class CliExtractor implements Extractor {
     const prompt = buildCliPrompt(req);
     const dir = mkdtempSync(join(tmpdir(), 'hornbook-cli-extract-'));
     writeFileSync(join(dir, 'prompt.txt'), prompt, 'utf8');
+    let retained = false;
     try {
       const cmd = cliCommand(this.kind, this.model, prompt, dir);
       const bin = resolveCli(cmd.bin, process.env);
@@ -85,8 +86,14 @@ export class CliExtractor implements Extractor {
       } catch (e) {
         throw new Error(`Extract ${this.driver}: ${(e as Error).message}. Output: ${answer.slice(0, 400)}`, { cause: e });
       }
+    } catch (error) {
+      if (error instanceof ProcessCleanupError) {
+        retained = true;
+        void error.owner.completion.then(() => removeExtractDir(dir)).catch((cleanup: Error) => console.error(`Extract scratch cleanup failed: ${cleanup.message}`));
+      }
+      throw error;
     } finally {
-      removeExtractDir(dir);
+      if (!retained) removeExtractDir(dir);
     }
   }
 }
@@ -273,8 +280,11 @@ export async function runProcess(
     child.stdin.on('error', () => undefined);
     child.stdin.end(stdin);
   }
-  return supervised.completion.then(({ code, error }) => {
-    if (error) throw new Error(`${bin}: ${error}`);
+  return supervised.result.then(({ code, error }) => {
+    if (error) {
+      if (supervised.cleanupPending) throw new ProcessCleanupError(`${bin}: ${error}`, supervised);
+      throw new Error(`${bin}: ${error}`);
+    }
     return { code, out, err };
   }).finally(() => signal?.removeEventListener('abort', cancel));
 }

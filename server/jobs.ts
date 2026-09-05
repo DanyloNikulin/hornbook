@@ -7,7 +7,7 @@
 import { spawn as nodeSpawn, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
-import { ProcessSupervisor } from '../scripts/lib/process-supervisor.ts';
+import { ProcessSupervisor, type terminateProcessTree } from '../scripts/lib/process-supervisor.ts';
 import { jobTimeout } from './job-timeout.ts';
 import { JobEventStream } from './job-events.ts';
 import { randomBytes } from 'node:crypto';
@@ -45,12 +45,14 @@ export interface JobRunnerOptions {
   /** Called after queue/running state changes. */
   onChange?: (active: number) => void;
   timeoutMs?: number;
+  terminate?: typeof terminateProcessTree;
 }
 
 interface Job extends JobView {
   cmd: string;
   args: string[];
-  cleanup?: () => void;
+  releaseUpload?: () => void;
+  cleanupFlight?: Promise<JobView>;
 
 }
 
@@ -59,7 +61,7 @@ export class JobRunner {
   private readonly order: string[] = [];
   private readonly queue: string[] = [];
   private running: { job: Job; process: ProcessSupervisor } | null = null;
-  private stopping = false;
+  private admission: { phase: 'open' | 'shutdown' } | { phase: 'cleanup-blocked'; error: string } = { phase: 'open' };
   private readonly idleWaiters = new Set<() => void>();
   private readonly spawnFn: typeof nodeSpawn;
   private readonly runner: (script: string) => { cmd: string; args: string[] };
@@ -73,7 +75,8 @@ export class JobRunner {
 
   /** Validate the request, stage any upload, and queue the job. */
   enqueue(section: string, input: StartJob): JobView {
-    if (this.stopping) throw new Error('Job runner is shutting down');
+    if (this.admission.phase === 'shutdown') throw new Error('Job runner is shutting down');
+    if (this.admission.phase === 'cleanup-blocked') throw new Error(this.admission.error);
     const id = `${Date.now().toString(36)}-${randomBytes(3).toString('hex')}`;
     let label: string;
     let script: string;
@@ -130,7 +133,7 @@ export class JobRunner {
       ...(input.kind === 'process' ? { stages: initialProcessStages(input, createdAt) } : {}),
       cmd,
       args: [...args, ...extra, '--section', section],
-      cleanup,
+      releaseUpload: cleanup,
     };
     this.jobs.set(id, job);
     this.order.push(id);
@@ -160,13 +163,14 @@ export class JobRunner {
 
   /** Reject new work, clean queued uploads, and await active tree termination. */
   async stop(): Promise<void> {
-    this.stopping = true;
+    this.admission = { phase: 'shutdown' };
     for (const id of this.queue.splice(0)) {
       const job = this.jobs.get(id);
       if (job) this.finish(job, 1, 'stopped with the server before starting');
     }
     if (this.running) await this.running.process.stop('stopped with the server');
     await this.idle();
+    for (const job of this.jobs.values()) if (job.cleanup) await this.retryCleanup(job.id);
   }
 
   idle(): Promise<void> {
@@ -175,7 +179,7 @@ export class JobRunner {
   }
 
   private view(job: Job): JobView {
-    const { cmd: _cmd, args: _args, cleanup: _cleanup, ...view } = job;
+    const { cmd: _cmd, args: _args, releaseUpload: _upload, cleanupFlight: _flight, ...view } = job;
     return { ...view, log: visibleLog(view.log) };
   }
 
@@ -183,14 +187,14 @@ export class JobRunner {
     while (this.order.length > MAX_JOBS_KEPT) {
       const id = this.order[0];
       const job = this.jobs.get(id);
-      if (!job || job.status === 'queued' || job.status === 'running') break;
+      if (!job || job.status === 'queued' || job.status === 'running' || job.cleanup || this.running?.job === job) break;
       this.order.shift();
       this.jobs.delete(id);
     }
   }
 
   private pump(): void {
-    if (this.running || this.stopping) return;
+    if (this.running || this.admission.phase !== 'open') return;
     const id = this.queue.shift();
     if (!id) return;
     const job = this.jobs.get(id);
@@ -216,19 +220,22 @@ export class JobRunner {
     }
     const timeoutMs = jobTimeout(job.kind, this.opts.timeoutMs);
     const supervised = new ProcessSupervisor(child, {
-      ownsProcessGroup: process.platform !== 'win32', timeoutMs,
+      ownsProcessGroup: process.platform !== 'win32', timeoutMs, terminate: this.opts.terminate,
       timeoutMessage: `Job reached its configured time limit (${timeoutMs / 60000} minutes). Set HORNBOOK_JOB_TIMEOUT_MINUTES to allow longer jobs.`,
-      onTerminationError: (error) => {
-        job.error = `Process cleanup failed: ${error.message}`;
-        job.log += '\n' + job.error + '\n';
-        this.stopping = true;
-        this.changed();
-      },
+      onTerminationError: (error) => this.blockForCleanup(job, error.message),
     });
     this.running = { job, process: supervised };
     const line = (text: string) => {
-      const marker = /HORNBOOK_(?:STAGE|PROGRESS|RESULT) /.exec(text);
+      const marker = /HORNBOOK_(?:STAGE|PROGRESS|RESULT|CLEANUP) /.exec(text);
       const event = marker ? text.slice(marker.index) : text;
+      if (event.startsWith('HORNBOOK_CLEANUP ')) {
+        try {
+          const raw: unknown = JSON.parse(event.slice('HORNBOOK_CLEANUP '.length));
+          if (raw && typeof raw === 'object' && 'error' in raw && typeof raw.error === 'string') {
+            this.blockForCleanup(job, raw.error);
+          }
+        } catch { /* Malformed child events remain harmless log text. */ }
+      }
       if (event.startsWith(STAGE_MARKER)) this.applyStageLine(job, event);
       else {
         job.log += text + '\n';
@@ -241,9 +248,16 @@ export class JobRunner {
     const stderr = new JobEventStream(line);
     child.stdout?.on('data', (chunk: Buffer) => stdout.write(chunk));
     child.stderr?.on('data', (chunk: Buffer) => stderr.write(chunk));
-    void supervised.completion.then(({ code, error }) => {
+    void supervised.result.then(({ code, error }) => {
       stdout.end(); stderr.end();
       this.finish(job, code, error);
+    });
+    void supervised.completion.then(() => {
+      if (this.running?.job === job) this.running = null;
+      if (this.admission.phase === 'cleanup-blocked') this.admission = { phase: 'open' };
+      this.cleanUpload(job);
+      this.pump();
+      this.changed();
     });
   }
 
@@ -264,17 +278,50 @@ export class JobRunner {
       job.error = error ?? lastErrorLine(job.log) ?? `exit code ${code}`;
       if (error) job.log += `\n${error}\n`;
     }
-    try {
-      job.cleanup?.();
-    } catch (cleanupError) {
-      job.status = 'failed';
-      job.error = `Upload cleanup failed: ${(cleanupError as Error).message}`;
-    }
-    job.cleanup = undefined;
-    if (this.running?.job === job) this.running = null;
+    if (this.running?.job === job) {
+      if (!job.cleanup) job.cleanup = { status: 'pending' };
+    } else this.cleanUpload(job);
     this.opts.onFinish?.(this.view(job));
     this.pump();
     this.changed();
+  }
+
+  private blockForCleanup(job: Job, detail: string): void {
+    const error = `Process cleanup failed: ${detail}`;
+    job.cleanup = { status: 'failed', error };
+    if (this.admission.phase !== 'shutdown') this.admission = { phase: 'cleanup-blocked', error };
+    this.finish(job, 1, error);
+    this.changed();
+  }
+
+  async retryCleanup(id: string): Promise<JobView> {
+    const job = this.jobs.get(id);
+    if (!job) throw new Error(`No job "${id}"`);
+    if (job.cleanupFlight) return job.cleanupFlight;
+    if (!job.cleanup) return this.view(job);
+    job.cleanup = { status: 'pending' };
+    job.cleanupFlight = (async () => {
+      try {
+        if (this.running?.job === job) await this.running.process.stop('retry process cleanup');
+        this.cleanUpload(job);
+        if (job.cleanup?.status === 'failed') throw new Error(job.cleanup.error);
+        return this.view(job);
+      } finally { this.changed(); }
+    })().finally(() => { job.cleanupFlight = undefined; });
+    return job.cleanupFlight;
+  }
+
+  private cleanUpload(job: Job): void {
+    if (this.running?.job === job) return;
+    try {
+      job.releaseUpload?.();
+      job.releaseUpload = undefined;
+      job.cleanup = undefined;
+    } catch (error) {
+      const message = `Upload cleanup failed: ${(error as Error).message}`;
+      job.cleanup = { status: 'failed', error: message };
+      job.log += '\n' + message + '\n';
+    }
   }
 
   private changed(): void {

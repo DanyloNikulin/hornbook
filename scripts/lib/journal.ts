@@ -18,6 +18,7 @@ import {
   readFileSync,
   lstatSync,
   realpathSync,
+  rmdirSync,
 } from 'node:fs';
 import { join, resolve, relative, isAbsolute, sep } from 'node:path';
 import { packageRoot } from './runtime.ts';
@@ -57,6 +58,12 @@ export function lessonFileStem(lesson: Pick<LessonT, 'date' | 'slug'>): string {
 export interface LoadedLesson {
   file: string;
   lesson: LessonT;
+}
+
+export class SectionNotEmptyError extends Error {}
+
+function configChange(config: JournalConfigT): FileChange {
+  return { path: 'journal.config.json', data: JSON.stringify(normalizeJournalConfig(config), null, 2) + '\n' };
 }
 
 export class JournalRepository {
@@ -138,8 +145,78 @@ export class JournalRepository {
   }
 
   saveJournalConfig(config: JournalConfigT): void {
-    const checked = normalizeJournalConfig(config);
-    this.commit(() => ({ changes: [{ path: 'journal.config.json', data: JSON.stringify(checked, null, 2) + '\n' }], result: undefined }));
+    const change = configChange(config);
+    this.commit(() => ({ changes: [change], result: undefined }));
+  }
+
+  initializeJournalConfig(config: JournalConfigT): void {
+    this.commit(() => ({ changes: existsSync(this.configPath()) ? [] : [configChange(config)], result: undefined }));
+  }
+
+  /** Ordinary updates always transform the latest configuration under the writer lock. */
+  updateJournalConfig(update: (current: JournalConfigT) => JournalConfigT): JournalConfigT {
+    return this.commit(() => {
+      const config = normalizeJournalConfig(update(this.loadJournalConfig()));
+      return { changes: [configChange(config)], result: config };
+    });
+  }
+
+  updateSection(id: string, update: (current: SectionConfigT) => SectionConfigT): SectionConfigT {
+    const config = this.updateJournalConfig((current) => {
+      const next = SectionConfig.parse(update(this.getSection(id)));
+      if (next.id !== id) throw new Error('A section update cannot change its identity');
+      return { ...current, sections: current.sections.map((section) => section.id === id ? next : section) };
+    });
+    return config.sections.find((section) => section.id === id)!;
+  }
+
+  writeBackdrop(id: string, image: { name: string; data: Uint8Array } | null): SectionConfigT {
+    if (image && !/^_backdrop\.[a-z0-9]+$/.test(image.name)) throw new Error('Invalid backdrop filename');
+    return this.commit(() => {
+      const section = this.getSection(id);
+      const dir = this.sectionDir(id);
+      const changes: FileChange[] = (existsSync(dir) ? readdirSync(dir) : [])
+        .filter((name) => /^_backdrop\./.test(name) && name !== image?.name)
+        .map((name) => ({ path: `${id}/${name}`, data: null }));
+      const theme = { ...section.theme };
+      if (image) {
+        changes.push({ path: `${id}/${image.name}`, data: image.data });
+        theme.backdrop = image.name;
+      } else delete theme.backdrop;
+      const next = { ...section };
+      if (Object.keys(theme).length) next.theme = theme; else delete next.theme;
+      const config = this.loadJournalConfig();
+      changes.push(configChange({ ...config, sections: config.sections.map((s) => s.id === id ? next : s) }));
+      return { changes, result: next };
+    });
+  }
+
+  deleteSection(id: string): void {
+    const directories = this.commit(() => {
+      this.getSection(id);
+      if (this.lessonFiles(id).length) throw new SectionNotEmptyError(`Section "${id}" still has lessons; delete them first`);
+      const changes: FileChange[] = [];
+      const directories: string[] = [];
+      const collect = (parts: string[]) => {
+        const dir = this.sectionPath(id, ...parts);
+        if (!existsSync(dir)) return;
+        directories.push(dir);
+        for (const name of readdirSync(dir)) {
+          const child = [...parts, name];
+          const path = this.sectionPath(id, ...child);
+          if (lstatSync(path).isDirectory()) collect(child);
+          else changes.push({ path: [id, ...child].join('/'), data: null });
+        }
+      };
+      collect([]);
+      const config = this.loadJournalConfig();
+      changes.push(configChange({ ...config, sections: config.sections.filter((s) => s.id !== id) }));
+      return { changes, result: directories };
+    });
+    // Only empty directories are disposable after commit; another writer may recreate the section.
+    for (const dir of directories.reverse()) {
+      try { rmdirSync(dir); } catch { /* Empty directory cleanup can be retried manually. */ }
+    }
   }
 
   invalidateConfig(): void {

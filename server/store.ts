@@ -3,7 +3,7 @@
 // src/lib/schema.ts, derived data in scripts/lib/derived.ts. This class adds
 // the HTTP-facing rules (404/409) and keeps derived files fresh on writes.
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename } from 'node:path';
 import {
   Cheatsheet,
@@ -37,7 +37,7 @@ import {
 } from '../src/lib/api-types.ts';
 import { connectionViews, updateSecrets } from './secrets.ts';
 import { parseProbeInput, probePipeline } from './probe.ts';
-import { JournalRepository, defaultJournalDir, DERIVED_FORMAT_VERSION, lessonFileStem } from '../scripts/lib/journal.ts';
+import { JournalRepository, SectionNotEmptyError, defaultJournalDir, DERIVED_FORMAT_VERSION, lessonFileStem } from '../scripts/lib/journal.ts';
 import { z } from 'zod';
 import { JournalProgress, ProgressError } from './progress.ts';
 import type { ProgressView } from '../src/lib/api-types.ts';
@@ -128,7 +128,7 @@ export class FolderStore {
   /** A missing journal is created with defaults and no sections. */
   private ensureJournal(): void {
     if (!existsSync(this.journal.configPath())) {
-      this.journal.saveJournalConfig(DEFAULT_CONFIG);
+      this.journal.initializeJournalConfig(DEFAULT_CONFIG);
     }
   }
 
@@ -173,25 +173,17 @@ export class FolderStore {
   updateSection(id: string, input: unknown): SectionSummary {
     const parsed = UpdateSectionInput.safeParse(input);
     if (!parsed.success) throw new HttpError(400, 'Invalid section update', parsed.error.format());
-    const current = this.section(id);
-    const next: SectionConfigT = { ...current };
-    const p = parsed.data;
-    if (p.title !== undefined) {
-      if (p.title === null) delete next.title;
-      else next.title = p.title;
-    }
-    if (p.theme !== undefined) {
-      if (p.theme === null) delete next.theme;
-      else next.theme = p.theme;
-    }
-    if (p.providers !== undefined) {
-      if (p.providers === null) delete next.providers;
-      else next.providers = p.providers;
-    }
-    const config = this.journal.loadJournalConfig();
-    this.journal.saveJournalConfig({
-      ...config,
-      sections: config.sections.map((s) => (s.id === id ? next : s)),
+    this.section(id);
+    const next = this.journal.updateSection(id, (current) => {
+      const next = { ...current };
+      const patch = parsed.data;
+      if (patch.title === null) delete next.title;
+      else if (patch.title !== undefined) next.title = patch.title;
+      if (patch.theme === null) delete next.theme;
+      else if (patch.theme !== undefined) next.theme = patch.theme;
+      if (patch.providers === null) delete next.providers;
+      else if (patch.providers !== undefined) next.providers = patch.providers;
+      return next;
     });
     return this.summarize(next);
   }
@@ -199,13 +191,11 @@ export class FolderStore {
   /** Delete a section. Refuses (409) while it still has lessons. */
   deleteSection(id: string): void {
     this.section(id);
-    if (this.journal.lessonFiles(id).length > 0) {
-      throw new HttpError(409, `Section "${id}" still has lessons; delete them first`);
+    try { this.journal.deleteSection(id); }
+    catch (error) {
+      if (error instanceof SectionNotEmptyError) throw new HttpError(409, error.message);
+      throw error;
     }
-    const dir = this.journal.sectionDir(id);
-    const config = this.journal.loadJournalConfig();
-    this.journal.saveJournalConfig({ ...config, sections: config.sections.filter((s) => s.id !== id) });
-    rmSync(dir, { recursive: true, force: true });
   }
 
   // ── lessons ──────────────────────────────────────────────────────────────
@@ -436,7 +426,7 @@ export class FolderStore {
    * previous one. Returns the section with the new theme.
    */
   saveBackdrop(id: string, input: unknown): SectionSummary {
-    const section = this.section(id);
+    this.section(id);
     const parsed = BackdropInput.safeParse(input);
     if (!parsed.success) throw new HttpError(400, 'Invalid image', parsed.error.format());
     const { filename, base64 } = parsed.data;
@@ -449,28 +439,13 @@ export class FolderStore {
     if (data.length > MAX_BACKDROP_BYTES) {
       throw new HttpError(413, `Image is larger than ${Math.round(MAX_BACKDROP_BYTES / 1024 / 1024)} MB`);
     }
-    this.clearBackdropFiles(id);
-    const name = `_backdrop.${ext}`;
-    mkdirSync(this.journal.sectionDir(id), { recursive: true });
-    writeFileSync(this.journal.sectionPath(id, name), data);
-    return this.updateSection(id, { theme: { ...section.theme, backdrop: name } });
+    return this.summarize(this.journal.writeBackdrop(id, { name: `_backdrop.${ext}`, data }));
   }
 
   /** Remove the backdrop image and the reference to it. */
   deleteBackdrop(id: string): SectionSummary {
-    const section = this.section(id);
-    this.clearBackdropFiles(id);
-    const theme = { ...section.theme };
-    delete theme.backdrop;
-    return this.updateSection(id, { theme: Object.keys(theme).length > 0 ? theme : null });
-  }
-
-  private clearBackdropFiles(id: string): void {
-    const dir = this.journal.sectionDir(id);
-    if (!existsSync(dir)) return;
-    for (const f of readdirSync(dir)) {
-      if (/^_backdrop\./.test(f)) rmSync(this.journal.sectionPath(id, f), { force: true });
-    }
+    this.section(id);
+    return this.summarize(this.journal.writeBackdrop(id, null));
   }
 
   // ── settings ─────────────────────────────────────────────────────────────
@@ -487,8 +462,8 @@ export class FolderStore {
     const parsed = SettingsUpdateInput.safeParse(input);
     if (!parsed.success) throw new HttpError(400, 'Invalid settings', parsed.error.format());
     if (parsed.data.providers) {
-      const config = this.journal.loadJournalConfig();
-      this.journal.saveJournalConfig({ ...config, providers: parsed.data.providers });
+      const providers = parsed.data.providers;
+      this.journal.updateJournalConfig((config) => ({ ...config, providers }));
     }
     if (parsed.data.connections) {
       updateSecrets(this.journal.journalDir(), parsed.data.connections);
