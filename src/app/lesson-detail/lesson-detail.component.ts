@@ -33,9 +33,9 @@ export class LessonDetailComponent {
   // Lazy fetch of full lesson content via Angular 21's resource() API.
   // The loader returns the cached promise from LessonsService (idempotent
   // per slug), so the route re-entering the same slug is free.
-  protected readonly lessonResource = resource<LessonT | undefined, string>({
-    params: () => this.slug(),
-    loader: async ({ params: slug }) => this.lessons.bySlug(slug),
+  protected readonly lessonResource = resource<LessonT | undefined, { slug: string; section: string | null; revision: number }>({
+    params: () => ({ slug: this.slug(), section: this.lessons.sectionId(), revision: this.lessons.revision() }),
+    loader: async ({ params }) => this.lessons.bySlug(params.slug),
   });
 
   // Template consumers — three states (loading, error, value) projected

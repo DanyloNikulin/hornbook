@@ -1,6 +1,7 @@
 import { strFromU8, strToU8, unzipSync, zipSync, type UnzipFileInfo } from 'fflate';
 import { z } from 'zod';
 import { SectionConfig, type SectionConfigT } from '../src/lib/journal-config.ts';
+import { readStoredLesson } from '../scripts/lib/lesson-storage.ts';
 import {
   Cheatsheet,
   Lesson,
@@ -55,7 +56,7 @@ export function buildSectionArchive(input: SectionArchiveInput): Buffer {
     section,
   });
   for (const raw of input.lessons) {
-    const lesson = Lesson.parse(raw);
+    const lesson = readStoredLesson(raw);
     entries[`lessons/${lesson.id}.json`] = jsonBytes(lesson);
   }
   if (input.cheatsheet) entries['cheatsheet.json'] = jsonBytes(Cheatsheet.parse(input.cheatsheet));
@@ -127,7 +128,7 @@ function readJson(data: Uint8Array, name: string): unknown {
   try {
     return JSON.parse(strFromU8(data));
   } catch (error) {
-    throw new Error(`${name} is not valid JSON: ${(error as Error).message}`);
+    throw new Error(`${name} is not valid JSON: ${(error as Error).message}`, { cause: error });
   }
 }
 

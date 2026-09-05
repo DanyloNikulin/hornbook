@@ -32,14 +32,18 @@ export class LessonsService {
   readonly loadError = signal<string | null>(null);
   readonly count = computed(() => this.metas().length);
 
+  readonly revision = signal(0);
+  private loadGeneration = 0;
   private readonly cache = new Map<string, Promise<LessonT>>();
 
   async load(sectionId: string): Promise<void> {
+    const generation = ++this.loadGeneration;
     this.sectionId.set(sectionId);
     this.metas.set([]);
+    this.revision.update((value) => value + 1);
     try {
       const raw = await this.api.get<unknown[]>(`${this.base(sectionId)}/lessons`);
-      if (this.sectionId() !== sectionId) return;
+      if (generation !== this.loadGeneration || this.sectionId() !== sectionId) return;
       this.metas.set(
         raw.flatMap((entry, idx) => {
           const result = LessonMeta.safeParse(entry);
@@ -52,18 +56,23 @@ export class LessonsService {
         }),
       );
       this.loadError.set(null);
+      this.revision.update((value) => value + 1);
     } catch (err) {
+      if (generation !== this.loadGeneration || this.sectionId() !== sectionId) return;
       this.loadError.set((err as Error).message);
     }
   }
 
-  /** Re-fetch the manifest after a save in the same section. */
-  async reload(): Promise<void> {
-    const id = this.sectionId();
-    if (id) {
-      this.cache.clear();
+  async invalidate(id: string): Promise<void> {
+    for (const key of this.cache.keys()) if (key.startsWith(`${id}/`)) this.cache.delete(key);
+    if (this.sectionId() === id) {
       await this.load(id);
     }
+  }
+
+  async reload(): Promise<void> {
+    const id = this.sectionId();
+    if (id) await this.invalidate(id);
   }
 
   private base(sectionId: string): string {
@@ -138,7 +147,7 @@ export class LessonsService {
       })
       .catch((error: unknown) => {
         // Never retain a rejected promise: resource.reload() must retry.
-        this.cache.delete(key);
+        if (this.cache.get(key) === promise) this.cache.delete(key);
         throw error;
       });
     this.cache.set(key, promise);
@@ -150,7 +159,7 @@ export class LessonsService {
     const sectionId = this.sectionId();
     if (!sectionId) throw new Error('No section selected');
     const saved = await this.api.post<LessonT>(`${this.base(sectionId)}/lessons`, lesson);
-    await this.reload();
+    await this.invalidate(sectionId);
     return saved;
   }
 }

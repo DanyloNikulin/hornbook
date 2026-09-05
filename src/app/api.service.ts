@@ -17,12 +17,12 @@ export class ApiError extends Error {
  */
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  async get<T>(path: string): Promise<T> {
-    return this.request<T>('GET', path);
+  async get<T>(path: string, signal?: AbortSignal): Promise<T> {
+    return this.request<T>('GET', path, undefined, signal);
   }
 
-  async post<T>(path: string, body: unknown): Promise<T> {
-    return this.request<T>('POST', path, body);
+  async post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+    return this.request<T>('POST', path, body, signal);
   }
 
   async put<T>(path: string, body: unknown): Promise<T> {
@@ -45,8 +45,8 @@ export class ApiService {
     return { blob: await res.blob(), filename };
   }
 
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const init: RequestInit = { method, headers: { Accept: 'application/json' } };
+  private async request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+    const init: RequestInit = { method, headers: { Accept: 'application/json' }, signal };
     if (body !== undefined) {
       init.headers = { ...init.headers, 'Content-Type': 'application/json' };
       init.body = JSON.stringify(body);

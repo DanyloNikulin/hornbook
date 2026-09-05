@@ -11,7 +11,7 @@
     var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     var theme = saved === 'night' || saved === 'day' ? saved : prefersDark ? 'night' : 'day';
     document.documentElement.setAttribute('data-theme', theme);
-  } catch (e) {
+  } catch {
     // localStorage can throw (privacy mode / blocked storage). Fall back to
     // the system preference only.
     document.documentElement.setAttribute(

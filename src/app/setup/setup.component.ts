@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LANGUAGES, languageInfo, type LanguageInfo } from '../../lib/languages';
@@ -6,12 +6,12 @@ import { sectionIdFor } from '../../lib/journal-config';
 import type {
   ImportConflictStrategy,
   LessonImportConflict,
-  SectionImportResult,
   SectionSummary,
 } from '../../lib/api-types';
-import { ApiError, ApiService, fileToBase64 } from '../api.service';
+import { ApiError, ApiService } from '../api.service';
 import { TPipe } from '../i18n.pipe';
 import { JournalService } from '../journal.service';
+import { SectionMutations } from '../section-mutations.service';
 import { SectionService } from '../section.service';
 
 /** Create a language pair. Pick once; the pair becomes a section of the journal. */
@@ -128,6 +128,8 @@ export class SetupComponent {
   private readonly journal = inject(JournalService);
   private readonly section = inject(SectionService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly mutations = inject(SectionMutations);
 
   protected readonly languages: readonly LanguageInfo[] = LANGUAGES;
   protected readonly target = signal('es');
@@ -151,6 +153,9 @@ export class SetupComponent {
   }
 
   protected async create(): Promise<void> {
+    const url = this.router.url;
+    const navigation = this.router.lastSuccessfulNavigation()?.id;
+    const current = () => !this.destroyRef.destroyed && this.router.url === url && this.router.lastSuccessfulNavigation()?.id === navigation && !this.router.currentNavigation();
     if (!this.valid()) return;
     this.saving.set(true);
     this.error.set(null);
@@ -161,11 +166,11 @@ export class SetupComponent {
         title: this.title.trim() || undefined,
       });
       await this.journal.refresh();
-      await this.router.navigate(['/', created.id]);
+      if (current()) await this.router.navigate(['/', created.id]);
     } catch (err) {
-      this.error.set((err as Error).message);
+      if (current()) this.error.set((err as Error).message);
     } finally {
-      this.saving.set(false);
+      if (current()) this.saving.set(false);
     }
   }
 
@@ -192,24 +197,25 @@ export class SetupComponent {
   }
 
   protected async importPair(strategy: ImportConflictStrategy = 'error'): Promise<void> {
+    const url = this.router.url;
+    const navigation = this.router.lastSuccessfulNavigation()?.id;
+    const current = () => !this.destroyRef.destroyed && this.router.url === url && this.router.lastSuccessfulNavigation()?.id === navigation && !this.router.currentNavigation();
     const file = this.importFile();
     if (!file || this.importing()) return;
     this.importing.set(true);
     this.importError.set(null);
     try {
-      const result = await this.api.post<SectionImportResult>('/api/sections/import', {
-        base64: await fileToBase64(file),
-        conflict: strategy,
-      });
+      const result = await this.mutations.importSection(file, strategy);
+      if (!current()) return;
       this.conflicts.set([]);
-      await this.journal.refresh();
       await this.router.navigate(['/', result.section.id]);
     } catch (error) {
+      if (!current()) return;
       const conflicts = error instanceof ApiError && error.status === 409 ? importConflicts(error.details) : [];
       this.conflicts.set(conflicts);
       if (conflicts.length === 0) this.importError.set((error as Error).message);
     } finally {
-      this.importing.set(false);
+      if (current()) this.importing.set(false);
     }
   }
 }

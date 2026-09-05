@@ -23,9 +23,9 @@ export class VocabComponent {
   protected readonly sec = inject(SectionService);
   private readonly vocabSvc = inject(VocabService);
   private readonly journal = this.sec;
-  protected readonly targetName = this.journal.targetName();
-  protected readonly learnerName = this.journal.learnerName();
-  protected readonly speechLang = this.journal.speechLang();
+  protected get targetName() { return this.journal.targetName(); }
+  protected get learnerName() { return this.journal.learnerName(); }
+  protected get speechLang() { return this.journal.speechLang(); }
 
   protected readonly PAGE_SIZE = PAGE_SIZE;
   protected readonly levels = LEVELS;
@@ -37,10 +37,8 @@ export class VocabComponent {
   protected readonly page = signal(0);
   protected readonly speakingWord = signal<string | null>(null);
 
-  // Lazy-fetched vocab list. The resource params don't change (no slug to
-  // key on), so the loader runs once and the value sticks.
-  private readonly vocabResource = resource<readonly DerivedVocabT[], boolean>({
-    params: () => true,
+  private readonly vocabResource = resource<readonly DerivedVocabT[], { section: string; revision: number }>({
+    params: () => ({ section: this.sec.id(), revision: this.vocabSvc.revision() }),
     loader: async () => this.vocabSvc.all(),
   });
 

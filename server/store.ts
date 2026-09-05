@@ -4,7 +4,7 @@
 // the HTTP-facing rules (404/409) and keeps derived files fresh on writes.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename } from 'node:path';
 import {
   Cheatsheet,
   EMPTY_PROGRESS,
@@ -15,8 +15,6 @@ import {
   type LessonMetaT,
   type LessonT,
   type ProgressT,
-  type DerivedCardT,
-  type TopicCatalogT,
 } from '../src/lib/schema.ts';
 import {
   SectionConfig,
@@ -34,17 +32,19 @@ import {
   type ConfigView,
   type SettingsView,
   type ProbeResult,
-  type ImportConflictStrategy,
-  type LessonImportConflict,
   type LessonImportResult,
   type SectionImportResult,
 } from '../src/lib/api-types.ts';
 import { connectionViews, updateSecrets } from './secrets.ts';
 import { parseProbeInput, probePipeline } from './probe.ts';
-import * as journal from '../scripts/lib/journal.ts';
-import { lessonToMarkdown } from '../scripts/lib/markdown.ts';
+import { JournalRepository, defaultJournalDir, DERIVED_FORMAT_VERSION, lessonFileStem } from '../scripts/lib/journal.ts';
 import { z } from 'zod';
-import { remapLessonScopedId } from '../src/lib/content-ids.ts';
+import { JournalProgress, ProgressError } from './progress.ts';
+import type { ProgressView } from '../src/lib/api-types.ts';
+import { planImport, mergeImportProgress } from './import-plan.ts';
+import { sectionWriteChanges } from '../scripts/lib/section-write.ts';
+import { readStoredLesson } from '../scripts/lib/lesson-storage.ts';
+import type { FileChange, CommitObserver } from '../scripts/lib/file-commit.ts';
 import {
   BACKDROP_EXTENSIONS,
   buildSectionArchive,
@@ -114,27 +114,29 @@ const SectionImportInput = z.object({
 });
 
 export class FolderStore {
-  constructor(journalDir?: string) {
-    if (journalDir) journal.setJournalDir(journalDir);
+  private readonly journal: JournalRepository;
+
+  constructor(journalDir = defaultJournalDir(), observeCommit?: CommitObserver) {
+    this.journal = new JournalRepository(journalDir, observeCommit);
     this.ensureJournal();
   }
 
   get dir(): string {
-    return journal.journalDir();
+    return this.journal.journalDir();
   }
 
   /** A missing journal is created with defaults and no sections. */
   private ensureJournal(): void {
-    if (!existsSync(journal.configPath())) {
-      journal.saveJournalConfig(DEFAULT_CONFIG);
+    if (!existsSync(this.journal.configPath())) {
+      this.journal.saveJournalConfig(DEFAULT_CONFIG);
     }
   }
 
   // ── config & sections ────────────────────────────────────────────────────
 
   config(): ConfigView {
-    journal.invalidateConfig();
-    const c = journal.loadJournalConfig();
+    this.journal.invalidateConfig();
+    const c = this.journal.loadJournalConfig();
     return { brand: c.brand, providers: c.providers, sections: c.sections.map((s) => this.summarize(s)) };
   }
 
@@ -143,13 +145,13 @@ export class FolderStore {
       ...s,
       label: sectionTitle(s),
       flags: { target: languageFlag(s.target), learner: languageFlag(s.learner) },
-      lessonCount: journal.lessonFiles(s.id).length,
+      lessonCount: this.journal.lessonFiles(s.id).length,
     };
   }
 
   section(id: string): SectionConfigT {
-    journal.invalidateConfig();
-    const s = journal.listSections().find((x) => x.id === id);
+    this.journal.invalidateConfig();
+    const s = this.journal.listSections().find((x) => x.id === id);
     if (!s) throw new HttpError(404, `Unknown section "${id}"`);
     return s;
   }
@@ -159,12 +161,12 @@ export class FolderStore {
     if (!parsed.success) throw new HttpError(400, 'Invalid section', parsed.error.format());
     const { target, learner, title, id } = parsed.data;
     if (target === learner) throw new HttpError(400, 'Target and learner language must differ');
-    journal.invalidateConfig();
+    this.journal.invalidateConfig();
     const wantId = id ?? sectionIdFor(target, learner);
-    if (journal.listSections().some((s) => s.id === wantId)) {
+    if (this.journal.listSections().some((s) => s.id === wantId)) {
       throw new HttpError(409, `Section "${wantId}" already exists`);
     }
-    const created = journal.createSection({ target, learner, title, id: wantId });
+    const created = this.journal.createSection({ target, learner, title, id: wantId });
     return this.summarize(created);
   }
 
@@ -186,8 +188,8 @@ export class FolderStore {
       if (p.providers === null) delete next.providers;
       else next.providers = p.providers;
     }
-    const config = journal.loadJournalConfig();
-    journal.saveJournalConfig({
+    const config = this.journal.loadJournalConfig();
+    this.journal.saveJournalConfig({
       ...config,
       sections: config.sections.map((s) => (s.id === id ? next : s)),
     });
@@ -197,40 +199,39 @@ export class FolderStore {
   /** Delete a section. Refuses (409) while it still has lessons. */
   deleteSection(id: string): void {
     this.section(id);
-    if (journal.lessonFiles(id).length > 0) {
+    if (this.journal.lessonFiles(id).length > 0) {
       throw new HttpError(409, `Section "${id}" still has lessons; delete them first`);
     }
-    const config = journal.loadJournalConfig();
-    journal.saveJournalConfig({ ...config, sections: config.sections.filter((s) => s.id !== id) });
-    rmSync(journal.sectionDir(id), { recursive: true, force: true });
+    const dir = this.journal.sectionDir(id);
+    const config = this.journal.loadJournalConfig();
+    this.journal.saveJournalConfig({ ...config, sections: config.sections.filter((s) => s.id !== id) });
+    rmSync(dir, { recursive: true, force: true });
   }
 
   // ── lessons ──────────────────────────────────────────────────────────────
 
   private ensureDerived(id: string): void {
-    const dir = journal.derivedDir(id);
     let version = 0;
     try {
-      version = (JSON.parse(readFileSync(join(dir, 'format.json'), 'utf8')) as { version?: number }).version ?? 0;
+      version = (JSON.parse(readFileSync(this.journal.sectionPath(id, '_derived', 'format.json'), 'utf8')) as { version?: number }).version ?? 0;
     } catch {
       // A missing or malformed marker belongs to an older derived format.
     }
-    if (version !== journal.DERIVED_FORMAT_VERSION || !existsSync(join(dir, 'meta.json'))) journal.writeDerived(id);
+    if (version !== DERIVED_FORMAT_VERSION || !existsSync(this.journal.sectionPath(id, '_derived', 'meta.json'))) this.journal.writeDerived(id);
   }
 
   lessonMetas(id: string): LessonMetaT[] {
     this.section(id);
     this.ensureDerived(id);
-    const raw = JSON.parse(readFileSync(join(journal.derivedDir(id), 'meta.json'), 'utf8')) as unknown[];
+    const raw = JSON.parse(readFileSync(this.journal.sectionPath(id, '_derived', 'meta.json'), 'utf8')) as unknown[];
     return raw.map((m) => LessonMeta.parse(m));
   }
 
   private lessonFileFor(id: string, slug: string): string | null {
-    const dir = journal.sectionDir(id);
-    for (const f of journal.lessonFiles(id)) {
+    for (const f of this.journal.lessonFiles(id)) {
       try {
-        const raw = JSON.parse(readFileSync(join(dir, f), 'utf8')) as { slug?: unknown };
-        if (raw.slug === slug) return join(dir, f);
+        const raw = JSON.parse(readFileSync(this.journal.sectionPath(id, f), 'utf8')) as { slug?: unknown };
+        if (raw.slug === slug) return this.journal.sectionPath(id, f);
       } catch {
         // malformed: reported by writeDerived
       }
@@ -242,9 +243,8 @@ export class FolderStore {
     this.section(id);
     const path = this.lessonFileFor(id, slug);
     if (!path) throw new HttpError(404, `No lesson "${slug}" in section "${id}"`);
-    const result = Lesson.safeParse(JSON.parse(readFileSync(path, 'utf8')));
-    if (!result.success) throw new HttpError(500, `Lesson "${slug}" is malformed`, result.error.format());
-    return result.data;
+    try { return readStoredLesson(JSON.parse(readFileSync(path, 'utf8'))); }
+    catch (error) { throw new HttpError(500, `Lesson "${slug}" is malformed: ${(error as Error).message}`); }
   }
 
   /**
@@ -257,15 +257,13 @@ export class FolderStore {
     const parsed = Lesson.safeParse(input);
     if (!parsed.success) throw new HttpError(400, 'Invalid lesson', parsed.error.format());
     const lesson = parsed.data;
-    const stem = journal.lessonFileStem(lesson);
+    const stem = lessonFileStem(lesson);
     lesson.id = stem;
     const existing = this.lessonFileFor(id, lesson.slug);
     if (existing && !existing.endsWith(`${stem}.json`)) {
       throw new HttpError(409, `Slug "${lesson.slug}" is already used by another lesson (${existing})`);
     }
-    this.writeLessonFiles(id, lesson);
-    this.rebuild(id);
-    return lesson;
+    return this.journal.writeLesson(id, lesson);
   }
 
   exportLesson(id: string, slug: string): { filename: string; data: Buffer } {
@@ -282,82 +280,34 @@ export class FolderStore {
     if (!parsed.success) throw new HttpError(400, 'Invalid lesson import', parsed.error.format());
     const incoming = Lesson.safeParse(parsed.data.lesson);
     if (!incoming.success) throw new HttpError(400, 'Invalid lesson', incoming.error.format());
-    return this.importOneLesson(id, incoming.data, parsed.data.conflict, true);
+    return this.journal.commit(() => {
+      const section = this.section(id);
+      const existing = this.journal.readSectionLessons(id).map((entry) => entry.lesson);
+      const plan = planImport(existing, [incoming.data], parsed.data.conflict);
+      if (plan.conflicts.length && parsed.data.conflict === 'error') {
+        throw new HttpError(409, `Lesson "${incoming.data.slug}" already exists`, { conflicts: plan.conflicts });
+      }
+      return {
+        changes: sectionWriteChanges(section, plan.lessons, plan.results.map((r) => r.lesson), plan.removed),
+        result: plan.results[0],
+      };
+    });
   }
 
   deleteLesson(id: string, slug: string): void {
-    this.section(id);
-    const path = this.lessonFileFor(id, slug);
-    if (!path) throw new HttpError(404, `No lesson "${slug}" in section "${id}"`);
-    rmSync(path, { force: true });
-    rmSync(path.replace(/\.json$/, '.md'), { force: true });
-    this.rebuild(id);
-  }
-
-  private rebuild(id: string): void {
-    try {
-      journal.writeDerived(id);
-    } catch (err) {
-      throw new HttpError(500, `Derived data rebuild failed: ${(err as Error).message}`);
-    }
-  }
-
-  private writeLessonFiles(id: string, lesson: LessonT): void {
-    const stem = journal.lessonFileStem(lesson);
-    const dir = journal.sectionDir(id);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, `${stem}.json`), `${JSON.stringify(lesson, null, 2)}\n`, 'utf8');
-    writeFileSync(join(dir, `${stem}.md`), lessonToMarkdown(lesson), 'utf8');
-  }
-
-  private importOneLesson(
-    sectionId: string,
-    incoming: LessonT,
-    strategy: ImportConflictStrategy,
-    rebuild: boolean,
-    reserved = new Set<string>(),
-  ): LessonImportResult {
-    const existingPath = this.lessonFileFor(sectionId, incoming.slug);
-    const originalId = incoming.id;
-    let lesson = incoming;
-    let action: LessonImportResult['action'] = 'imported';
-    if (existingPath) {
-      const conflict = this.lessonConflict(existingPath, incoming);
-      if (strategy === 'error') {
-        throw new HttpError(409, `Lesson "${incoming.slug}" already exists`, { conflicts: [conflict] });
-      }
-      if (strategy === 'keep-both') {
-        const slug = this.availableSlug(sectionId, incoming.slug, reserved);
-        lesson = Lesson.parse({ ...incoming, slug, id: `${incoming.date}-${slug}` });
-        action = 'kept-both';
-      } else {
-        rmSync(existingPath, { force: true });
-        rmSync(existingPath.replace(/\.json$/, '.md'), { force: true });
-        action = 'replaced';
-      }
-    }
-    reserved.add(lesson.slug);
-    this.writeLessonFiles(sectionId, lesson);
-    if (rebuild) this.rebuild(sectionId);
-    return { lesson, action, originalId };
-  }
-
-  private lessonConflict(existingPath: string, incoming: LessonT): LessonImportConflict {
-    const existing = Lesson.parse(JSON.parse(readFileSync(existingPath, 'utf8')));
-    return { slug: incoming.slug, incomingId: incoming.id, existingId: existing.id };
-  }
-
-  private availableSlug(sectionId: string, base: string, reserved: ReadonlySet<string>): string {
-    const used = journal.existingSlugs(sectionId);
-    let n = 2;
-    while (used.has(`${base}-${n}`) || reserved.has(`${base}-${n}`)) n += 1;
-    return `${base}-${n}`;
+    this.journal.commit(() => {
+      const section = this.section(id);
+      const existing = this.journal.readSectionLessons(id).map((entry) => entry.lesson);
+      const removed = existing.find((lesson) => lesson.slug === slug);
+      if (!removed) throw new HttpError(404, `No lesson "${slug}" in section "${id}"`);
+      return { changes: sectionWriteChanges(section, existing.filter((lesson) => lesson.slug !== slug), [], [removed]), result: undefined };
+    });
   }
 
   exportSection(id: string, includeProgress: boolean): { filename: string; data: Buffer } {
     const section = structuredClone(this.section(id));
-    const lessons = journal.readSectionLessons(id).map((entry) => entry.lesson);
-    const topicsPath = journal.topicsPath(id);
+    const lessons = this.journal.readSectionLessons(id).map((entry) => entry.lesson);
+    const topicsPath = this.journal.topicsPath(id);
     const backdropPath = this.backdropPath(id);
     if (section.theme?.backdrop && !backdropPath) {
       delete section.theme.backdrop;
@@ -366,8 +316,8 @@ export class FolderStore {
     const data = buildSectionArchive({
       section,
       lessons,
-      cheatsheet: existsSync(journal.cheatsheetPath(id)) ? this.cheatsheet(id) : undefined,
-      topics: existsSync(topicsPath) ? journal.readTopicCatalog(id) : undefined,
+      cheatsheet: existsSync(this.journal.cheatsheetPath(id)) ? this.cheatsheet(id) : undefined,
+      topics: existsSync(topicsPath) ? this.journal.readTopicCatalog(id) : undefined,
       progress: includeProgress ? this.progress(id) : undefined,
       backdrop: backdropPath ? { name: basename(backdropPath), data: readFileSync(backdropPath) } : undefined,
     });
@@ -385,96 +335,47 @@ export class FolderStore {
     } catch (error) {
       throw new HttpError(400, `Invalid pair archive: ${(error as Error).message}`);
     }
-    const existing = this.config().sections.find((section) => section.id === archive.section.id);
-    if (existing && (existing.target !== archive.section.target || existing.learner !== archive.section.learner)) {
-      throw new HttpError(409, `Pair "${archive.section.id}" uses different languages in this journal`);
-    }
-
-    const conflicts = this.sectionConflicts(archive.section.id, archive.lessons);
-    if (conflicts.length > 0 && parsed.data.conflict === 'error') {
-      throw new HttpError(409, `${conflicts.length} imported lesson${conflicts.length === 1 ? '' : 's'} already exist`, { conflicts });
-    }
-
-    const created = !existing;
-    if (created) {
-      this.createSection({
-        id: archive.section.id,
-        target: archive.section.target,
-        learner: archive.section.learner,
-        title: archive.section.title,
-      });
-    }
-    if (created) this.applyImportedSectionConfig(archive.section);
-
-    const reserved = new Set<string>();
-    const results = archive.lessons.map((lesson) =>
-      this.importOneLesson(archive.section.id, lesson, parsed.data.conflict, false, reserved),
-    );
-    if (created) {
-      this.writeImportedSectionFiles(archive.section.id, archive.cheatsheet, archive.topics, archive.backdrop);
-    }
-    this.rebuild(archive.section.id);
-    if (archive.progress) this.mergeImportedProgress(archive.section.id, archive.progress, results);
-    return {
-      section: this.summarize(this.section(archive.section.id)),
-      created,
-      imported: results.filter((result) => result.action === 'imported').length,
-      keptBoth: results.filter((result) => result.action === 'kept-both').length,
-      replaced: results.filter((result) => result.action === 'replaced').length,
-      progressImported: archive.progress !== undefined,
-    };
-  }
-
-  private sectionConflicts(sectionId: string, lessons: readonly LessonT[]): LessonImportConflict[] {
-    if (!this.config().sections.some((section) => section.id === sectionId)) return [];
-    return lessons.flatMap((lesson) => {
-      const path = this.lessonFileFor(sectionId, lesson.slug);
-      return path ? [this.lessonConflict(path, lesson)] : [];
-    });
-  }
-
-  private applyImportedSectionConfig(imported: SectionConfigT): void {
-    const config = journal.loadJournalConfig();
-    journal.saveJournalConfig({
-      ...config,
-      sections: config.sections.map((section) => (section.id === imported.id ? imported : section)),
-    });
-  }
-
-  private writeImportedSectionFiles(
-    id: string,
-    cheatsheet: CheatsheetT | undefined,
-    topics: TopicCatalogT | undefined,
-    backdrop: { name: string; data: Uint8Array } | undefined,
-  ): void {
-    if (cheatsheet) writeFileSync(journal.cheatsheetPath(id), `${JSON.stringify(cheatsheet, null, 2)}\n`, 'utf8');
-    if (topics) journal.writeTopicCatalog(id, topics);
-    this.clearBackdropFiles(id);
-    if (backdrop) writeFileSync(join(journal.sectionDir(id), backdrop.name), backdrop.data);
-  }
-
-  private mergeImportedProgress(id: string, imported: ProgressT, lessons: readonly LessonImportResult[]): void {
-    const current = this.progress(id);
-    const remappedSm2: ProgressT['sm2'] = {};
-    for (const [key, state] of Object.entries(imported.sm2)) {
-      let next = key;
-      for (const lesson of lessons) next = remapLessonScopedId(next, lesson.originalId, lesson.lesson.id);
-      remappedSm2[next] = state;
-    }
-    const remappedQuiz: ProgressT['quiz'] = {};
-    for (const [slug, result] of Object.entries(imported.quiz)) {
-      const lesson = lessons.find((entry) => entry.originalId === `${entry.lesson.date}-${slug}`);
-      remappedQuiz[lesson?.lesson.slug ?? slug] = result;
-    }
-    const activity = { ...current.activity };
-    for (const [date, count] of Object.entries(imported.activity)) {
-      activity[date] = Math.max(activity[date] ?? 0, count);
-    }
-    this.saveProgress(id, {
-      sm2: { ...current.sm2, ...remappedSm2 },
-      daily: newerDaily(current.daily, imported.daily),
-      quiz: { ...current.quiz, ...remappedQuiz },
-      activity,
+    return this.journal.commit(() => {
+      const config = this.journal.loadJournalConfig();
+      const section = archive.section;
+      const id = section.id;
+      const existing = config.sections.find((s) => s.id === id);
+      if (existing && (existing.target !== section.target || existing.learner !== section.learner)) {
+        throw new HttpError(409, `Pair "${id}" uses different languages in this journal`);
+      }
+      const lessons = existing ? this.journal.readSectionLessons(id).map((entry) => entry.lesson) : [];
+      const plan = planImport(lessons, archive.lessons, parsed.data.conflict);
+      if (plan.conflicts.length && parsed.data.conflict === 'error') {
+        throw new HttpError(409, `${plan.conflicts.length} imported lessons already exist`, { conflicts: plan.conflicts });
+      }
+      const changes: FileChange[] = sectionWriteChanges(existing ?? section, plan.lessons, plan.results.map((r) => r.lesson), plan.removed);
+      if (!existing) {
+        changes.push({ path: 'journal.config.json', data: JSON.stringify({ ...config, sections: [...config.sections, section] }, null, 2) + '\n' });
+        if (archive.cheatsheet) {
+          const sheet = structuredClone(archive.cheatsheet);
+          sheet.processed_lessons = sheet.processed_lessons.map(plan.mapSlug);
+          for (const category of sheet.categories) for (const entry of category.sections) entry.source_lessons = entry.source_lessons.map(plan.mapSlug);
+          changes.push({ path: `${id}/_cheatsheet.json`, data: JSON.stringify(sheet, null, 2) + '\n' });
+        }
+        if (archive.topics) changes.push({ path: `${id}/_topics.json`, data: JSON.stringify(archive.topics, null, 2) + '\n' });
+        if (archive.backdrop) changes.push({ path: `${id}/${archive.backdrop.name}`, data: archive.backdrop.data });
+      }
+      if (archive.progress) {
+        const path = existing ? this.journal.progressPath(id) : undefined;
+        // Import planning must not quarantine or normalize the destination's progress as a side effect.
+        const current = path && existsSync(path) ? Progress.parse(JSON.parse(readFileSync(path, 'utf8'))) : structuredClone(EMPTY_PROGRESS);
+        const progress = Progress.parse(mergeImportProgress(current, archive.progress, plan));
+        changes.push({ path: `${id}/_progress.json`, data: JSON.stringify(progress, null, 2) + '\n' });
+      }
+      const savedSection = existing ?? section;
+      return { changes, result: {
+        section: { ...savedSection, label: sectionTitle(savedSection), flags: { target: languageFlag(savedSection.target), learner: languageFlag(savedSection.learner) }, lessonCount: plan.lessons.length },
+        created: !existing,
+        imported: plan.results.filter((r) => r.action === 'imported').length,
+        keptBoth: plan.results.filter((r) => r.action === 'kept-both').length,
+        replaced: plan.results.filter((r) => r.action === 'replaced').length,
+        progressImported: archive.progress !== undefined,
+      } };
     });
   }
 
@@ -482,12 +383,12 @@ export class FolderStore {
   derived(id: string, kind: DerivedKind): string {
     this.section(id);
     this.ensureDerived(id);
-    return readFileSync(join(journal.derivedDir(id), `${kind}.json`), 'utf8');
+    return readFileSync(this.journal.sectionPath(id, '_derived', `${kind}.json`), 'utf8');
   }
 
   cheatsheet(id: string): CheatsheetT {
     this.section(id);
-    const path = journal.cheatsheetPath(id);
+    const path = this.journal.cheatsheetPath(id);
     if (!existsSync(path)) return { processed_lessons: [], categories: [] };
     const result = Cheatsheet.safeParse(JSON.parse(readFileSync(path, 'utf8')));
     if (!result.success) throw new HttpError(500, 'Cheat sheet is malformed', result.error.format());
@@ -496,38 +397,24 @@ export class FolderStore {
 
   // ── progress ─────────────────────────────────────────────────────────────
 
-  progress(id: string): ProgressT {
+  progressView(id: string): ProgressView {
     this.section(id);
-    const path = journal.progressPath(id);
-    if (!existsSync(path)) return { ...EMPTY_PROGRESS };
-    const result = Progress.safeParse(JSON.parse(readFileSync(path, 'utf8')));
-    if (!result.success) {
-      // A corrupt progress file must not brick the section. Keep it aside.
-      const backup = path.replace(/\.json$/, `.corrupt-${Date.now()}.json`);
-      writeFileSync(backup, readFileSync(path));
-      return { ...EMPTY_PROGRESS };
-    }
-    const cards = JSON.parse(this.derived(id, 'cards')) as DerivedCardT[];
-    const sm2 = { ...result.data.sm2 };
-    const migrated = new Set<string>();
-    for (const card of cards) {
-      for (const alias of [...card.source_ids, ...(card.legacy_id ? [card.legacy_id] : [])]) {
-        if (alias === card.id || !sm2[alias]) continue;
-        if (!sm2[card.id]) sm2[card.id] = sm2[alias];
-        migrated.add(alias);
-      }
-    }
-    for (const legacyId of migrated) delete sm2[legacyId];
-    return { ...result.data, sm2 };
+    return new JournalProgress(this.journal).read(id);
   }
 
-  saveProgress(id: string, input: unknown): ProgressT {
+  progress(id: string): ProgressT {
+    const { revision: _revision, journalKey: _key, recovery, ...value } = this.progressView(id);
+    if (recovery) throw new HttpError(409, 'Progress needs explicit recovery', { recovery });
+    return value;
+  }
+
+  saveProgress(id: string, input: unknown, revision?: string, recover = false): ProgressView {
     this.section(id);
-    const result = Progress.safeParse(input);
-    if (!result.success) throw new HttpError(400, 'Invalid progress', result.error.format());
-    mkdirSync(journal.sectionDir(id), { recursive: true });
-    writeFileSync(journal.progressPath(id), JSON.stringify(result.data, null, 2) + '\n', 'utf8');
-    return result.data;
+    try { return new JournalProgress(this.journal).write(id, input, revision, recover); }
+    catch (error) {
+      if (error instanceof ProgressError) throw new HttpError(error.status, error.message);
+      throw error;
+    }
   }
 
   // ── backdrop image ───────────────────────────────────────────────────────
@@ -540,7 +427,7 @@ export class FolderStore {
     // The name is written by saveBackdrop and always a bare file name; guard
     // anyway so a hand-edited config cannot read outside the section folder.
     if (name.includes('/') || name.includes(BS) || name.startsWith('.')) return null;
-    const path = join(journal.sectionDir(id), name);
+    const path = this.journal.sectionPath(id, name);
     return existsSync(path) ? path : null;
   }
 
@@ -549,6 +436,7 @@ export class FolderStore {
    * previous one. Returns the section with the new theme.
    */
   saveBackdrop(id: string, input: unknown): SectionSummary {
+    const section = this.section(id);
     const parsed = BackdropInput.safeParse(input);
     if (!parsed.success) throw new HttpError(400, 'Invalid image', parsed.error.format());
     const { filename, base64 } = parsed.data;
@@ -563,9 +451,8 @@ export class FolderStore {
     }
     this.clearBackdropFiles(id);
     const name = `_backdrop.${ext}`;
-    mkdirSync(journal.sectionDir(id), { recursive: true });
-    writeFileSync(join(journal.sectionDir(id), name), data);
-    const section = this.section(id);
+    mkdirSync(this.journal.sectionDir(id), { recursive: true });
+    writeFileSync(this.journal.sectionPath(id, name), data);
     return this.updateSection(id, { theme: { ...section.theme, backdrop: name } });
   }
 
@@ -579,20 +466,20 @@ export class FolderStore {
   }
 
   private clearBackdropFiles(id: string): void {
-    const dir = journal.sectionDir(id);
+    const dir = this.journal.sectionDir(id);
     if (!existsSync(dir)) return;
     for (const f of readdirSync(dir)) {
-      if (/^_backdrop\./.test(f)) rmSync(join(dir, f), { force: true });
+      if (/^_backdrop\./.test(f)) rmSync(this.journal.sectionPath(id, f), { force: true });
     }
   }
 
   // ── settings ─────────────────────────────────────────────────────────────
 
   settings(): SettingsView {
-    journal.invalidateConfig();
+    this.journal.invalidateConfig();
     return {
-      providers: journal.loadJournalConfig().providers,
-      connections: connectionViews(journal.journalDir()),
+      providers: this.journal.loadJournalConfig().providers,
+      connections: connectionViews(this.journal.journalDir()),
     };
   }
 
@@ -600,18 +487,18 @@ export class FolderStore {
     const parsed = SettingsUpdateInput.safeParse(input);
     if (!parsed.success) throw new HttpError(400, 'Invalid settings', parsed.error.format());
     if (parsed.data.providers) {
-      const config = journal.loadJournalConfig();
-      journal.saveJournalConfig({ ...config, providers: parsed.data.providers });
+      const config = this.journal.loadJournalConfig();
+      this.journal.saveJournalConfig({ ...config, providers: parsed.data.providers });
     }
     if (parsed.data.connections) {
-      updateSecrets(journal.journalDir(), parsed.data.connections);
+      updateSecrets(this.journal.journalDir(), parsed.data.connections);
     }
     return this.settings();
   }
 
   async probe(input: unknown): Promise<ProbeResult> {
     try {
-      return await probePipeline(parseProbeInput(input), journal.journalDir());
+      return await probePipeline(parseProbeInput(input), this.journal.journalDir());
     } catch (err) {
       throw new HttpError(400, (err as Error).message);
     }
@@ -620,19 +507,7 @@ export class FolderStore {
   /** Files of a section dir, for diagnostics. */
   listFiles(id: string): string[] {
     this.section(id);
-    const dir = journal.sectionDir(id);
+    const dir = this.journal.sectionDir(id);
     return existsSync(dir) ? readdirSync(dir) : [];
   }
-}
-
-function newerDaily(a: ProgressT['daily'], b: ProgressT['daily']): ProgressT['daily'] {
-  if (!a) return b;
-  if (!b) return a;
-  if (a.date !== b.date) return a.date > b.date ? a : b;
-  return {
-    date: a.date,
-    target_learner: Math.max(a.target_learner, b.target_learner),
-    learner_target: Math.max(a.learner_target, b.learner_target),
-    pairs: Math.max(a.pairs, b.pairs),
-  };
 }

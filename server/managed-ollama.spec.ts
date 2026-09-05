@@ -18,6 +18,7 @@ function fakeChild(): FakeChild {
   c.kill = vi.fn(() => {
     c.exitCode = 0;
     c.emit('exit', 0);
+    c.emit('close', 0);
     return true;
   });
   return c;
@@ -62,7 +63,7 @@ describe('ManagedOllama', () => {
     expect(await m.start()).toBe(true);
     expect(spawn).toHaveBeenCalledTimes(1);
 
-    m.stop();
+    await m.stop();
     expect(child.kill).toHaveBeenCalled();
     expect(m.running()).toBe(false);
     expect(activeManagedHost()).toBeUndefined();
@@ -102,6 +103,9 @@ describe('ManagedOllama', () => {
     expect(await m.start()).toBe(true);
     child.exitCode = 1;
     child.emit('exit', 1);
+    child.emit('close', 1);
+    await Promise.resolve();
+    await Promise.resolve();
     expect(m.running()).toBe(false);
     expect(activeManagedHost()).toBeUndefined();
   });

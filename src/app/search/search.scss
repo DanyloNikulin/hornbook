@@ -1,0 +1,37 @@
+@mixin bar {
+/* ---------- Search bar ---------- */
+.il-searchbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(244, 236, 223, 0.96);
+  border-radius: 999px;
+  padding: 8px 8px 8px 22px;
+  max-width: 560px;
+  box-shadow: var(--shadow-3);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  cursor: text;
+}
+.il-searchbar svg { color: var(--muted); flex-shrink: 0; }
+.il-searchbar input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  color: var(--ink);
+  padding: 10px 0;
+  min-width: 0;
+}
+.il-searchbar input::placeholder { color: var(--muted); }
+
+}
+
+@mixin night {
+/* Search bar: dark translucent on night hero */
+[data-theme="night"] .il-searchbar {
+  background: rgba(38, 33, 25, 0.92);
+  border-color: rgba(217, 201, 168, 0.12);
+}
+
+}

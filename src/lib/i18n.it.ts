@@ -2,6 +2,14 @@ import type { Catalog } from './i18n.js';
 
 /** Italian chrome copy. Same keys as `EN`; missing keys fall back to English. */
 export const IT = {
+  'progress.problem': 'Progressi di studio — {section}',
+  'progress.recovery': 'Il file danneggiato è stato conservato nel diario. Avvia nuovi progressi solo se vuoi continuare con una cronologia vuota.',
+  'progress.startFresh': 'Avvia nuovi progressi',
+  'progress.retry': 'Riprova',
+  'progress.retained': 'Le modifiche non salvate sono conservate. Scarica una copia prima di scegliere di eliminarle.',
+  'progress.download': 'Scarica i progressi non salvati',
+  'progress.useSaved': 'Elimina le modifiche non salvate e usa i progressi salvati',
+  'progress.pending': 'I progressi di studio sono in attesa di salvataggio.',
   'nav.main': 'Principale',
   'nav.homeAria': '{brand} — inizio',
   'nav.pair': 'Coppia di lingue',

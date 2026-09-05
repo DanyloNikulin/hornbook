@@ -4,6 +4,7 @@ import type { DesktopPreferencesView, DesktopUpdateState } from '../src/lib/api-
 const { contextBridge, ipcRenderer } = require('electron') as typeof import('electron');
 
 const bridge: HornbookDesktopBridge = {
+  progressDraft: (section, value) => ipcRenderer.sendSync('hornbook:progress-draft', section, value),
   state: () => ipcRenderer.invoke('hornbook:state'),
   chooseJournal: () => ipcRenderer.invoke('hornbook:choose-journal'),
   openJournal: () => ipcRenderer.invoke('hornbook:open-journal'),

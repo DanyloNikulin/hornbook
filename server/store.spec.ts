@@ -3,7 +3,6 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { FolderStore, HttpError } from './store.ts';
-import { setJournalDir } from '../scripts/lib/journal.ts';
 
 function lesson(slug: string, date = '2026-01-01', extra: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -51,7 +50,6 @@ describe('FolderStore — journal bootstrap', () => {
     const s = new FolderStore(legacy);
     expect(s.config().sections.map((x) => x.id)).toEqual(['it-en']);
     rmSync(legacy, { recursive: true, force: true });
-    setJournalDir(dir);
   });
 });
 
@@ -244,7 +242,6 @@ describe('FolderStore — pair transfers', () => {
       expect(readFileSync(importedStore.backdropPath('it-en')!)).toEqual(Buffer.from([9, 8, 7]));
     } finally {
       rmSync(destination, { recursive: true, force: true });
-      setJournalDir(dir);
     }
   });
 });
@@ -271,7 +268,8 @@ describe('FolderStore — progress', () => {
   it('sets a corrupt progress file aside instead of failing', () => {
     mkdirSync(join(dir, 'es-en'), { recursive: true });
     writeFileSync(join(dir, 'es-en', '_progress.json'), JSON.stringify({ sm2: 'nope' }));
-    expect(store.progress('es-en').sm2).toEqual({});
+    expect(store.progressView('es-en').recovery).toMatch(/^_progress.corrupt-/);
+    expect(() => store.progress('es-en')).toThrow('recovery');
   });
 
   it('maps legacy content-hash card state onto lesson-scoped card ids', () => {

@@ -76,7 +76,6 @@ export function computeVocabStats(lessonsDir: string, catalog: TopicCatalogT): V
     ? readdirSync(lessonsDir).filter((f) => f.endsWith('.json') && !f.startsWith('_'))
     : [];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parsed: { date: string; topics: TopicT[] }[] = [];
   for (const f of files) {
     try {

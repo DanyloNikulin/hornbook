@@ -1,0 +1,235 @@
+@mixin styles {
+/* ---------- Cards: deck-first study surface ---------- */
+.il-cards-page {
+  width: min(100%, 760px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 56px 40px 64px;
+  color: var(--ink);
+}
+.il-cards-head { margin-bottom: 18px; }
+.il-cards-back {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+.il-cards-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.il-cards-title-row h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(36px, 6vw, 42px);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -.005em;
+}
+.il-cards-session-count,
+.il-cards-deck-stats {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.il-cards-deck-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.il-cards-deck-select {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  min-width: 0;
+  height: 44px;
+  padding-left: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 14px;
+}
+.il-cards-deck-select select {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0 34px 0 5px;
+  overflow: hidden;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.il-cards-deck-help {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.il-cards-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.il-cards-filter-group {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.il-cards-filter-group--divided {
+  position: relative;
+  padding-left: 15px;
+}
+.il-cards-filter-group--divided::before {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 3px;
+  width: 1px;
+  background: var(--line);
+  content: '';
+}
+.il-study-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 288px;
+  padding: 32px 34px 30px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--paper-2);
+  box-shadow: var(--shadow-2);
+  transition: border-color .18s ease;
+}
+.il-study-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 20px;
+  margin-bottom: 18px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.il-study-listen {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: -6px -7px -6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.il-study-listen:hover { color: var(--primary); }
+.il-study-front {
+  margin: 0 0 6px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(34px, 7vw, 42px);
+  line-height: 1.15;
+  text-align: center;
+  white-space: pre-wrap;
+}
+.il-study-example {
+  margin: 0 0 22px;
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
+  text-align: center;
+  white-space: pre-wrap;
+}
+.il-study-input {
+  width: 100%;
+  height: 48px;
+  margin-top: auto;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  outline: none;
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px var(--font-body);
+}
+.il-study-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent); }
+.il-study-primary { width: 100%; margin-top: 12px; border-radius: 999px; }
+.il-study-primary kbd {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .22);
+  color: inherit;
+  font: 11px var(--font-mono);
+}
+.il-study-primary.ghost kbd { background: rgba(42, 37, 32, .08); }
+.il-study-result {
+  display: grid;
+  gap: 7px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.il-study-result strong { color: var(--ink-2); font-family: var(--font-mono); font-weight: 500; }
+.il-study-result .il-study-correct { color: var(--primary-ink); }
+.il-study-verdict { margin: 0 0 2px; font-size: 14px; }
+.il-study-verdict--exact { color: var(--success); }
+.il-study-verdict--close { color: var(--accent); }
+.il-study-verdict--wrong { color: var(--primary); }
+.il-study-back { margin: 2px 0 0; font-style: italic; white-space: pre-wrap; }
+.il-study-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.il-study-reset { min-height: 44px; }
+.il-study-source {
+  min-height: 20px;
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: center;
+}
+.il-study-source a,
+.il-study-source button { color: var(--primary-ink); }
+.il-study-source button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.il-study-source a:hover,
+.il-study-source button:hover { color: var(--primary); text-decoration: underline; }
+@media (max-width: 640px) {
+  .il-cards-page { padding: 28px 18px 48px; }
+  .il-cards-title-row { align-items: baseline; }
+  .il-cards-deck-row { grid-template-columns: 1fr; gap: 7px; }
+  .il-cards-deck-stats { white-space: normal; }
+  .il-cards-filters { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .il-cards-filter-group--divided { padding: 7px 0 0; }
+  .il-cards-filter-group--divided::before { top: 0; right: 0; bottom: auto; left: 0; width: auto; height: 1px; }
+  .il-study-card { min-height: 270px; padding: 24px 20px; border-radius: 18px; }
+}
+@media (max-width: 480px) {
+  .il-cards-filter-group { width: 100%; }
+  .il-cards-filter-group--mode,
+  .il-cards-filter-group--direction { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .il-cards-filter-group--levels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .il-cards-filter-group .il-chip { min-width: 0; justify-content: center; }
+}
+}

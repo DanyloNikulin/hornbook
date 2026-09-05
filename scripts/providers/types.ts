@@ -7,14 +7,13 @@ export interface Transcriber {
   transcribe(audioPath: string, hint: string): Promise<string>;
 }
 
-export interface ExtractMessagePart {
-  type: 'text' | 'image';
-  text?: string;
-  /** Raw JPEG bytes for vision drivers. */
-  imageJpeg?: Buffer;
-}
+export type ExtractMessagePart =
+  | { type: 'text'; text: string; imageJpeg?: never }
+  | { type: 'image'; imageJpeg: Buffer; text?: never };
 
 export interface ExtractRequest {
+  signal?: AbortSignal;
+  timeoutMs?: number;
   system: string;
   userParts: ExtractMessagePart[];
   jsonSchema: Record<string, unknown>;

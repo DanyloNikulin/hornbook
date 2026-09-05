@@ -5,7 +5,7 @@
 
 import { Lesson } from '../src/lib/schema.ts';
 import { slugify, ensureUniqueSlug } from './lib/slug.ts';
-import { existingSlugs, resolveSectionArg } from './lib/journal.ts';
+import { existingSlugs, resolveSectionArg } from './lib/cli-journal.ts';
 import { writeLesson } from './process.ts';
 
 function arg(name: string): string | undefined {

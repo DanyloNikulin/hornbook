@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { FormsModule } from '@angular/forms';
 import { TPipe } from '../i18n.pipe';
 import { QuizResultsService } from '../quiz-results.service';
-import { normalizeAnswer } from '../cards.service';
+import { normalizeAnswer } from '../../lib/answer-grading';
 import type { QuizQuestionT } from '../../lib/schema';
 
 type AnswerMap = Record<number, string | number | undefined>;

@@ -1,30 +1,53 @@
-// One JSON POST for the extract drivers, retried once when the request never
-// reached HTTP (undici's "fetch failed": ECONNRESET, ECONNREFUSED). Ollama
-// drops connections while it swaps one model out of memory for another,
-// which is exactly when a cheat-sheet job follows a lesson written by a
-// different model. HTTP errors are not retried; the caller reads them.
+import { setTimeout as pause } from 'node:timers/promises';
 
-export async function postJson(
+export interface ExtractHttpOptions { signal?: AbortSignal; timeoutMs?: number }
+
+async function abortable<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+  signal.throwIfAborted();
+  let abort!: () => void;
+  try {
+    return await Promise.race([operation, new Promise<never>((_, reject) => {
+      abort = () => reject(signal.reason);
+      signal.addEventListener('abort', abort, { once: true });
+    })]);
+  } finally { signal.removeEventListener('abort', abort); }
+}
+
+/** One deadline spans connection, the single transport retry, and body consumption. */
+export async function postJson<T>(
   url: string,
   body: unknown,
   headers: Record<string, string>,
   who: string,
   retryPauseMs: number,
-): Promise<Response> {
-  const init: RequestInit = {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify(body),
-  };
+  consume: (response: Response) => Promise<T>,
+  options: ExtractHttpOptions = {},
+): Promise<T> {
+  const payload = JSON.stringify(body);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error(`Extract ${who} timed out`)), options.timeoutMs ?? 8 * 60 * 1000);
+  const signal = options.signal ? AbortSignal.any([controller.signal, options.signal]) : controller.signal;
+  const init: RequestInit = { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: payload, signal };
+  let response: Response | undefined;
   try {
-    return await fetch(url, init);
-  } catch {
-    await new Promise((resolve) => setTimeout(resolve, retryPauseMs));
+    signal.throwIfAborted();
     try {
-      return await fetch(url, init);
-    } catch (err) {
-      const cause = (err as { cause?: { code?: string; message?: string } }).cause;
-      throw new Error(`Extract ${who}: cannot reach ${url} (${cause?.code ?? cause?.message ?? (err as Error).message}).`);
+      try { response = await abortable(fetch(url, init), signal); }
+      catch (error) {
+        signal.throwIfAborted();
+        if (!(error instanceof TypeError)) throw error;
+        await pause(retryPauseMs, undefined, { signal });
+        response = await abortable(fetch(url, init), signal);
+      }
+    } catch (error) {
+      signal.throwIfAborted();
+      const cause = (error as { cause?: { code?: string; message?: string } }).cause;
+      throw new Error(`Extract ${who}: cannot reach ${url} (${cause?.code ?? cause?.message ?? (error as Error).message}).`, { cause: error });
     }
+    return await abortable(consume(response), signal);
+  } finally {
+    clearTimeout(timer);
+    controller.abort();
+    if (response?.body && !response.body.locked) void response.body.cancel().catch(() => undefined);
   }
 }

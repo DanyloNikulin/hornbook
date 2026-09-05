@@ -1,0 +1,46 @@
+import { Lesson } from '../../src/lib/schema.ts';
+import { buildSectionArchive } from '../../server/transfers.ts';
+import type { UiScenario } from './context.ts';
+
+export async function mutationsScenario({ r, page, pageErrors, context, base, goto }: UiScenario): Promise<void> {
+  await goto('/es-en/lesson/greetings');
+  await page.getByRole('heading', { name: 'Saludos y presentaciones' }).waitFor();
+  const nav = async (path: string) => { await page.locator(`.il-nav a[href="${path}"]`).first().click(); };
+  const initialCards = page.waitForResponse((response) => response.url().endsWith('/es-en/cards') && response.ok());
+  await nav('/es-en/flashcards'); await initialCards;
+  const initialVocab = page.waitForResponse((response) => response.url().endsWith('/es-en/vocab') && response.ok());
+  await nav('/es-en/vocab'); await initialVocab;
+  await nav('/es-en/search');
+  await page.getByRole('heading', { name: 'Search', exact: true }).waitFor();
+  const initialSearch = page.waitForResponse((response) => response.url().endsWith('/es-en/search-index') && response.ok());
+  await page.locator('input[type=search]').fill('hola');
+  await initialSearch;
+  const raw = await (await context.request.get(`${base}/api/sections/es-en/lessons/greetings`)).json();
+  const changed = Lesson.parse({ ...raw, title: 'Replacement lesson', summary: 'montanatest', article_md: '## Replacement proof\n\nmontanatest', vocabulary: [{ target: 'montanatest', learner: 'replacement word' }], flashcards: [], quiz: [] });
+  const zip = buildSectionArchive({ section: { id: 'es-en', target: 'es', learner: 'en' }, lessons: [changed] });
+  await nav('/');
+  await nav('/setup');
+  await page.locator('input[type=file][accept*=".zip"]').setInputFiles({ name: 'replacement.hornbook.zip', mimeType: 'application/zip', buffer: zip });
+  await page.getByRole('button', { name: 'Import pair', exact: true }).click();
+  await page.getByRole('button', { name: 'Replace existing lessons', exact: true }).click();
+  await page.waitForURL(`${base}/es-en`);
+  await page.locator('a[href="/es-en/lesson/greetings"]').first().click();
+  await page.getByRole('heading', { name: 'Replacement lesson', exact: true }).waitFor();
+  r.rec('pair replacement refreshes a previously cached lesson without reloading the app', true);
+  const cards = page.waitForResponse((response) => response.url().endsWith('/es-en/cards') && response.ok());
+  await page.locator('a[href="/es-en/flashcards?lesson=greetings"]').first().click();
+  r.rec('pair replacement refreshes cached cards', (await (await cards).json()).some((card: { front: string }) => card.front === 'montanatest'));
+  await nav('/es-en/vocab');
+  await page.getByRole('heading', { name: 'Glossary', exact: true }).waitFor();
+  await page.getByText('replacement word', { exact: true }).waitFor();
+  r.rec('pair replacement refreshes cached vocabulary', true);
+  await nav('/es-en/search');
+  await page.getByRole('heading', { name: 'Search', exact: true }).waitFor();
+  const search = page.waitForResponse((response) => response.url().endsWith('/es-en/search-index') && response.ok());
+  await page.locator('input[type=search]').fill('montanatest');
+  r.rec('pair replacement refreshes the cached search index', (await (await search).json()).some((entry: { text: string }) => entry.text.includes('montanatest')));
+  const expected = 'Failed to load resource: the server responded with a status of 409 (Conflict)';
+  r.rec('the expected import conflict was observed', pageErrors.filter((error) => error === expected).length === 1);
+  const index = pageErrors.indexOf(expected);
+  if (index >= 0) pageErrors.splice(index, 1);
+}

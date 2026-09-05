@@ -4,8 +4,8 @@
 // under work/harness/.
 
 import { spawn, type ChildProcess } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { chromium, type Browser } from 'playwright-core';
@@ -103,7 +103,7 @@ export function client(base: string) {
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const text = await res.text();
-    let json: unknown = null;
+    let json: unknown;
     try {
       json = text ? JSON.parse(text) : null;
     } catch {
@@ -157,11 +157,12 @@ export interface JournalSeed {
   secrets?: Record<string, string>;
 }
 
-/** A fresh journal folder under work/harness/journals/<name>. */
+/** Each run owns a new folder; earlier runs are retained for inspection. */
 export function throwawayJournal(name: string, seed: JournalSeed = {}): string {
-  const dir = join(outDir, 'journals', name);
-  rmSync(dir, { recursive: true, force: true });
-  mkdirSync(dir, { recursive: true });
+  if (!/^[a-z0-9-]+$/i.test(name)) throw new Error('Invalid harness fixture name');
+  const parent = join(outDir, 'journals');
+  mkdirSync(parent, { recursive: true });
+  const dir = mkdtempSync(join(parent, `${name}-`));
   if (seed.fromDemo) {
     cpSync(join(repoRoot, 'journal'), dir, {
       recursive: true,
@@ -202,7 +203,8 @@ export async function startServer(opts: ServerOptions): Promise<ServerHandle> {
   const child = spawn(process.execPath, args, {
     cwd: repoRoot,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, OPENAI_API_KEY: '', ANTHROPIC_API_KEY: '', HORNBOOK_PASSWORD: '', ...(opts.env ?? {}) },
+    env: { ...process.env, HORNBOOK_ORIGIN: '', HORNBOOK_TOOLS: join(opts.journal, '_harness-tools'), ...(opts.env ?? {}), OPENAI_API_KEY: '', ANTHROPIC_API_KEY: '', HORNBOOK_PASSWORD: '' },
+    windowsHide: true,
   });
   let log = '';
   child.stdout?.on('data', (d: Buffer) => (log += d.toString()));
@@ -210,9 +212,13 @@ export async function startServer(opts: ServerOptions): Promise<ServerHandle> {
   const api = `http://127.0.0.1:${opts.port}`;
   for (let i = 0; i < 60; i++) {
     if (child.exitCode !== null) break;
-    if (await reachable(`${api}/api/mode`, 1000)) {
-      return { api, child, log: () => log, stop: () => child.kill() };
-    }
+    try {
+      const response = await fetch(`${api}/api/mode`, { signal: AbortSignal.timeout(1000) });
+      const mode = await response.json() as { journal?: string };
+      if (response.ok && mode.journal && resolve(mode.journal) === resolve(opts.journal) && child.exitCode === null) {
+        return { api, child, log: () => log, stop: () => child.kill() };
+      }
+    } catch { /* Wait for the owned server to start. */ }
     await sleep(250);
   }
   child.kill();

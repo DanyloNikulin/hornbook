@@ -13,8 +13,8 @@ interface Harness {
 }
 
 function harness(initialActivity: Record<string, number> = {}): Harness {
-  const get = vi.fn().mockResolvedValue({ ...EMPTY_PROGRESS, activity: initialActivity });
-  const put = vi.fn().mockResolvedValue({});
+  const get = vi.fn().mockResolvedValue({ ...EMPTY_PROGRESS, revision: 'r0', journalKey: 'fixture', activity: initialActivity });
+  const put = vi.fn().mockResolvedValue({ revision: 'r1' });
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({ providers: [{ provide: ApiService, useValue: { get, put } }] });
   const store = TestBed.inject(ProgressStore);
@@ -23,6 +23,8 @@ function harness(initialActivity: Record<string, number> = {}): Harness {
 
 beforeEach(() => {
   vi.useRealTimers();
+  localStorage.clear();
+  sessionStorage.clear();
 });
 
 describe('ProgressStore — load and save', () => {
@@ -92,8 +94,9 @@ describe('ProgressService — streakDays', () => {
 });
 
 describe('ProgressService — record', () => {
-  it('accumulates within a day and ignores non-positive counts', () => {
+  it('accumulates within a day and ignores non-positive counts', async () => {
     const { svc, store } = harness();
+    await store.load('es-en');
     svc.record(2);
     svc.record(3);
     svc.record(0);

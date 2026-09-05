@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, type WritableSignal } from '@angular/core';
+import { Injectable, inject, signal, DestroyRef } from '@angular/core';
 import type { JobView, SetupPlanRequest, StartJob } from '../lib/api-types';
 import { ApiService } from './api.service';
 import { SectionService } from './section.service';
@@ -7,10 +7,22 @@ import { DesktopService } from './desktop.service';
 
 const POLL_MS = 1200;
 
-/**
- * Starts pipeline jobs in the current section and follows one job at a time
- * by polling until it finishes. The UI reads `current()` for status and log.
- */
+interface Listener {
+  resolve(job: JobView): void;
+  reject(error: unknown): void;
+  update?: (job: JobView) => void;
+  detach(): void;
+}
+interface Observation {
+  id: string;
+  listeners: Set<Listener>;
+  controller: AbortController;
+  active: boolean;
+  timer?: ReturnType<typeof setTimeout>;
+  latest?: JobView;
+}
+
+/** Independent observers share one poll per job; observation never cancels server work. */
 @Injectable({ providedIn: 'root' })
 export class JobsService {
   private readonly api = inject(ApiService);
@@ -21,67 +33,106 @@ export class JobsService {
   readonly current = signal<JobView | null>(null);
   /** The setup job being followed (downloads of local tools), apart from lesson jobs. */
   readonly setupJob = signal<JobView | null>(null);
-  private timer: ReturnType<typeof setTimeout> | null = null;
-  private setupTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly observations = new Map<string, Observation>();
+  private readonly starts = new Set<AbortController>();
+  private readonly notified = new Set<string>();
+  private generation = 0;
+  private setupGeneration = 0;
 
-  /** Queue a job and follow it. Resolves with the finished job. */
-  async run(input: StartJob): Promise<JobView> {
-    this.stop();
-    this.prepareNotifications();
-    const started = await this.api.post<JobView>(`${this.section.apiBase()}/jobs`, input);
-    this.current.set(started);
-    return this.follow(started.id, this.current, (timer) => (this.timer = timer));
+  constructor() { inject(DestroyRef).onDestroy(() => this.stop()); }
+
+  async run(input: StartJob, sectionId = this.section.id()): Promise<JobView> {
+    const generation = ++this.generation;
+    return this.start(`/api/sections/${encodeURIComponent(sectionId)}/${input.kind === 'process' ? 'uploads' : 'jobs'}`, input,
+      (job) => { if (generation === this.generation) this.current.set(job); });
   }
 
-  /** Queue a setup job for the journal and follow it. `onStarted` gets the queued job at once. */
   async runSetup(input: SetupPlanRequest & { sha256?: string }, onStarted?: (job: JobView) => void): Promise<JobView> {
-    if (this.setupTimer) {
-      clearTimeout(this.setupTimer);
-      this.setupTimer = null;
-    }
+    const generation = ++this.setupGeneration;
+    return this.start('/api/setup/jobs', input,
+      (job) => { if (generation === this.setupGeneration) this.setupJob.set(job); }, onStarted);
+  }
+
+  private async start(path: string, input: unknown, update: (job: JobView) => void, onStarted?: (job: JobView) => void): Promise<JobView> {
+    const controller = new AbortController();
+    this.starts.add(controller);
     this.prepareNotifications();
-    const started = await this.api.post<JobView>('/api/setup/jobs', input);
-    this.setupJob.set(started);
-    onStarted?.(started);
-    return this.follow(started.id, this.setupJob, (timer) => (this.setupTimer = timer));
+    try {
+      const started = await this.api.post<JobView>(path, input, controller.signal);
+      controller.signal.throwIfAborted();
+      update(started);
+      onStarted?.(started);
+      return await this.observe(started.id, update, controller.signal);
+    } finally { this.starts.delete(controller); }
   }
 
-  /** Recent jobs of the current section, newest first. */
-  recent(): Promise<JobView[]> {
-    return this.api.get<JobView[]>(`${this.section.apiBase()}/jobs`);
-  }
+  recent(): Promise<JobView[]> { return this.api.get<JobView[]>(`${this.section.apiBase()}/jobs`); }
 
+  /** Release all local observations. Jobs remain queued/running on the server. */
   stop(): void {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = null;
+    this.generation++; this.setupGeneration++;
+    for (const controller of this.starts) controller.abort();
+    for (const observation of this.observations.values()) this.settle(observation, undefined, new DOMException('Observation stopped', 'AbortError'));
+  }
+
+  observe(id: string, update?: (job: JobView) => void, signal?: AbortSignal): Promise<JobView> {
+    if (signal?.aborted) return Promise.reject(signal.reason);
+    let observation = this.observations.get(id);
+    const fresh = !observation;
+    if (!observation) {
+      observation = { id, listeners: new Set(), controller: new AbortController(), active: true };
+      this.observations.set(id, observation);
+    }
+    const selected = observation;
+    const promise = new Promise<JobView>((resolve, reject) => {
+      const cancel = () => {
+        selected.listeners.delete(listener); listener.detach(); reject(signal?.reason);
+        if (selected.listeners.size === 0) this.release(selected);
+      };
+      const listener: Listener = { resolve, reject, update, detach: () => signal?.removeEventListener('abort', cancel) };
+      selected.listeners.add(listener);
+      signal?.addEventListener('abort', cancel, { once: true });
+      if (selected.latest) update?.(selected.latest);
+    });
+    if (fresh) void this.tick(selected);
+    return promise;
+  }
+
+  private async tick(observation: Observation): Promise<void> {
+    try {
+      const job = await this.api.get<JobView>(`/api/jobs/${encodeURIComponent(observation.id)}`,
+        AbortSignal.any([observation.controller.signal, AbortSignal.timeout(30_000)]));
+      if (!observation.active) return;
+      observation.latest = job;
+      for (const listener of observation.listeners) listener.update?.(job);
+      if (!observation.active) return;
+      if (job.status === 'done' || job.status === 'failed') {
+        if (!this.notified.has(job.id)) {
+          this.notified.add(job.id);
+          if (this.notified.size > 50) this.notified.delete(this.notified.values().next().value!);
+          this.notify(job);
+        }
+        this.settle(observation, job);
+      } else observation.timer = setTimeout(() => { void this.tick(observation); }, POLL_MS);
+    } catch (error) {
+      if (observation.active) this.settle(observation, undefined, error);
     }
   }
 
-  private follow(
-    id: string,
-    sink: WritableSignal<JobView | null>,
-    setTimer: (timer: ReturnType<typeof setTimeout> | null) => void,
-  ): Promise<JobView> {
-    return new Promise((resolve, reject) => {
-      const tick = async (): Promise<void> => {
-        try {
-          const job = await this.api.get<JobView>(`/api/jobs/${encodeURIComponent(id)}`);
-          sink.set(job);
-          if (job.status === 'done' || job.status === 'failed') {
-            setTimer(null);
-            this.notify(job);
-            resolve(job);
-            return;
-          }
-          setTimer(setTimeout(() => void tick(), POLL_MS));
-        } catch (err) {
-          setTimer(null);
-          reject(err as Error);
-        }
-      };
-      void tick();
-    });
+  private settle(observation: Observation, job?: JobView, error?: unknown): void {
+    this.release(observation);
+    for (const listener of observation.listeners) {
+      listener.detach();
+      if (job) listener.resolve(job); else listener.reject(error);
+    }
+    observation.listeners.clear();
+  }
+
+  private release(observation: Observation): void {
+    observation.active = false;
+    clearTimeout(observation.timer);
+    observation.controller.abort();
+    if (this.observations.get(observation.id) === observation) this.observations.delete(observation.id);
   }
 
   private prepareNotifications(): void {

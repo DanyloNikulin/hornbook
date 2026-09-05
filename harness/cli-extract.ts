@@ -191,7 +191,7 @@ async function oneCli(r: Report, kind: CodingCliKind, browser: Browser | undefin
     const probe = (await api('POST', '/api/settings/probe', { job: 'extract', driver, model: MODEL })).json as ProbeResult;
     r.rec(`${kind}: probe`, probe.ok === true, probe.detail);
 
-    const posted = await api('POST', '/api/sections/es-en/jobs', {
+    const posted = await api('POST', '/api/sections/es-en/uploads', {
       kind: 'process',
       filename: 'transcript.txt',
       base64: b64(transcript),

@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { AddressInfo } from 'node:net';
 import { startServer } from './main.ts';
-import { setJournalDir } from '../scripts/lib/journal.ts';
 import type { SetupView } from '../src/lib/api-types.ts';
 
 // A real server on an ephemeral port, driven with fetch. Static serving is
@@ -42,7 +41,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
-  setJournalDir(process.cwd());
   delete process.env['HORNBOOK_TOOLS'];
   rmSync(dir, { recursive: true, force: true, maxRetries: 5 });
 });

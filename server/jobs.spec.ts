@@ -134,13 +134,11 @@ describe('JobRunner', () => {
     const first = runner.enqueue('es-en', { kind: 'cheatsheet' });
     const second = runner.enqueue('es-en', { kind: 'review-topics' });
     await new Promise((r) => setTimeout(r, 300));
-    runner.stop();
+    await runner.stop();
     await runner.idle();
-    // The killed child releases its working directory a moment later on Windows.
-    await new Promise((r) => setTimeout(r, 700));
     expect(runner.get(first.id)?.status).toBe('failed');
     expect(runner.get(first.id)?.error).toMatch(/stopped with the server/);
-    expect(runner.get(second.id)?.status).toBe('queued');
+    expect(runner.get(second.id)?.status).toBe('failed');
   });
 
   it('marks a failing job failed with the last error line and keeps going', async () => {

@@ -49,7 +49,7 @@ function parseJson<T>(text: string, name: string): T {
   try {
     return JSON.parse(text) as T;
   } catch (error) {
-    throw new Error(`${name} is not valid JSON: ${(error as Error).message}`);
+    throw new Error(`${name} is not valid JSON: ${(error as Error).message}`, { cause: error });
   }
 }
 

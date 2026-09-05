@@ -41,9 +41,9 @@ export class LessonListComponent {
 
   // Word of day pulls from the lazy-loaded vocab. The page renders without
   // it on cold visits; the cell pops in once the fetch resolves.
-  private readonly wordOfDayResource = resource<DerivedVocabT | null, string>({
-    params: () => today(),
-    loader: async ({ params: date }) => this.vocab.wordOfDay(date),
+  private readonly wordOfDayResource = resource<DerivedVocabT | null, { date: string; section: string; revision: number }>({
+    params: () => ({ date: today(), section: this.sec.id(), revision: this.vocab.revision() }),
+    loader: async ({ params }) => this.vocab.wordOfDay(params.date),
   });
   protected readonly wordOfDay = computed(() =>
     this.wordOfDayResource.error() ? null : (this.wordOfDayResource.value() ?? null),

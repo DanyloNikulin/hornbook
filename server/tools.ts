@@ -4,7 +4,7 @@
 // the managed copies without any change to them.
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { spawn } from 'node:child_process';
+import { spawnProcess as spawn } from '../scripts/lib/process.ts';
 import { join } from 'node:path';
 import { totalmem } from 'node:os';
 import type { MachineInfo, ToolStatus } from '../src/lib/api-types.ts';

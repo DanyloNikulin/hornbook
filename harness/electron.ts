@@ -100,7 +100,7 @@ async function main(): Promise<void> {
 
     const demo = JSON.parse(readFileSync(join(repoRoot, 'journal', 'es-en', '2026-01-01-greetings.json'), 'utf8')) as Record<string, unknown>;
     const job = await page.evaluate(async (base64) => {
-      const created = await fetch('/api/sections/es-en/jobs', {
+      const created = await fetch('/api/sections/es-en/uploads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

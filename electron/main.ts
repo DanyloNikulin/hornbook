@@ -1,4 +1,7 @@
+import { retryableShutdown } from '../scripts/lib/shutdown.ts';
 import { randomBytes } from 'node:crypto';
+import { UpdateController } from './update-controller.ts';
+import { desktopProgressDraft } from './progress-drafts.ts';
 import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { AddressInfo } from 'node:net';
@@ -18,7 +21,7 @@ import {
   type OpenDialogOptions,
 } from 'electron';
 import electronUpdater from 'electron-updater';
-import type { DesktopState, DesktopUpdateState, JobView, ReleaseInfo } from '../src/lib/api-types.ts';
+import type { DesktopState, DesktopUpdateState, JobView } from '../src/lib/api-types.ts';
 import type { DesktopToolPath } from '../src/lib/desktop.ts';
 import { startServer } from '../server/main.ts';
 import { defaultJournalDir } from '../server/cli.ts';
@@ -46,6 +49,11 @@ let tray: Tray | null = null;
 let server: ReturnType<typeof startServer> | null = null;
 let baseUrl = '';
 let quitting = false;
+let shutdownComplete = false;
+const stopServer = retryableShutdown(async () => {
+  await server?.shutdown();
+  shutdownComplete = true;
+});
 let activeJobs = 0;
 let journal = '';
 let preferencesPath = '';
@@ -57,7 +65,7 @@ let updateState: DesktopUpdateState = {
 };
 let checker: ReleaseChecker;
 let resizeTimer: ReturnType<typeof setTimeout> | undefined;
-let preparedVersion = '';
+let updater: UpdateController;
 
 function argValue(name: string, argv: readonly string[] = process.argv): string | undefined {
   const index = argv.indexOf(name);
@@ -222,76 +230,48 @@ function publishUpdate(state: DesktopUpdateState): DesktopUpdateState {
   return state;
 }
 
-function availableState(release: ReleaseInfo): DesktopUpdateState {
-  return {
-    phase: 'available',
-    currentVersion: app.getVersion(),
-    installable: isInstallable(),
-    release,
-    checkedAt: preferences.lastUpdateCheck,
-  };
-}
-
 async function checkForUpdates(force: boolean): Promise<DesktopUpdateState> {
   if (!force && !preferences.automaticUpdates) return updateState;
-  const recent = preferences.lastUpdateCheck && Date.now() - Date.parse(preferences.lastUpdateCheck) < UPDATE_INTERVAL_MS;
-  if (!force && recent) {
-    const release = preferences.lastRelease;
-    if (release && compareVersions(release.version, app.getVersion()) > 0) {
-      publishUpdate(availableState(release));
-      void prepareInstaller();
-    } else {
-      publishUpdate({ phase: 'current', currentVersion: app.getVersion(), installable: isInstallable(), checkedAt: preferences.lastUpdateCheck });
-    }
-    return updateState;
-  }
-
-  publishUpdate({ phase: 'checking', currentVersion: app.getVersion(), installable: isInstallable() });
-  const result = await checker.check(force);
-  preferences.lastUpdateCheck = result.checkedAt;
-  preferences.lastRelease = result.release;
-  persist();
-  if (result.error) {
-    return publishUpdate({ phase: 'error', currentVersion: app.getVersion(), installable: isInstallable(), checkedAt: result.checkedAt, error: result.error });
-  }
-  if (!result.available || !result.release) {
-    return publishUpdate({ phase: 'current', currentVersion: app.getVersion(), installable: isInstallable(), checkedAt: result.checkedAt });
-  }
-  publishUpdate(availableState(result.release));
-  void prepareInstaller();
-  return updateState;
-}
-
-async function prepareInstaller(): Promise<void> {
-  const version = updateState.release?.version;
-  if (!isInstallable() || !version || preparedVersion === version) return;
-  preparedVersion = version;
-  try {
-    await autoUpdater.checkForUpdates();
-  } catch (error) {
-    preparedVersion = '';
-    publishUpdate({ ...updateState, phase: 'available', installable: false, error: (error as Error).message });
-  }
+  return updater.check(force);
 }
 
 function configureUpdater(): void {
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = false;
-  autoUpdater.allowPrerelease = false;
-  autoUpdater.on('download-progress', (progress) => {
-    publishUpdate({ ...updateState, phase: 'downloading', progress: Math.round(progress.percent) });
-  });
-  autoUpdater.on('update-downloaded', () => {
-    publishUpdate({ ...updateState, phase: 'ready', progress: 100 });
-    if (Notification.isSupported()) {
+  updater = new UpdateController({
+    currentVersion: app.getVersion(),
+    installable: isInstallable(),
+    discover: async (force) => {
+      const recent = preferences.lastUpdateCheck && Date.now() - Date.parse(preferences.lastUpdateCheck) < UPDATE_INTERVAL_MS;
+      if (!force && recent) return {
+        currentVersion: app.getVersion(), checkedAt: preferences.lastUpdateCheck!,
+        available: !!preferences.lastRelease && compareVersions(preferences.lastRelease.version, app.getVersion()) > 0,
+        release: preferences.lastRelease,
+      };
+      const result = await checker.check(force);
+      preferences.lastUpdateCheck = result.checkedAt;
+      if (!result.error) preferences.lastRelease = result.release;
+      persist();
+      return result;
+    },
+    prepare: async () => {
+      const result = await autoUpdater.checkForUpdates();
+      await result?.downloadPromise;
+    },
+    publish: publishUpdate,
+    ready: () => {
+      if (!Notification.isSupported()) return;
       const notice = new Notification({ title: 'Hornbook update ready', body: 'Restart Hornbook when you are ready to install it.' });
       notice.on('click', () => showWindow('/'));
       notice.show();
-    }
+    },
   });
-  autoUpdater.on('error', (error) => {
-    if (updateState.release) publishUpdate({ ...updateState, phase: 'available', installable: false, error: error.message });
-  });
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.allowPrerelease = false;
+  autoUpdater.on('update-available', (info) => updater.available(info.version));
+  autoUpdater.on('update-not-available', () => updater.unavailable());
+  autoUpdater.on('download-progress', (progress) => updater.progress(progress.percent));
+  autoUpdater.on('update-downloaded', (info) => updater.downloaded(info.version));
+  autoUpdater.on('error', (error) => updater.failed(error.message));
 }
 
 function notifyJob(job: JobView): void {
@@ -349,6 +329,12 @@ function registerIpc(): void {
     const error = await shell.openPath(journal);
     if (error) throw new Error(error);
   });
+  ipcMain.on('hornbook:progress-draft', (event, section: string, value: unknown) => {
+    try {
+      assertRenderer(event);
+      event.returnValue = desktopProgressDraft(join(app.getPath('userData'), 'progress-drafts'), journal, section, value);
+    } catch (error) { event.returnValue = { value: null, error: (error as Error).message }; }
+  });
   ipcMain.handle('hornbook:choose-tool', async (event, kind: DesktopToolPath) => {
     assertRenderer(event);
     if (!['FFMPEG_BIN', 'WHISPER_BIN', 'WHISPER_MODEL'].includes(kind)) throw new Error('Unknown tool path');
@@ -383,9 +369,10 @@ function registerIpc(): void {
     assertRenderer(event);
     return checkForUpdates(force === true);
   });
-  ipcMain.handle('hornbook:restart-update', (event) => {
+  ipcMain.handle('hornbook:restart-update', async (event) => {
     assertRenderer(event);
     if (updateState.phase !== 'ready') return false;
+    await stopServer();
     quitting = true;
     autoUpdater.quitAndInstall(false, true);
     return true;
@@ -468,10 +455,15 @@ if (ownsInstance) {
     }
   });
   app.on('activate', () => showWindow('/'));
-  app.on('before-quit', () => {
+  app.on('before-quit', (event) => {
     quitting = true;
     rememberWindowSize();
-    server?.close();
+    if (shutdownComplete) return;
+    event.preventDefault();
+    void stopServer().then(() => app.quit(), (error: Error) => {
+      quitting = false;
+      dialog.showErrorBox('Hornbook could not stop background work', error.message);
+    });
   });
   app.whenReady().then(start).catch((error: unknown) => {
     dialog.showErrorBox('Hornbook could not start', (error as Error).stack ?? (error as Error).message);

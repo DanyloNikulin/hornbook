@@ -10,29 +10,31 @@ import { EMPTY_PROGRESS } from '../lib/schema';
 // CardsService reads and writes learner state through ProgressStore, which
 // talks to the API. Stub the API so nothing touches the network; the store
 // still debounces a PUT, which the tests flush explicitly.
-function freshService(): { svc: CardsService; store: ProgressStore; put: ReturnType<typeof vi.fn> } {
-  const put = vi.fn().mockResolvedValue({});
+async function freshService(): Promise<{ svc: CardsService; store: ProgressStore; put: ReturnType<typeof vi.fn> }> {
+  const put = vi.fn().mockResolvedValue({ revision: 'r1' });
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
-      { provide: ApiService, useValue: { get: vi.fn().mockResolvedValue(EMPTY_PROGRESS), put } },
+      { provide: ApiService, useValue: { get: vi.fn().mockResolvedValue({ ...EMPTY_PROGRESS, revision: 'r0', journalKey: 'fixture' }), put } },
       { provide: SectionService, useValue: { id: () => 'es-en', apiBase: () => '/api/sections/es-en' } },
     ],
   });
   const store = TestBed.inject(ProgressStore);
-  store.sectionId.set('es-en');
+  await store.load('es-en');
   return { svc: TestBed.inject(CardsService), store, put };
 }
 
 beforeEach(() => {
+  localStorage.clear();
+  sessionStorage.clear();
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(2026, 8, 2, 23, 55, 0)); // 2026-09-02 23:55 local
 });
 afterEach(() => vi.useRealTimers());
 
-describe('CardsService — daily counter', () => {
+describe('CardsService — daily counter', async () => {
   it('counts increments per direction within the same day and persists them', async () => {
-    const { svc, store, put } = freshService();
+    const { svc, store, put } = await freshService();
     svc.incrementDaily('target-learner');
     svc.incrementDaily('target-learner');
     svc.incrementDaily('learner-target');
@@ -47,8 +49,8 @@ describe('CardsService — daily counter', () => {
     expect(put.mock.calls[0][1]).toMatchObject({ daily: { target_learner: 2 } });
   });
 
-  it('reads a fresh counter after midnight from inside a computed', () => {
-    const { svc, store } = freshService();
+  it('reads a fresh counter after midnight from inside a computed', async () => {
+    const { svc, store } = await freshService();
     svc.incrementDaily('target-learner');
     svc.incrementDaily('target-learner');
     svc.incrementPairs();
@@ -73,13 +75,13 @@ describe('CardsService — daily counter', () => {
   });
 });
 
-describe('CardsService — SM-2 state', () => {
+describe('CardsService — SM-2 state', async () => {
   // INITIAL.due is computed once at module load from the real clock, so this
   // block runs on real time rather than the frozen date above.
   beforeEach(() => vi.useRealTimers());
 
-  it('rates, resets and reports due cards through the store', () => {
-    const { svc, store } = freshService();
+  it('rates, resets and reports due cards through the store', async () => {
+    const { svc, store } = await freshService();
     const todayKey = new Date().toISOString().slice(0, 10);
     const card = {
       id: 'c1',

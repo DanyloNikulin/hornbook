@@ -106,7 +106,15 @@
           "options": {
             "lintFilePatterns": [
               "src/**/*.ts",
-              "src/**/*.html"
+              "src/**/*.html",
+              "server/**/*.ts",
+              "scripts/**/*.ts",
+              "electron/**/*.ts",
+              "harness/**/*.ts",
+              "bin/**/*.mjs",
+              "*.config.js",
+              "*.config.cjs",
+              "public/**/*.js"
             ]
           }
         }

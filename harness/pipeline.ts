@@ -60,7 +60,7 @@ function pulledHas(pulled: readonly string[], model: string): boolean {
 }
 
 async function processJob(api: Api, body: Record<string, unknown>): Promise<JobView | undefined> {
-  const job = await api('POST', '/api/sections/es-en/jobs', { kind: 'process', ...body });
+  const job = await api('POST', '/api/sections/es-en/uploads', { kind: 'process', ...body });
   const id = obj(job)['id'];
   if (typeof id !== 'string') return undefined;
   return waitJob(api, id, JOB_TIMEOUT);

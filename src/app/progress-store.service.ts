@@ -1,116 +1,355 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, DestroyRef } from '@angular/core';
 import {
   EMPTY_PROGRESS,
+  Progress,
   type DailyStateT,
   type ProgressT,
   type QuizResultT,
   type Sm2StateT,
 } from '../lib/schema';
-import { ApiService } from './api.service';
+import type { ProgressView } from '../lib/api-types';
+import { ApiService, ApiError } from './api.service';
+import { ProgressDrafts } from './progress-drafts.service';
 
-const SAVE_DEBOUNCE_MS = 400;
+type LoadState = 'unloaded' | 'loading' | 'ready' | 'failed';
+interface Entry {
+  id: string;
+  state: LoadState;
+  value: ProgressT;
+  revision: string;
+  journal: string;
+  version: number;
+  acknowledged: number;
+  loading?: Promise<void>;
+  pending?: Promise<boolean>;
+  timer?: ReturnType<typeof setTimeout>;
+  loadError: string | null;
+  saveError: string | null;
+  draftError: string | null;
+  recovery?: string;
+  conflict: boolean;
+}
+export interface ProgressNotice {
+  id: string;
+  message: string;
+  recovery: boolean;
+  conflict: boolean;
+  dirty: boolean;
+}
 
-/**
- * Learner progress for the current section, mirrored from
- * `<section>/_progress.json`. Signals are the in-memory truth; every write
- * is debounced into one PUT of the whole document (a few KB).
- *
- * Loaded by the section guard, so section pages never see another
- * section's state.
- */
 @Injectable({ providedIn: 'root' })
 export class ProgressStore {
   private readonly api = inject(ApiService);
-
+  private readonly drafts = inject(ProgressDrafts);
+  private readonly entries = new Map<string, Entry>();
   readonly sectionId = signal<string | null>(null);
+  readonly state = signal<LoadState>('unloaded');
   readonly sm2 = signal<Record<string, Sm2StateT>>({});
   readonly daily = signal<DailyStateT | null>(null);
   readonly quiz = signal<Record<string, QuizResultT>>({});
   readonly activity = signal<Record<string, number>>({});
   readonly loadError = signal<string | null>(null);
   readonly saveError = signal<string | null>(null);
+  readonly notices = signal<ProgressNotice[]>([]);
+  readonly dirty = signal(false);
 
-  private timer: ReturnType<typeof setTimeout> | null = null;
-  private pending: Promise<void> | null = null;
+  constructor() {
+    const close = (event: BeforeUnloadEvent) => {
+      if (
+        [...this.entries.values()].some(
+          (entry) =>
+            entry.version !== entry.acknowledged &&
+            (!globalThis.window?.hornbookDesktop || entry.draftError),
+        )
+      ) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    const online = () => {
+      void this.flush();
+    };
+    window.addEventListener('beforeunload', close);
+    window.addEventListener('online', online);
+    inject(DestroyRef).onDestroy(() => {
+      window.removeEventListener('beforeunload', close);
+      window.removeEventListener('online', online);
+      for (const entry of this.entries.values()) if (entry.timer) clearTimeout(entry.timer);
+    });
+  }
 
-  async load(sectionId: string): Promise<void> {
-    await this.flush();
-    this.sectionId.set(sectionId);
-    this.apply(EMPTY_PROGRESS);
-    try {
-      const p = await this.api.get<ProgressT>(`/api/sections/${encodeURIComponent(sectionId)}/progress`);
-      // The section may have changed while the request was in flight.
-      if (this.sectionId() !== sectionId) return;
-      this.apply(p);
-      this.loadError.set(null);
-    } catch (err) {
-      this.loadError.set((err as Error).message);
+  private path(id: string): string {
+    return `/api/sections/${encodeURIComponent(id)}/progress`;
+  }
+  private publish(): void {
+    const entry = this.entries.get(this.sectionId() ?? '');
+    this.state.set(entry?.state ?? 'unloaded');
+    this.apply(entry?.value ?? structuredClone(EMPTY_PROGRESS));
+    this.loadError.set(entry?.loadError ?? null);
+    this.saveError.set(entry?.saveError ?? entry?.draftError ?? null);
+    this.dirty.set(
+      [...this.entries.values()].some((value) => value.version !== value.acknowledged),
+    );
+    this.notices.set(
+      [...this.entries.values()]
+        .filter((value) => value.loadError || value.saveError || value.draftError || value.recovery)
+        .map((value) => ({
+          id: value.id,
+          message: value.loadError ?? value.saveError ?? value.draftError ?? value.recovery!,
+          recovery: !!value.recovery,
+          conflict: value.conflict,
+          dirty: value.version !== value.acknowledged,
+        })),
+    );
+  }
+  private apply(value: ProgressT): void {
+    this.sm2.set(value.sm2);
+    this.daily.set(value.daily);
+    this.quiz.set(value.quiz);
+    this.activity.set(value.activity);
+  }
+
+  async load(id: string, activate = true): Promise<void> {
+    const prior = this.entries.get(this.sectionId() ?? '');
+    if (activate && prior && prior.id !== id) void this.drain(prior);
+    if (activate) this.sectionId.set(id);
+    let entry = this.entries.get(id);
+    if (!entry) {
+      entry = {
+        id,
+        state: 'unloaded',
+        value: structuredClone(EMPTY_PROGRESS),
+        revision: '',
+        journal: '',
+        version: 0,
+        acknowledged: 0,
+        loadError: null,
+        saveError: null,
+        draftError: null,
+        conflict: false,
+      };
+      this.entries.set(id, entry);
     }
-  }
-
-  private apply(p: ProgressT): void {
-    this.sm2.set(p.sm2);
-    this.daily.set(p.daily);
-    this.quiz.set(p.quiz);
-    this.activity.set(p.activity);
-  }
-
-  setSm2(map: Record<string, Sm2StateT>): void {
-    this.sm2.set(map);
-    this.schedule();
-  }
-
-  setDaily(d: DailyStateT | null): void {
-    this.daily.set(d);
-    this.schedule();
-  }
-
-  setQuiz(map: Record<string, QuizResultT>): void {
-    this.quiz.set(map);
-    this.schedule();
-  }
-
-  setActivity(map: Record<string, number>): void {
-    this.activity.set(map);
-    this.schedule();
-  }
-
-  snapshot(): ProgressT {
-    return { sm2: this.sm2(), daily: this.daily(), quiz: this.quiz(), activity: this.activity() };
-  }
-
-  private schedule(): void {
-    if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => {
-      this.timer = null;
-      void this.save();
-    }, SAVE_DEBOUNCE_MS);
-  }
-
-  /** Write immediately (section switch, tests). */
-  async flush(): Promise<void> {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = null;
-      await this.save();
-    } else if (this.pending) {
-      await this.pending;
-    }
-  }
-
-  private save(): Promise<void> {
-    const id = this.sectionId();
-    if (!id) return Promise.resolve();
-    const body = this.snapshot();
-    this.pending = this.api
-      .put(`/api/sections/${encodeURIComponent(id)}/progress`, body)
-      .then(() => this.saveError.set(null))
-      .catch((err: unknown) => {
-        this.saveError.set((err as Error).message);
+    this.publish();
+    if (entry.state === 'loading') return entry.loading;
+    if (entry.state === 'ready' || entry.version !== entry.acknowledged) return;
+    const selected = entry;
+    selected.state = 'loading';
+    selected.loadError = null;
+    this.publish();
+    selected.loading = this.api
+      .get<ProgressView>(this.path(id))
+      .then((view) => {
+        if (!view.revision || !view.journalKey)
+          throw new Error('Progress response has no revision');
+        selected.value = Progress.parse(view);
+        selected.revision = view.revision;
+        selected.journal = view.journalKey;
+        selected.recovery = view.recovery;
+        selected.state = view.recovery ? 'failed' : 'ready';
+        const draft = this.drafts.read(view.journalKey, id);
+        if (draft) {
+          const same = JSON.stringify(draft.snapshot) === JSON.stringify(selected.value);
+          if (same && !view.recovery) this.drafts.write(view.journalKey, id, null);
+          else {
+            selected.value = draft.snapshot;
+            selected.revision = draft.revision;
+            selected.version++;
+            selected.conflict = draft.revision !== view.revision || !!view.recovery;
+            selected.saveError = selected.conflict
+              ? 'Saved progress changed while this copy was pending.'
+              : null;
+            if (!selected.conflict) void this.drain(selected);
+          }
+        }
+      })
+      .catch((error: unknown) => {
+        selected.state = 'failed';
+        selected.loadError = (error as Error).message;
       })
       .finally(() => {
-        this.pending = null;
+        selected.loading = undefined;
+        this.publish();
       });
-    return this.pending;
+    return selected.loading;
+  }
+
+  private change(patch: Partial<ProgressT>): void {
+    const entry = this.entries.get(this.sectionId() ?? '');
+    if (!entry || entry.state !== 'ready') return;
+    entry.value = structuredClone({ ...entry.value, ...patch });
+    entry.version++;
+    this.persist(entry);
+    this.publish();
+    if (entry.timer) clearTimeout(entry.timer);
+    entry.timer = setTimeout(() => {
+      entry.timer = undefined;
+      void this.drain(entry);
+    }, 400);
+  }
+  private persist(entry: Entry): void {
+    try {
+      this.drafts.write(entry.journal, entry.id, {
+        revision: entry.revision,
+        snapshot: entry.value,
+      });
+      entry.draftError = null;
+    } catch (error) {
+      entry.draftError = `Local backup failed: ${(error as Error).message}`;
+    }
+  }
+  setSm2(sm2: Record<string, Sm2StateT>): void {
+    this.change({ sm2 });
+  }
+  setDaily(daily: DailyStateT | null): void {
+    this.change({ daily });
+  }
+  setQuiz(quiz: Record<string, QuizResultT>): void {
+    this.change({ quiz });
+  }
+  setActivity(activity: Record<string, number>): void {
+    this.change({ activity });
+  }
+  snapshot(): ProgressT {
+    return structuredClone({
+      sm2: this.sm2(),
+      daily: this.daily(),
+      quiz: this.quiz(),
+      activity: this.activity(),
+    });
+  }
+
+  private drain(entry: Entry): Promise<boolean> {
+    if (entry.timer) {
+      clearTimeout(entry.timer);
+      entry.timer = undefined;
+    }
+    if (entry.pending) return entry.pending;
+    if (entry.state !== 'ready' || entry.conflict) return Promise.resolve(false);
+    const run = async () => {
+      while (entry.version !== entry.acknowledged) {
+        const version = entry.version;
+        const snapshot = structuredClone(entry.value);
+        try {
+          const result = await this.api.put<ProgressView>(this.path(entry.id), {
+            ...snapshot,
+            revision: entry.revision,
+          });
+          if (!result.revision) throw new Error('Save response has no revision');
+          entry.revision = result.revision;
+          entry.acknowledged = version;
+          entry.saveError = null;
+          if (entry.version !== version) this.persist(entry);
+          else {
+            try {
+              this.drafts.write(entry.journal, entry.id, null);
+              entry.draftError = null;
+            } catch (error) {
+              entry.draftError = (error as Error).message;
+            }
+          }
+        } catch (error) {
+          entry.saveError = (error as Error).message;
+          entry.conflict = error instanceof ApiError && error.status === 409;
+          this.persist(entry);
+          return false;
+        } finally {
+          this.publish();
+        }
+      }
+      return true;
+    };
+    entry.pending = run().finally(() => {
+      entry.pending = undefined;
+      this.publish();
+    });
+    return entry.pending;
+  }
+
+  async flush(): Promise<boolean> {
+    const results = await Promise.all(
+      [...this.entries.values()].map(async (entry) => {
+        do {
+          if (!(await this.drain(entry))) return false;
+        } while (entry.version !== entry.acknowledged);
+        return true;
+      }),
+    );
+    return results.every(Boolean);
+  }
+  async retry(id: string): Promise<void> {
+    const entry = this.entries.get(id);
+    if (entry?.state === 'ready') {
+      entry.conflict = false;
+      await this.drain(entry);
+    } else await this.load(id, false);
+  }
+  async externalChange(id: string): Promise<void> {
+    const entry = this.entries.get(id);
+    if (!entry) return;
+    if (entry.loading) await entry.loading;
+    if (entry.pending) await entry.pending;
+    if (entry.version !== entry.acknowledged) {
+      entry.conflict = true;
+      entry.saveError = 'Imported progress changed the saved history. Your unsaved copy is retained.';
+      this.publish();
+      return;
+    }
+    entry.state = 'unloaded';
+    await this.load(id, false);
+  }
+  async startFresh(id: string): Promise<void> {
+    const entry = this.entries.get(id);
+    if (!entry?.recovery || entry.state === 'loading' || entry.version !== entry.acknowledged)
+      return;
+    entry.state = 'loading';
+    this.publish();
+    try {
+      const result = await this.api.put<ProgressView>(this.path(id), {
+        ...structuredClone(EMPTY_PROGRESS),
+        revision: entry.revision,
+        recover: true,
+      });
+      if (!result.revision) throw new Error('Recovery response has no revision');
+      entry.revision = result.revision;
+      entry.recovery = undefined;
+      entry.state = 'ready';
+      entry.loadError = null;
+    } catch (error) {
+      entry.state = 'failed';
+      entry.loadError = (error as Error).message;
+    }
+    this.publish();
+  }
+  async useSaved(id: string): Promise<void> {
+    const entry = this.entries.get(id);
+    if (!entry || entry.state === 'loading') return;
+    const previousState = entry.state;
+    entry.state = 'loading';
+    this.publish();
+    if (entry.pending) await entry.pending;
+    try {
+      const view = await this.api.get<ProgressView>(this.path(id));
+      const value = Progress.parse(view);
+      if (!view.revision || !view.journalKey) throw new Error('Progress response has no revision');
+      this.drafts.write(view.journalKey, id, null);
+      entry.value = value;
+      entry.revision = view.revision;
+      entry.journal = view.journalKey;
+      entry.acknowledged = entry.version;
+      entry.conflict = false;
+      entry.saveError = null;
+      entry.loadError = null;
+      entry.draftError = null;
+      entry.recovery = view.recovery;
+      entry.state = view.recovery ? 'failed' : 'ready';
+    } catch (error) {
+      entry.state = previousState;
+      entry.saveError = (error as Error).message;
+    }
+    this.publish();
+  }
+  exportPending(id: string): string {
+    return JSON.stringify(this.entries.get(id)?.value ?? EMPTY_PROGRESS, null, 2);
   }
 }

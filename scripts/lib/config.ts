@@ -1,10 +1,10 @@
 // Language names and providers for the pipeline scripts, read from the
-// section a script is working on (see journal.ts → useSection /
+// section a script is working on (see cli-journal.ts → useSection /
 // resolveSectionArg). Kept as zero-argument helpers because the prompt
 // builders are called deep inside transcribe/extract.
 
 import { languageName, providersFor, type ProvidersT } from '../../src/lib/journal-config.ts';
-import { currentSection, loadJournalConfig, repoRootDir } from './journal.ts';
+import { currentSection, loadJournalConfig, repoRootDir } from './cli-journal.ts';
 
 export { loadJournalConfig, repoRootDir };
 

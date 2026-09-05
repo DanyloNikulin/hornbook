@@ -42,6 +42,8 @@ export async function cli(argv: readonly string[]): Promise<void> {
   --no-open   start the server only
   --host      listen address; anything but 127.0.0.1 is hosted mode — set --password
   --password  Basic-auth password for hosted mode (or HORNBOOK_PASSWORD)
+  --origin    public origin behind a TLS proxy (or HORNBOOK_ORIGIN)
+  HORNBOOK_JOB_TIMEOUT_MINUTES  background job limit; default 1440 for lessons, 60 for other jobs
   doctor      print what is installed for the zero-cost path (ffmpeg, whisper.cpp, Ollama)`);
     return;
   }
@@ -79,12 +81,7 @@ export async function cli(argv: readonly string[]): Promise<void> {
     });
   }
 
-  const stop = (): void => {
-    server.close(() => process.exit(0));
-    setTimeout(() => process.exit(0), 1000).unref();
-  };
-  process.on('SIGINT', stop);
-  process.on('SIGTERM', stop);
+
 }
 
 /** The setup page as a table, for a terminal. No network beyond the local Ollama. */

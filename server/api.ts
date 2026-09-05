@@ -2,7 +2,6 @@
 // here. Bodies are JSON. Errors are `{ error, details? }` with a status.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { createReadStream } from 'node:fs';
 import { extname } from 'node:path';
 import { FolderStore, HttpError, type DerivedKind } from './store.ts';
 import type { JobRunner } from './jobs.ts';
@@ -10,7 +9,14 @@ import { SETUP_SECTION, type SetupApi } from './setup.ts';
 import type { StartJob } from '../src/lib/api-types.ts';
 import type { ReleaseChecker } from './releases.ts';
 
-const MAX_BODY_BYTES = 512 * 1024 * 1024; // base64 uploads of lesson video
+import { readJson, sendJson, streamFile } from './http.ts';
+export { sendJson } from './http.ts';
+
+const JSON_BYTES = 1024 * 1024;
+const LESSON_BYTES = 8 * 1024 * 1024;
+const IMAGE_BYTES = 12 * 1024 * 1024;
+const ARCHIVE_BYTES = 90 * 1024 * 1024;
+const UPLOAD_BYTES = 512 * 1024 * 1024;
 
 const MIME_BY_EXT: Record<string, string> = {
   '.jpg': 'image/jpeg',
@@ -38,6 +44,7 @@ interface Route {
   pattern: RegExp;
   keys: string[];
   handler: Handler;
+  bodyLimit: number;
 }
 
 function compile(path: string): { pattern: RegExp; keys: string[] } {
@@ -51,9 +58,9 @@ function compile(path: string): { pattern: RegExp; keys: string[] } {
 
 export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerResponse) => Promise<boolean> {
   const routes: Route[] = [];
-  const on = (method: string, path: string, handler: Handler): void => {
+  const on = (method: string, path: string, handler: Handler, bodyLimit = JSON_BYTES): void => {
     const { pattern, keys } = compile(path);
-    routes.push({ method, pattern, keys, handler });
+    routes.push({ method, pattern, keys, handler, bodyLimit });
   };
   const { store } = ctx;
 
@@ -72,8 +79,8 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
   });
 
   on('GET', '/api/sections/:id/lessons', (_r, _s, p) => store.lessonMetas(p['id']));
-  on('POST', '/api/sections/:id/lessons', async (_r, _s, p, body) => store.saveLesson(p['id'], await body()));
-  on('POST', '/api/sections/:id/lessons/import', async (_r, _s, p, body) => store.importLesson(p['id'], await body()));
+  on('POST', '/api/sections/:id/lessons', async (_r, _s, p, body) => store.saveLesson(p['id'], await body()), LESSON_BYTES);
+  on('POST', '/api/sections/:id/lessons/import', async (_r, _s, p, body) => store.importLesson(p['id'], await body()), LESSON_BYTES);
   on('GET', '/api/sections/:id/lessons/:slug/export', (_r, res, p) => {
     const file = store.exportLesson(p['id'], p['slug']);
     sendDownload(res, file.data, 'application/json; charset=utf-8', file.filename);
@@ -85,7 +92,7 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
       throw new HttpError(400, `Body slug "${String(raw['slug'])}" does not match URL slug "${p['slug']}"`);
     }
     return store.saveLesson(p['id'], raw);
-  });
+  }, LESSON_BYTES);
   on('DELETE', '/api/sections/:id/lessons/:slug', (_r, _s, p) => {
     store.deleteLesson(p['id'], p['slug']);
     return { ok: true };
@@ -106,13 +113,17 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
     const file = store.exportSection(p['id'], includeProgress);
     sendDownload(res, file.data, 'application/zip', file.filename);
   });
-  on('POST', '/api/sections/import', async (_r, _s, _p, body) => store.importSection(await body()));
+  on('POST', '/api/sections/import', async (_r, _s, _p, body) => store.importSection(await body()), ARCHIVE_BYTES);
 
-  on('GET', '/api/sections/:id/progress', (_r, _s, p) => store.progress(p['id']));
-  on('PUT', '/api/sections/:id/progress', async (_r, _s, p, body) => store.saveProgress(p['id'], await body()));
+  on('GET', '/api/sections/:id/progress', (_r, _s, p) => store.progressView(p['id']));
+  on('PUT', '/api/sections/:id/progress', async (_r, _s, p, body) => {
+    const input = await body() as { revision?: unknown; recover?: unknown } | null;
+    if (typeof input?.revision !== 'string') throw new HttpError(428, 'Load progress before saving');
+    return store.saveProgress(p['id'], input, input.revision, input.recover === true);
+  }, 8 * 1024 * 1024);
 
   // Backdrop image of a section (optional; themes are otherwise gradients).
-  on('GET', '/api/sections/:id/backdrop', (_r, res, p) => {
+  on('GET', '/api/sections/:id/backdrop', async (_r, res, p) => {
     const path = store.backdropPath(p['id']);
     if (!path) throw new HttpError(404, 'This pair has no backdrop image');
     res.writeHead(200, {
@@ -120,10 +131,10 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
       // The file name never changes, so the browser must revalidate.
       'Cache-Control': 'no-cache',
     });
-    createReadStream(path).pipe(res);
+    await streamFile(path, res);
     return undefined;
   });
-  on('PUT', '/api/sections/:id/backdrop', async (_r, _s, p, body) => store.saveBackdrop(p['id'], await body()));
+  on('PUT', '/api/sections/:id/backdrop', async (_r, _s, p, body) => store.saveBackdrop(p['id'], await body()), IMAGE_BYTES);
   on('DELETE', '/api/sections/:id/backdrop', (_r, _s, p) => store.deleteBackdrop(p['id']));
 
   // Settings: journal-level provider defaults + connection values.
@@ -132,14 +143,16 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
   on('POST', '/api/settings/probe', async (_r, _s, _p, body) => store.probe(await body()));
 
   // Jobs: the pipeline scripts run as child processes, one at a time.
-  on('POST', '/api/sections/:id/jobs', async (_r, _s, p, body) => {
-    store.section(p['id']);
-    const input = (await body()) as Partial<StartJob>;
-    if (!input || typeof input !== 'object' || !isStartJob(input)) {
-      throw new HttpError(400, 'Invalid job request');
-    }
-    return ctx.jobs.enqueue(p['id'], input);
-  });
+  for (const upload of [false, true]) {
+    on('POST', `/api/sections/:id/${upload ? 'uploads' : 'jobs'}`, async (_r, _s, p, body) => {
+      store.section(p['id']);
+      const input = (await body()) as Partial<StartJob>;
+      if (!input || typeof input !== 'object' || !isStartJob(input) || (input.kind === 'process') !== upload) {
+        throw new HttpError(400, 'Invalid job request');
+      }
+      return ctx.jobs.enqueue(p['id'], input);
+    }, upload ? UPLOAD_BYTES : JSON_BYTES);
+  }
   on('GET', '/api/sections/:id/jobs', (_r, _s, p) => {
     store.section(p['id']);
     return ctx.jobs.list(p['id']);
@@ -184,28 +197,10 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
       return true;
     }
 
-    const body = (): Promise<unknown> => readJson(req);
-    try {
-      const result = await matched.handler(req, res, params, body);
-      // A handler that answered itself (a streamed file) has sent headers
-      // even though the response is still being written — writableEnded
-      // alone is not enough, and writing again throws.
-      if (!res.headersSent) {
-        sendJson(res, method === 'POST' && url.pathname === '/api/sections' ? 201 : 200, result ?? { ok: true });
-      }
-    } catch (err) {
-      const httpErr = err instanceof HttpError;
-      if (!httpErr) {
-        const e = err as Error;
-        console.error(`[api] ${method} ${url.pathname}:`, e.stack ?? e.message);
-      }
-      if (res.headersSent) {
-        res.destroy();
-      } else if (httpErr) {
-        sendJson(res, err.status, { error: err.message, details: err.details });
-      } else {
-        sendJson(res, 500, { error: (err as Error).message });
-      }
+    const body = (): Promise<unknown> => readJson(req, matched.bodyLimit);
+    const result = await matched.handler(req, res, params, body);
+    if (!res.headersSent) {
+      sendJson(res, method === 'POST' && url.pathname === '/api/sections' ? 201 : 200, result ?? { ok: true });
     }
     return true;
   };
@@ -233,15 +228,6 @@ function isStartJob(input: Partial<StartJob>): input is StartJob {
   }
 }
 
-export function sendJson(res: ServerResponse, status: number, body: unknown): void {
-  const json = JSON.stringify(body);
-  res.writeHead(status, {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Cache-Control': 'no-store',
-  });
-  res.end(json);
-}
-
 function sendDownload(res: ServerResponse, data: Uint8Array, contentType: string, filename: string): void {
   res.writeHead(200, {
     'Content-Type': contentType,
@@ -250,33 +236,4 @@ function sendDownload(res: ServerResponse, data: Uint8Array, contentType: string
     'Cache-Control': 'no-store',
   });
   res.end(data);
-}
-
-function readJson(req: IncomingMessage): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    let size = 0;
-    req.on('data', (c: Buffer) => {
-      size += c.length;
-      if (size > MAX_BODY_BYTES) {
-        reject(new HttpError(413, 'Body too large'));
-        req.destroy();
-        return;
-      }
-      chunks.push(c);
-    });
-    req.on('end', () => {
-      const text = Buffer.concat(chunks).toString('utf8');
-      if (!text.trim()) {
-        resolve({});
-        return;
-      }
-      try {
-        resolve(JSON.parse(text));
-      } catch {
-        reject(new HttpError(400, 'Body is not valid JSON'));
-      }
-    });
-    req.on('error', reject);
-  });
 }

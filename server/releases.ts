@@ -15,13 +15,20 @@ export interface ReleaseCheckerOptions {
 export class ReleaseChecker {
   private cached: ReleaseCheckView | null = null;
   private lastFetchAt = 0;
+  private pending?: Promise<ReleaseCheckView>;
 
   constructor(private readonly opts: ReleaseCheckerOptions) {}
 
   async check(force = false): Promise<ReleaseCheckView> {
+    if (this.pending) return this.pending;
     const now = (this.opts.now ?? Date.now)();
     if (force && this.cached && now - this.lastFetchAt < FORCED_UPDATE_INTERVAL_MS) return this.cached;
     if (!force && this.cached && now - Date.parse(this.cached.checkedAt) < UPDATE_INTERVAL_MS) return this.cached;
+    this.pending = this.fetchRelease(now).finally(() => { this.pending = undefined; });
+    return this.pending;
+  }
+
+  private async fetchRelease(now: number): Promise<ReleaseCheckView> {
     const checkedAt = new Date(now).toISOString();
     this.lastFetchAt = now;
     try {

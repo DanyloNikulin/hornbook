@@ -91,6 +91,15 @@ async function main(): Promise<void> {
     const again = await api('GET', '/api/sections/es-en/progress');
     r.rec('PUT progress round-trips', put.status === 200 && again.text === progress.text, `put=${put.status}`);
     r.rec('it-en progress is separate', (await api('GET', '/api/sections/it-en/progress')).status === 200);
+    r.rec('unversioned progress writes are refused', (await api('PUT', '/api/sections/es-en/progress', { sm2: {}, daily: null, quiz: {}, activity: {} })).status === 428);
+    const largeHistory = { ...obj(progress), sm2: Object.fromEntries(Array.from({ length: 8000 }, (_, i) => [
+      `${i}-${'card'.repeat(25)}`, { interval: 6, ef: 2.5, repetitions: 2, due: '2026-09-04' },
+    ])) };
+    const historyBytes = Buffer.byteLength(JSON.stringify(largeHistory));
+    const largeSaved = await api('PUT', '/api/sections/es-en/progress', largeHistory);
+    r.rec('progress above 1 MiB fits its dedicated body limit', historyBytes > 1024 * 1024 && largeSaved.status === 200, `${historyBytes} bytes, status=${largeSaved.status}`);
+    const restored = await api('PUT', '/api/sections/es-en/progress', { ...obj(progress), revision: obj(largeSaved)['revision'] });
+    r.rec('large-history fixture can be restored with the current revision', restored.status === 200);
 
     r.section('probe');
     r.rec('probe with a bad body → 400', (await api('POST', '/api/settings/probe', { nope: true })).status === 400);
@@ -197,7 +206,7 @@ async function main(): Promise<void> {
     r.rec('demo pairs intact', after.includes('es-en') && after.includes('it-en') && !after.includes(TEST), after.join(','));
 
     r.section('jobs');
-    r.rec('bad job body → 400', (await api('POST', '/api/sections/es-en/jobs', { kind: 'process' })).status === 400);
+    r.rec('bad job body → 400', (await api('POST', '/api/sections/es-en/uploads', { kind: 'process' })).status === 400);
     r.rec('unknown job id → 404', (await api('GET', '/api/jobs/nope')).status === 404);
 
     const demo = readJson<Record<string, unknown>>(join(repoRoot, 'journal', 'es-en', '2026-01-01-greetings.json'));
@@ -206,7 +215,7 @@ async function main(): Promise<void> {
     demo['title'] = 'JSON copy smoke';
     const copyPath = join(outDir, 'api-smoke-copy.json');
     writeFileSync(copyPath, JSON.stringify(demo));
-    const jsonJob = await api('POST', '/api/sections/es-en/jobs', { kind: 'process', filename: 'copy.json', base64: b64(copyPath), date: '2026-09-03', from: 'json' });
+    const jsonJob = await api('POST', '/api/sections/es-en/uploads', { kind: 'process', filename: 'copy.json', base64: b64(copyPath), date: '2026-09-03', from: 'json' });
     const jsonDone = await waitJob(api, String(obj(jsonJob)['id']), 60_000);
     r.rec('process JSON job needs no model and lands as a lesson', jsonDone?.status === 'done' && jsonDone.result?.slug === 'json-copy', jobSummary(jsonDone));
     r.rec('the copied lesson is served', (await api('GET', '/api/sections/es-en/lessons/json-copy')).status === 200);

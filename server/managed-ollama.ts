@@ -4,6 +4,7 @@
 // configured host.
 
 import { spawn as nodeSpawn, type ChildProcess } from 'node:child_process';
+import { ProcessSupervisor } from '../scripts/lib/process-supervisor.ts';
 import { existsSync } from 'node:fs';
 
 export interface ManagedOllamaOptions {
@@ -32,6 +33,10 @@ export class ManagedOllama {
   readonly host: string;
   private child: ChildProcess | null = null;
   private log = '';
+  private supervised: ProcessSupervisor | null = null;
+  private generation = 0;
+  private stopping?: Promise<void>;
+  private disposed = false;
   private starting: Promise<boolean> | null = null;
 
   constructor(private readonly opts: ManagedOllamaOptions) {
@@ -52,8 +57,9 @@ export class ManagedOllama {
 
   /** Start if the binary is there and it is not running; resolves once /api/version answers. */
   start(): Promise<boolean> {
-    if (this.running()) return this.answers(1500);
+    if (this.stopping || this.disposed) return Promise.resolve(false);
     if (this.starting) return this.starting;
+    if (this.running()) return this.answers(1500);
     if (!this.available()) return Promise.resolve(false);
     this.starting = this.launch().finally(() => {
       this.starting = null;
@@ -62,6 +68,7 @@ export class ManagedOllama {
   }
 
   private async launch(): Promise<boolean> {
+    const generation = this.generation;
     const spawn = this.opts.spawn ?? nodeSpawn;
     let child: ChildProcess;
     try {
@@ -73,12 +80,15 @@ export class ManagedOllama {
         },
         stdio: ['ignore', 'pipe', 'pipe'],
         windowsHide: true,
+        detached: process.platform !== 'win32',
       });
     } catch (err) {
       this.note(`could not start: ${(err as Error).message}`);
       return false;
     }
     this.child = child;
+    const supervised = new ProcessSupervisor(child, { ownsProcessGroup: process.platform !== 'win32', onTerminationError: (error) => this.note(`cleanup failed: ${error.message}`) });
+    this.supervised = supervised;
     const append = (d: Buffer): void => {
       this.log += d.toString();
       if (this.log.length > LOG_KEEP) this.log = this.log.slice(-LOG_KEEP);
@@ -86,17 +96,19 @@ export class ManagedOllama {
     child.stdout?.on('data', append);
     child.stderr?.on('data', append);
     child.on('error', (err) => this.note(`error: ${err.message}`));
-    child.on('exit', (code) => {
+    void supervised.completion.then(({ code }) => {
       this.note(`exited with ${code ?? 'signal'}`);
       if (this.child === child) {
         this.child = null;
         active = undefined;
       }
-    });
+    }).catch((error: Error) => this.note(`cleanup failed: ${error.message}`));
     const startupMs = this.opts.startupMs ?? 20_000;
     const deadline = Date.now() + startupMs;
     while (Date.now() < deadline && this.running()) {
-      if (await this.answers(1000)) {
+      const answered = await this.answers(1000);
+      if (generation !== this.generation || this.child !== child) return false;
+      if (answered) {
         active = this.host;
         this.note(`up at ${this.host}`);
         return true;
@@ -105,15 +117,25 @@ export class ManagedOllama {
     }
     this.note(`did not answer within ${Math.round(startupMs / 1000)} s`);
     // A server that never answered is not worth keeping around.
-    this.stop();
+    await this.stop();
     return false;
   }
 
-  stop(): void {
-    const child = this.child;
-    this.child = null;
-    active = undefined;
-    if (child && child.exitCode === null) child.kill();
+  stop(): Promise<void> {
+    if (this.stopping) return this.stopping;
+    this.generation++;
+    if (active === this.host) active = undefined;
+    const supervised = this.supervised;
+    this.stopping = (async () => {
+      if (supervised) await supervised.stop('managed Ollama stopped');
+      this.child = null; this.supervised = null;
+    })().finally(() => { this.stopping = undefined; });
+    return this.stopping;
+  }
+
+  shutdown(): Promise<void> {
+    this.disposed = true;
+    return this.stop();
   }
 
   private async answers(timeoutMs: number): Promise<boolean> {

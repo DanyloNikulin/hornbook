@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { retryableShutdown } from '../scripts/lib/shutdown.ts';
+import { jobTimeoutFromEnv } from './job-timeout.ts';
 // Hornbook server: serves the built UI and the API over the journal folder.
 //
 //   tsx server/main.ts                       # 127.0.0.1:8787, dist/hornbook/browser, ./journal
@@ -9,10 +11,10 @@
 // Env: HORNBOOK_JOURNAL, HORNBOOK_PORT, HORNBOOK_HOST.
 
 import { createServer } from 'node:http';
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { createApi, sendJson } from './api.ts';
-import { FolderStore } from './store.ts';
+import { FolderStore, HttpError } from './store.ts';
 import { JobRunner } from './jobs.ts';
 import { pipelineEnv } from './secrets.ts';
 import { isMain } from '../scripts/lib/is-main.ts';
@@ -22,6 +24,7 @@ import { createSetup } from './setup.ts';
 import { DEFAULT_MANAGED_OLLAMA_PORT, managedPaths, toolsDir } from '../scripts/lib/tools.ts';
 import { packageRoot, packageVersion } from '../scripts/lib/runtime.ts';
 import { ReleaseChecker } from './releases.ts';
+import { requestBoundary, checkMutationOrigin, streamFile } from './http.ts';
 import type { JobView } from '../src/lib/api-types.ts';
 
 const repoRoot = packageRoot(import.meta.url);
@@ -37,6 +40,7 @@ export interface Options {
   password: string | undefined;
   /** Per-launch secret used by the Electron renderer on every request. */
   token?: string;
+  publicOrigin?: string;
   shell?: 'browser' | 'electron';
   version?: string;
   releasesUrl?: string;
@@ -61,6 +65,7 @@ export function parseArgs(argv: readonly string[]): Options {
     journal: get('--journal') ?? process.env['HORNBOOK_JOURNAL'],
     dist: resolve(get('--dist') ?? join(repoRoot, 'dist', 'hornbook', 'browser')),
     serveStatic: !argv.includes('--no-static'),
+    publicOrigin: get('--origin') ?? process.env['HORNBOOK_ORIGIN'],
     password: get('--password') ?? process.env['HORNBOOK_PASSWORD'] ?? undefined,
   };
 }
@@ -103,7 +108,8 @@ const SECURITY_HEADERS: Record<string, string> = {
   'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
 };
 
-export function startServer(opts: Options): ReturnType<typeof createServer> {
+export function startServer(opts: Options): ReturnType<typeof createServer> & { shutdown(): Promise<void> } {
+  const timeoutMs = jobTimeoutFromEnv();
   const store = new FolderStore(opts.journal);
   const mode = opts.host === '127.0.0.1' || opts.host === 'localhost' ? 'local' : 'hosted';
   const tools = managedPaths(toolsDir());
@@ -114,6 +120,7 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
     log: (line) => console.log(line),
   });
   const jobs = new JobRunner({
+    timeoutMs,
     repoRoot,
     cwd: opts.childCwd,
     journalDir: () => store.dir,
@@ -146,7 +153,7 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
     url: opts.releasesUrl ?? process.env['HORNBOOK_RELEASES_URL'],
   });
   const api = createApi({ store, jobs, setup, mode, shell: opts.shell ?? 'browser', version, updates });
-  const distRoot = opts.dist;
+  const distRoot = resolve(opts.dist);
   const hasDist = opts.serveStatic && existsSync(join(distRoot, 'index.html'));
 
   if (opts.serveStatic && !hasDist) {
@@ -157,7 +164,7 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
     console.warn('Listening on a non-local address with no --password. Anyone who can reach this port can read and write the journal.');
   }
 
-  const server = createServer(async (req, res) => {
+  const server = createServer(requestBoundary(async (req, res) => {
     if (opts.token && !isLaunchAuthorized(req, opts.token)) {
       sendJson(res, 401, { error: 'Hornbook launch token required' });
       return;
@@ -166,13 +173,12 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
       challenge(res);
       return;
     }
-    try {
-      if (await api(req, res)) return;
-    } catch (err) {
-      if (res.headersSent) res.destroy();
-      else sendJson(res, 500, { error: (err as Error).message });
-      return;
+    if (mode === 'local' && !opts.publicOrigin) {
+      const host = new URL(`http://${req.headers.host}`).hostname;
+      if (!['localhost', '127.0.0.1', '[::1]'].includes(host)) throw new HttpError(403, 'Unknown local host');
     }
+    checkMutationOrigin(req, opts.publicOrigin);
+    if (await api(req, res)) return;
 
     if (!hasDist) {
       sendJson(res, 404, { error: 'UI not built. Run "npm run build".' });
@@ -202,8 +208,8 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
       'Cache-Control': hashed ? 'public, max-age=31536000, immutable' : 'no-cache',
       ...(ext === '.html' ? SECURITY_HEADERS : {}),
     });
-    createReadStream(filePath).pipe(res);
-  });
+    await streamFile(filePath, res);
+  }));
 
   server.listen(opts.port, opts.host, () => {
     console.log(`Hornbook ${mode} server on http://${opts.host}:${opts.port}${opts.password ? ' (password protected)' : ''}`);
@@ -211,22 +217,25 @@ export function startServer(opts: Options): ReturnType<typeof createServer> {
     if (hasDist) console.log(`UI: ${distRoot}`);
     void setup.bootManagedOllama();
   });
-  server.on('close', () => {
-    jobs.stop();
-    managed.stop();
+  const stopWork = retryableShutdown(() => Promise.all([jobs.stop(), managed.shutdown()]).then(() => undefined));
+  const shutdown = retryableShutdown(async () => {
+    const work = stopWork();
+    server.closeAllConnections();
+    await Promise.all([work, new Promise<void>((resolveClose, reject) => {
+      server.close((error) => error && (error as NodeJS.ErrnoException).code !== 'ERR_SERVER_NOT_RUNNING' ? reject(error) : resolveClose());
+    })]);
+    removeSignalHandlers();
   });
-  process.once('exit', () => {
-    jobs.stop();
-    managed.stop();
-  });
-  for (const sig of ['SIGINT', 'SIGTERM'] as const) {
-    process.once(sig, () => {
-      jobs.stop();
-      managed.stop();
-      process.exit(0);
-    });
+  const onSignal = () => { void shutdown().then(() => process.exit(0), (error) => { console.error(error); process.exitCode = 1; }); };
+  function removeSignalHandlers(): void {
+    for (const sig of ['SIGINT', 'SIGTERM'] as const) process.removeListener(sig, onSignal);
   }
-  return server;
+  server.on('close', () => {
+    void stopWork().then(removeSignalHandlers, (error) => console.error('Shutdown failed:', error));
+  });
+  for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, onSignal);
+
+  return Object.assign(server, { shutdown });
 }
 
 if (isMain(import.meta.url)) {

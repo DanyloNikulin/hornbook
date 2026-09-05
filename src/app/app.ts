@@ -9,6 +9,8 @@ import { JournalService } from './journal.service';
 import { SectionService } from './section.service';
 import { ThemeService } from './theme.service';
 import { UpdateService } from './update.service';
+import { ProgressStore } from './progress-store.service';
+import { saveBrowserDownload } from './api.service';
 
 @Component({
   selector: 'app-root',
@@ -16,6 +18,7 @@ import { UpdateService } from './update.service';
   templateUrl: './app.html',
 })
 export class AppComponent {
+  protected readonly progress = inject(ProgressStore);
   protected readonly router = inject(Router);
   private readonly journal = inject(JournalService);
   protected readonly section = inject(SectionService);
@@ -70,6 +73,10 @@ export class AppComponent {
 
   protected restartToUpdate(): void {
     void this.updates.restart();
+  }
+
+  protected downloadProgress(id: string): void {
+    saveBrowserDownload(new Blob([this.progress.exportPending(id)], { type: 'application/json' }), `${id}-unsaved-progress.json`);
   }
 
   /** Switch to another section, keeping the same page when it exists there. */

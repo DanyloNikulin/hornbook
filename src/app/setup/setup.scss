@@ -1,0 +1,51 @@
+@mixin styles {
+.il-pair-pick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 1.25rem 0;
+}
+@media (max-width: 640px) { .il-pair-pick { grid-template-columns: 1fr; } }
+.il-pair-col { display: block; }
+.il-pair-head { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }
+.il-lang-list {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid rgba(42, 37, 32, 0.18);
+  border-radius: 10px;
+  background: var(--paper-2);
+}
+.il-lang-option {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(42, 37, 32, 0.08);
+  cursor: pointer;
+}
+.il-lang-option:hover { background: rgba(42, 37, 32, 0.06); }
+.il-lang-option.selected { background: var(--primary); color: #fff; }
+.il-lang-option.selected .il-lang-name { color: rgba(255, 255, 255, 0.8); }
+.il-lang-flag { font-size: 20px; }
+.il-lang-native { font-weight: 600; }
+.il-lang-name { font-size: 12px; color: var(--muted); }
+.il-pair-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--paper-2);
+  font-size: 20px;
+}
+.il-pair-preview strong { font-family: var(--font-display); }
+
+}

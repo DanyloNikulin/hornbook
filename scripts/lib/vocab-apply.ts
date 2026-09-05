@@ -32,7 +32,7 @@ export function addTopic(catalog: TopicCatalogT, entry: TopicEntryT): TopicCatal
     try {
       new RegExp(p, 'i');
     } catch (err) {
-      throw new Error(`Pattern for ${entry.id} does not compile: ${p} (${(err as Error).message})`);
+      throw new Error(`Pattern for ${entry.id} does not compile: ${p} (${(err as Error).message})`, { cause: err });
     }
   }
   if (hasTopic(catalog, entry.id)) return catalog;

@@ -107,6 +107,7 @@
 
         @if (!revealed()) {
           <input #typeInput
+                 (keydown.enter)="submitFromKeyboard($event)"
                  type="text"
                  [ngModel]="typed()"
                  (ngModelChange)="typed.set($event)"
@@ -145,7 +146,7 @@
             }
           </div>
           <div class="il-study-actions">
-            <button type="button" (click)="nextCard()" class="il-btn ghost il-study-primary">
+            <button #nextButton type="button" (click)="nextCard()" class="il-btn ghost il-study-primary">
               {{ 'cards.next' | t }} <kbd>{{ 'cards.enter' | t }}</kbd>
             </button>
             <button type="button" (click)="resetCurrent()"

@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  HostListener,
   ViewChild,
   computed,
   effect,
@@ -24,9 +23,8 @@ import {
   PAIRS_PER_ROUND,
   type Card,
   type Direction,
-  type TypedResult,
-  checkTypedAnswer,
 } from '../cards.service';
+import { checkTypedAnswer, type TypedResult } from '../../lib/answer-grading';
 import type { Rating } from '../../lib/sm2';
 
 type Mode = 'type' | 'pairs';
@@ -46,11 +44,11 @@ const MISMATCH_FLASH_MS = 600;
 export class FlashcardsComponent {
   protected readonly sec = inject(SectionService);
   private readonly journal = this.sec;
-  protected readonly pairFwd = this.journal.labels().fwd;
-  protected readonly pairRev = this.journal.labels().rev;
-  protected readonly targetName = this.journal.targetName();
-  protected readonly learnerName = this.journal.learnerName();
-  protected readonly speechLang = this.journal.speechLang();
+  protected get pairFwd() { return this.journal.labels().fwd; }
+  protected get pairRev() { return this.journal.labels().rev; }
+  protected get targetName() { return this.journal.targetName(); }
+  protected get learnerName() { return this.journal.learnerName(); }
+  protected get speechLang() { return this.journal.speechLang(); }
   private readonly cards = inject(CardsService);
   protected readonly lessons = inject(LessonsService);
   private readonly route = inject(ActivatedRoute);
@@ -80,9 +78,9 @@ export class FlashcardsComponent {
   // Whatever lesson filter is active drives the fetch. `null` (no filter)
   // means load the single pre-built global cards asset via `cards.all()`.
   // Switching filters re-triggers the loader; in-flight requests are cancelled.
-  private readonly cardsResource = resource<readonly Card[], string | null>({
-    params: () => this.lessonFilter(),
-    loader: async ({ params: slug }) => (slug ? this.cards.forLesson(slug) : this.cards.all()),
+  private readonly cardsResource = resource<readonly Card[], { slug: string | null; section: string; revision: number }>({
+    params: () => ({ slug: this.lessonFilter(), section: this.sec.id(), revision: this.cards.revision() }),
+    loader: async ({ params }) => (params.slug ? this.cards.forLesson(params.slug) : this.cards.all()),
   });
 
   protected readonly cardsLoading = computed(() => this.cardsResource.isLoading());
@@ -136,6 +134,7 @@ export class FlashcardsComponent {
   protected readonly revealed = signal(false);
 
   @ViewChild('typeInput') private typeInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('nextButton') private nextButton?: ElementRef<HTMLButtonElement>;
 
   // ---- pairs-mode state ----
 
@@ -182,8 +181,9 @@ export class FlashcardsComponent {
 
     // Focus the type input when active.
     effect(() => {
-      if (this.mode() === 'type' && this.current() && !this.revealed()) {
-        queueMicrotask(() => this.typeInput?.nativeElement.focus());
+      if (this.mode() === 'type' && this.current()) {
+        const revealed = this.revealed();
+        queueMicrotask(() => (revealed ? this.nextButton : this.typeInput)?.nativeElement.focus());
       }
     });
 
@@ -316,15 +316,11 @@ export class FlashcardsComponent {
     return parts.length > 1 ? parts.slice(1).join('\n\n').trim() || null : null;
   }
 
-  // ---- keyboard ----
-
-  // Enter submits/advances in type mode only.
-  @HostListener('document:keydown.enter', ['$event'])
-  protected onEnter(e: Event): void {
-    if (this.mode() !== 'type' || !this.current()) return;
-    e.preventDefault();
-    if (this.revealed()) this.nextCard();
-    else this.submitTyped();
+  protected submitFromKeyboard(event: Event): void {
+    if (!(event instanceof KeyboardEvent)) return;
+    if (event.isComposing || event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+    event.preventDefault();
+    this.submitTyped();
   }
 
   // ---- prefs ----

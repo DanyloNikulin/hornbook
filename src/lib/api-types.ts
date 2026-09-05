@@ -2,7 +2,13 @@
 // sides compile against one definition.
 
 import type { JournalConfigT, ProvidersT, SectionConfigT } from './journal-config.js';
-import type { LessonT } from './schema.js';
+import type { LessonT, ProgressT } from './schema.js';
+
+export interface ProgressView extends ProgressT {
+  revision: string;
+  journalKey: string;
+  recovery?: string;
+}
 
 export interface SectionSummary extends SectionConfigT {
   /** Explicit title or "Spanish → English". */

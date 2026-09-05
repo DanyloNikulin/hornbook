@@ -51,18 +51,13 @@ export class OpenAiExtractor implements Extractor {
       },
     };
 
-    const resp = await postJson(
-      'https://api.openai.com/v1/chat/completions',
-      body,
-      { Authorization: `Bearer ${key}` },
-      'openai',
-      this.retryPauseMs,
+    const json = await postJson(
+      'https://api.openai.com/v1/chat/completions', body, { Authorization: `Bearer ${key}` },
+      'openai', this.retryPauseMs, async (resp) => {
+        if (!resp.ok) throw new Error(`Extract openai HTTP ${resp.status}: ${(await resp.text()).slice(0, 800)}`);
+        return await resp.json() as { choices?: { message?: { content?: string } }[] };
+      }, { signal: req.signal, timeoutMs: req.timeoutMs },
     );
-    if (!resp.ok) {
-      const text = await resp.text();
-      throw new Error(`Extract openai HTTP ${resp.status}: ${text.slice(0, 800)}`);
-    }
-    const json = (await resp.json()) as { choices?: { message?: { content?: string } }[] };
     const content = json.choices?.[0]?.message?.content;
     if (!content) throw new Error('Extract openai returned empty content');
     return JSON.parse(content) as unknown;

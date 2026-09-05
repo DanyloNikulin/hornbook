@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import Fuse from 'fuse.js';
 import { ApiService } from './api.service';
 import { SectionService } from './section.service';
@@ -30,6 +30,7 @@ const SNIPPET_LEN = 160;
 @Injectable({ providedIn: 'root' })
 export class SearchService {
   private readonly api = inject(ApiService);
+  readonly revision = signal(0);
   private readonly section = inject(SectionService);
   private readonly cache = new Map<string, Promise<Fuse<SearchDoc>>>();
 
@@ -45,8 +46,9 @@ export class SearchService {
   }
 
   /** Drop the cached index (after a lesson was saved). */
-  invalidate(): void {
-    this.cache.delete(this.section.id());
+  invalidate(id = this.section.id()): void {
+    if (id === this.section.id()) this.revision.update((value) => value + 1);
+    this.cache.delete(id);
   }
 
   private async ensureReady(): Promise<Fuse<SearchDoc>> {
@@ -54,7 +56,7 @@ export class SearchService {
     const cached = this.cache.get(id);
     if (cached) return cached;
     const promise = this.buildIndex(id).catch((error: unknown) => {
-      this.cache.delete(id);
+      if (this.cache.get(id) === promise) this.cache.delete(id);
       throw error;
     });
     this.cache.set(id, promise);

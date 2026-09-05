@@ -22,11 +22,8 @@
 // sheet size, hitting truncation around 30-40 lessons. With patches, output
 // stays bounded regardless of cheat sheet size.
 
-import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import {
-  Lesson,
   Cheatsheet,
   type CheatsheetT,
   type CheatsheetCategoryT,
@@ -48,7 +45,7 @@ import {
   readSectionLessons,
   readTopicCatalog,
   resolveSectionArg,
-} from './lib/journal.ts';
+} from './lib/cli-journal.ts';
 import { getExtractor } from './providers/index.ts';
 
 // The section is selected once in main() (--section); every path below

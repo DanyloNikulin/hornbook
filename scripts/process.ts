@@ -14,9 +14,9 @@ import { join, basename, extname } from 'node:path';
 import { transcribe } from './transcribe.ts';
 import { extractFrames } from './extract-frames.ts';
 import { extract } from './extract.ts';
-import { lessonToMarkdown } from './lib/markdown.ts';
+import { finalizeLesson } from './lib/lesson-storage.ts';
 import { Lesson, type LessonT } from '../src/lib/schema.ts';
-import { existingSlugs, repoRootDir, resolveSectionArg, sectionDir, writeDerived, lessonFileStem } from './lib/journal.ts';
+import { existingSlugs, repoRootDir, resolveSectionArg, sectionDir, writeCanonicalLesson } from './lib/cli-journal.ts';
 import { ensureUniqueSlug, slugify } from './lib/slug.ts';
 import { currentProviders } from './lib/config.ts';
 import { isMain } from './lib/is-main.ts';
@@ -90,24 +90,15 @@ function parseArgs(argv: string[]): Args {
 
 /** Write a lesson into a section and refresh that section's derived data. */
 export function writeLesson(sectionId: string, lesson: LessonT): { jsonPath: string; mdPath: string } {
+  const canonical = writeCanonicalLesson(sectionId, lesson);
   const dir = sectionDir(sectionId);
-  mkdirSync(dir, { recursive: true });
-  const stem = lessonFileStem(lesson);
-  if (lesson.id !== stem) lesson.id = stem;
-  const jsonPath = join(dir, `${stem}.json`);
-  const mdPath = join(dir, `${stem}.md`);
-  writeFileSync(jsonPath, JSON.stringify(lesson, null, 2) + '\n', 'utf8');
-  writeFileSync(mdPath, lessonToMarkdown(lesson), 'utf8');
-  writeDerived(sectionId);
-  return { jsonPath, mdPath };
+  return { jsonPath: join(dir, `${canonical.id}.json`), mdPath: join(dir, `${canonical.id}.md`) };
 }
 
-function applyInputDetails(sectionId: string, lesson: LessonT, date: string, title: string | null): void {
-  lesson.date = date;
-  if (title) lesson.title = title;
+export function applyInputDetails(sectionId: string, lesson: LessonT, date: string, title: string | null): LessonT {
   const requestedSlug = title ? slugify(title) || 'lesson' : lesson.slug;
-  lesson.slug = ensureUniqueSlug(requestedSlug, date, existingSlugs(sectionId));
-  lesson.id = `${date}-${lesson.slug}`;
+  const slug = ensureUniqueSlug(requestedSlug, date, existingSlugs(sectionId));
+  return finalizeLesson(lesson, { date, slug, ...(title ? { title } : {}) });
 }
 
 async function main(): Promise<void> {
@@ -128,11 +119,11 @@ async function main(): Promise<void> {
       console.error(JSON.stringify(parsed.error.format(), null, 2));
       process.exit(1);
     }
-    applyInputDetails(section.id, parsed.data, date, title);
-    const out = writeLesson(section.id, parsed.data);
+    const lesson = applyInputDetails(section.id, parsed.data, date, title);
+    const out = writeLesson(section.id, lesson);
     reportStage('checking', 'done');
     console.log(`✓ ${out.jsonPath}`);
-    console.log(`HORNBOOK_RESULT ${JSON.stringify({ slug: parsed.data.slug, id: parsed.data.id })}`);
+    console.log(`HORNBOOK_RESULT ${JSON.stringify({ slug: lesson.slug, id: lesson.id })}`);
     return;
   }
 
@@ -169,7 +160,7 @@ async function main(): Promise<void> {
   reportStage('writing', 'running');
   console.log(`\n=== Extract structured lesson ===`);
   let checking = false;
-  const lesson = await extract(workdir, date, {
+  const extracted = await extract(workdir, date, {
     onModelAnswer: () => {
       if (checking) return;
       checking = true;
@@ -181,7 +172,7 @@ async function main(): Promise<void> {
     reportStage('writing', 'done');
     reportStage('checking', 'running');
   }
-  applyInputDetails(section.id, lesson, date, title);
+  const lesson = applyInputDetails(section.id, extracted, date, title);
   console.log(`\n=== Writing lesson files ===`);
   const out = writeLesson(section.id, lesson);
   reportStage('checking', 'done');

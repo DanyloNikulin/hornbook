@@ -164,11 +164,11 @@ export class SettingsComponent {
       this.defaults = structuredClone(s.providers);
       const current = this.sec.current();
       const p = current?.providers;
-      for (const field of ['transcribe', 'extract'] as const) {
-        const o = p?.[field];
-        this.override[field] = !!o;
-        this.overrides[field] = o ? { ...o } : { ...s.providers[field] };
-      }
+      this.override = { transcribe: !!p?.transcribe, extract: !!p?.extract };
+      this.overrides = {
+        transcribe: { ...(p?.transcribe ?? s.providers.transcribe) },
+        extract: { ...(p?.extract ?? s.providers.extract) },
+      };
     } catch (err) {
       this.error.set((err as Error).message);
     } finally {

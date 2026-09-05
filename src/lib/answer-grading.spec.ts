@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeAnswer, checkTypedAnswer as checkTypedAnswerFor, deriveExpectedFromBack } from './cards.service';
+import { normalizeAnswer, checkTypedAnswer as checkTypedAnswerFor } from './answer-grading';
+import { deriveExpectedFromBack } from './card-text';
 
 // The historical cases below were written for an Italian target; article
 // handling is per language, so pin it explicitly. Other languages are covered

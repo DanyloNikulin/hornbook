@@ -66,12 +66,10 @@ export class OllamaExtractor implements Extractor {
       ],
     };
 
-    const resp = await postJson(`${host}/api/chat`, body, {}, 'ollama', this.retryPauseMs);
-    if (!resp.ok) {
-      const detail = await resp.text();
-      throw new Error(`Extract ollama HTTP ${resp.status}: ${detail.slice(0, 800)}`);
-    }
-    const json = (await resp.json()) as ChatReply;
+    const json = await postJson(`${host}/api/chat`, body, {}, 'ollama', this.retryPauseMs, async (resp) => {
+      if (!resp.ok) throw new Error(`Extract ollama HTTP ${resp.status}: ${(await resp.text()).slice(0, 800)}`);
+      return await resp.json() as ChatReply;
+    }, { signal: req.signal, timeoutMs: req.timeoutMs });
     const content = json.message?.content;
     if (!content) throw new Error('Extract ollama returned empty content');
     try {
@@ -81,6 +79,7 @@ export class OllamaExtractor implements Extractor {
       throw new Error(
         `Extract ollama: ${this.model} did not return valid JSON (${(err as Error).message}; ${tokens}). ` +
           'If the answer was cut off, set OLLAMA_NUM_CTX higher or pick a larger model.',
+        { cause: err },
       );
     }
   }

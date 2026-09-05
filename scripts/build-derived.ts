@@ -9,7 +9,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { Cheatsheet } from '../src/lib/schema.ts';
-import { cheatsheetPath, journalDir, listSections, writeDerived, configPath } from './lib/journal.ts';
+import { cheatsheetPath, journalDir, listSections, writeDerived, configPath } from './lib/cli-journal.ts';
 
 if (!existsSync(configPath())) {
   console.log(`No journal at ${journalDir()} — nothing to derive. Run "npm run migrate" or create a section.`);

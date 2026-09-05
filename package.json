@@ -31,7 +31,7 @@
     "watch": "ng build --watch --configuration development",
     "pretest": "tsx scripts/build-derived.ts",
     "test": "ng test",
-    "test:scripts": "vitest run scripts server electron",
+    "test:scripts": "vitest run scripts server electron harness",
     "typecheck:scripts": "tsc -p tsconfig.scripts.json",
     "lint": "ng lint",
     "format": "prettier --write \"src/**/*.{ts,html,scss,json}\"",

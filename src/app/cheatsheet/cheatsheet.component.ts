@@ -1,4 +1,5 @@
-import { Component, computed, inject, resource, signal } from '@angular/core';
+import { SectionMutations } from '../section-mutations.service';
+import { Component, DestroyRef, computed, inject, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TPipe } from '../i18n.pipe';
 import { I18nService } from '../i18n.service';
@@ -19,9 +20,11 @@ export class CheatsheetComponent {
   private readonly svc = inject(CheatsheetService);
   private readonly jobs = inject(JobsService);
   private readonly i18n = inject(I18nService);
+  private readonly mutations = inject(SectionMutations);
+  private readonly destroyRef = inject(DestroyRef);
 
-  private readonly cheatsheetResource = resource<CheatsheetT, string>({
-    params: () => this.sec.id(),
+  private readonly cheatsheetResource = resource<CheatsheetT, { section: string; revision: number }>({
+    params: () => ({ section: this.sec.id(), revision: this.svc.revision() }),
     loader: async () => this.svc.get(),
   });
 
@@ -39,7 +42,7 @@ export class CheatsheetComponent {
   );
 
   // Rebuild job (runs scripts/build-cheatsheet.ts on the server).
-  protected readonly job = computed(() => this.jobs.current());
+  protected readonly job = computed(() => { const job = this.jobs.current(); return job?.section === this.sec.id() ? job : null; });
   protected readonly jobRunning = computed(() => {
     const j = this.job();
     return j?.status === 'queued' || j?.status === 'running';
@@ -79,16 +82,19 @@ export class CheatsheetComponent {
 
   /** Merge lessons not yet in the sheet (or rebuild everything with force). */
   protected async rebuild(force = false): Promise<void> {
+    const id = this.sec.id();
+    const current = () => !this.destroyRef.destroyed && this.sec.id() === id;
     this.jobError.set(null);
     this.showLog.set(true);
     try {
-      const job = await this.jobs.run({ kind: 'cheatsheet', force });
+      const job = await this.mutations.runJob(id, { kind: 'cheatsheet', force });
+      if (!current()) return;
       if (job.status !== 'done') {
         this.jobError.set(job.error ?? this.i18n.t('sheet.failed'));
         return;
       }
-      this.reload();
     } catch (err) {
+      if (!current()) return;
       this.jobError.set((err as Error).message);
     }
   }

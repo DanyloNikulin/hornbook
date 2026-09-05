@@ -1,11 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { join } from 'node:path';
-import { invalidateConfig, setJournalDir, useSection } from './journal.ts';
+import { invalidateConfig, useSection } from './cli-journal.ts';
 import { buildLessonTool, buildSystemPrompt, userMessageForLesson } from './prompt.ts';
 import { DEFAULT_TOPIC_CATALOG } from '../../src/lib/schema.ts';
 
 beforeEach(() => {
-  setJournalDir(join(process.cwd(), 'journal'));
   invalidateConfig();
   useSection('es-en');
 });

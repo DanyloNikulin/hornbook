@@ -32,9 +32,9 @@ export class SearchComponent {
   // The first non-empty query kicks off the lazy index fetch (inside
   // SearchService) and then runs Fuse. Subsequent queries reuse the cached
   // Fuse instance — only the search itself runs.
-  private readonly searchResource = resource<SearchHit[], string>({
-    params: () => this.debounced(),
-    loader: async ({ params: q }) => (q ? this.search.search(q) : []),
+  private readonly searchResource = resource<SearchHit[], { query: string; section: string; revision: number }>({
+    params: () => ({ query: this.debounced(), section: this.sec.id(), revision: this.search.revision() }),
+    loader: async ({ params }) => (params.query ? this.search.search(params.query) : []),
   });
 
   protected readonly loading = computed(() => this.searchResource.isLoading());

@@ -5,7 +5,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
-import { repoRootDir } from './lib/journal.ts';
+import { repoRootDir } from './lib/cli-journal.ts';
 
 const sizes = [16, 32, 48, 64, 128, 256, 512, 1024] as const;
 

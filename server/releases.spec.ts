@@ -2,6 +2,15 @@ import { describe, expect, it, vi } from 'vitest';
 import { compareVersions, parseRelease, ReleaseChecker } from './releases.ts';
 
 describe('release checks', () => {
+  it('shares an in-flight request across forced and automatic callers', async () => {
+    let resolve!: (response: Response) => void;
+    const fetchImpl = vi.fn(() => new Promise<Response>((done) => { resolve = done; }));
+    const checker = new ReleaseChecker({ currentVersion: '1.0.0', fetch: fetchImpl });
+    const first = checker.check(); const second = checker.check(true);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    resolve(new Response(JSON.stringify({ tag_name: 'v1.1.0', html_url: 'https://github.com/fixture' })));
+    expect(await first).toEqual(await second);
+  });
   it('compares stable semantic versions', () => {
     expect(compareVersions('0.2.0', '0.1.9')).toBe(1);
     expect(compareVersions('1.0.0', '1.0.0-beta.2')).toBe(1);

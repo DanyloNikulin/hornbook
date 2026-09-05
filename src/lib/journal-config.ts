@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { languageName, speechLocale } from './languages.js';
+import { PROVIDER_DRIVERS } from './provider-capabilities.js';
 
 export { languageName, speechLocale, LANGUAGE_CODES as SETUP_LANGUAGE_CODES } from './languages.js';
 
@@ -10,24 +11,21 @@ const Iso639 = z
 
 const SectionIdRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-export const ProviderConfig = z.object({
-  driver: z.enum([
-    'openai',
-    'anthropic',
-    'ollama',
-    'whisper-cli',
-    'skip',
-    'claude-cli',
-    'codex-cli',
-    'grok-cli',
-    'kimi-cli',
-  ]),
+export const TranscriberConfig = z.object({
+  driver: z.enum(PROVIDER_DRIVERS.transcribe),
   model: z.string().min(1),
 });
 
+export const ExtractorConfig = z.object({
+  driver: z.enum(PROVIDER_DRIVERS.extract),
+  model: z.string().min(1),
+});
+
+export const ProviderConfig = z.union([TranscriberConfig, ExtractorConfig]);
+
 export const Providers = z.object({
-  transcribe: ProviderConfig,
-  extract: ProviderConfig,
+  transcribe: TranscriberConfig,
+  extract: ExtractorConfig,
 });
 
 /**

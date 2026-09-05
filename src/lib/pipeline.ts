@@ -3,19 +3,11 @@
 // (Ollama), or a remote API. Not every job has every place.
 
 import type { ConnectionKey } from './api-types.js';
+import { supportsRole, type PROVIDER_DRIVERS } from './provider-capabilities.js';
 
 export type PipelineJob = 'transcribe' | 'extract';
 export type PlaceId = 'skip' | 'cli' | 'lan' | 'cloud';
-export type DriverId =
-  | 'skip'
-  | 'whisper-cli'
-  | 'openai'
-  | 'ollama'
-  | 'anthropic'
-  | 'claude-cli'
-  | 'codex-cli'
-  | 'grok-cli'
-  | 'kimi-cli';
+export type DriverId = (typeof PROVIDER_DRIVERS)[PipelineJob][number];
 
 export interface PipelinePath {
   job: PipelineJob;
@@ -116,7 +108,7 @@ export const PLACES_FOR: Record<PipelineJob, readonly PlaceId[]> = {
 };
 
 export function canHear(driver: string): boolean {
-  return driver === 'whisper-cli' || driver === 'openai';
+  return driver !== 'skip' && supportsRole('transcribe', driver);
 }
 
 export function pathsFor(job: PipelineJob, place?: PlaceId): readonly PipelinePath[] {

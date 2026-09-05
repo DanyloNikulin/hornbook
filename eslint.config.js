@@ -7,7 +7,7 @@ import templateParser from '@angular-eslint/template-parser';
 
 export default tseslint.config(
   {
-    files: ['**/*.ts'],
+    files: ['src/**/*.ts'],
     extends: [
       eslint.configs.recommended,
       ...tseslint.configs.recommended,
@@ -25,6 +25,28 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       'no-console': 'error',
+    },
+  },
+  {
+    files: ['server/**/*.ts', 'scripts/**/*.ts', 'electron/**/*.ts', 'harness/**/*.ts'],
+    extends: [eslint.configs.recommended, ...tseslint.configs.recommended],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', ignoreRestSiblings: true }],
+    },
+  },
+  {
+    files: ['bin/**/*.mjs', '*.config.js', '*.config.cjs'],
+    extends: [eslint.configs.recommended],
+    languageOptions: {
+      globals: { console: 'readonly', process: 'readonly', module: 'readonly' },
+    },
+  },
+  {
+    files: ['public/**/*.js'],
+    extends: [eslint.configs.recommended],
+    languageOptions: {
+      globals: { document: 'readonly', localStorage: 'readonly', window: 'readonly' },
     },
   },
   {

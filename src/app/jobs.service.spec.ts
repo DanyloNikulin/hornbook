@@ -21,7 +21,7 @@ function serviceWith(done: JobView): JobsService {
   TestBed.configureTestingModule({
     providers: [
       { provide: ApiService, useValue: { post: vi.fn().mockResolvedValue(started), get: vi.fn().mockResolvedValue(done) } },
-      { provide: SectionService, useValue: { apiBase: () => '/api/sections/es-en' } },
+      { provide: SectionService, useValue: { id: () => 'es-en', apiBase: () => '/api/sections/es-en' } },
       { provide: I18nService, useValue: { t: (key: string, vars?: { label?: string }) => `${key}:${vars?.label ?? ''}` } },
     ],
   });
@@ -54,6 +54,12 @@ describe('JobsService notifications', () => {
       date: '2026-09-04',
       from: 'video',
     });
+
+    expect(TestBed.inject(ApiService).post).toHaveBeenCalledWith(
+      '/api/sections/es-en/uploads',
+      expect.objectContaining({ kind: 'process', filename: 'lesson.mp4' }),
+      expect.any(AbortSignal),
+    );
 
     expect(shown).toHaveBeenCalledWith('job.notificationTitle:', {
       body: 'job.notificationDone:lesson.mp4',

@@ -16,7 +16,7 @@
 
 import { createHash } from 'node:crypto';
 import { createWriteStream, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { spawn } from 'node:child_process';
+import { spawnProcess as spawn } from './lib/process.ts';
 import { basename, dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';

@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { Cheatsheet, type CheatsheetT } from '../lib/schema';
 import { ApiService } from './api.service';
 import { SectionService } from './section.service';
@@ -10,6 +10,7 @@ import { SectionService } from './section.service';
 @Injectable({ providedIn: 'root' })
 export class CheatsheetService {
   private readonly api = inject(ApiService);
+  readonly revision = signal(0);
   private readonly section = inject(SectionService);
   private readonly cache = new Map<string, Promise<CheatsheetT>>();
 
@@ -18,7 +19,7 @@ export class CheatsheetService {
     const cached = this.cache.get(id);
     if (cached) return cached;
     const promise = this.fetchAndValidate(id).catch((error: unknown) => {
-      this.cache.delete(id);
+      if (this.cache.get(id) === promise) this.cache.delete(id);
       throw error;
     });
     this.cache.set(id, promise);
@@ -26,8 +27,9 @@ export class CheatsheetService {
   }
 
   /** Drop the cached sheet (after a rebuild job). */
-  invalidate(): void {
-    this.cache.delete(this.section.id());
+  invalidate(id = this.section.id()): void {
+    if (id === this.section.id()) this.revision.update((value) => value + 1);
+    this.cache.delete(id);
   }
 
   private async fetchAndValidate(sectionId: string): Promise<CheatsheetT> {

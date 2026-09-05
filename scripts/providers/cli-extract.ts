@@ -14,7 +14,8 @@
 //                 prompt.txt from its working folder; stream-json keeps
 //                 stdout to one JSON line per message
 
-import { spawn } from 'node:child_process';
+import { ProcessSupervisor } from '../lib/process-supervisor.ts';
+import { spawnProcess } from '../lib/process.ts';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -65,6 +66,7 @@ export class CliExtractor implements Extractor {
   }
 
   async extract(req: ExtractRequest): Promise<unknown> {
+    req.signal?.throwIfAborted();
     const prompt = buildCliPrompt(req);
     const dir = mkdtempSync(join(tmpdir(), 'hornbook-cli-extract-'));
     writeFileSync(join(dir, 'prompt.txt'), prompt, 'utf8');
@@ -72,7 +74,7 @@ export class CliExtractor implements Extractor {
       const cmd = cliCommand(this.kind, this.model, prompt, dir);
       const bin = resolveCli(cmd.bin, process.env);
       if (!bin) throw new Error(missingCliMessage(this.kind, cmd.bin));
-      const { code, out, err } = await runProcess(bin, cmd.args, cmd.stdin, this.timeoutMs, dir);
+      const { code, out, err } = await runProcess(bin, cmd.args, cmd.stdin, req.timeoutMs ?? this.timeoutMs, dir, req.signal);
       if (code !== 0) {
         throw new Error(`Extract ${this.driver} exited ${code}: ${(err || out).slice(0, 800)}`);
       }
@@ -81,7 +83,7 @@ export class CliExtractor implements Extractor {
       try {
         return parseCliLesson(answer);
       } catch (e) {
-        throw new Error(`Extract ${this.driver}: ${(e as Error).message}. Output: ${answer.slice(0, 400)}`);
+        throw new Error(`Extract ${this.driver}: ${(e as Error).message}. Output: ${answer.slice(0, 400)}`, { cause: e });
       }
     } finally {
       removeExtractDir(dir);
@@ -246,49 +248,33 @@ function tryParse(text: string): unknown {
   }
 }
 
-function runProcess(
+export async function runProcess(
   bin: string,
   args: string[],
   stdin: string | undefined,
   timeoutMs: number,
   cwd: string,
+  signal?: AbortSignal,
 ): Promise<{ code: number; out: string; err: string }> {
-  return new Promise((resolve, reject) => {
-    // .cmd shims (npm's `codex`) need a shell, and the shell gets one plain
-    // command line; real .exe CLIs must not go through it, or Windows
-    // re-splits quoted arguments.
-    const viaShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(bin);
-    const quote = (s: string) => (viaShell && /\s/.test(s) ? `"${s}"` : s);
-    const child = spawn(quote(bin), args.map(quote), {
-      stdio: [stdin === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
-      windowsHide: true,
-      shell: viaShell,
-      cwd,
-    });
-    let out = '';
-    let err = '';
-    const timer = setTimeout(() => {
-      child.kill();
-      reject(new Error(`Extract timed out after ${Math.round(timeoutMs / 1000)}s (${bin})`));
-    }, timeoutMs);
-    child.stdout?.on('data', (chunk: Buffer) => {
-      out += chunk.toString();
-    });
-    child.stderr?.on('data', (chunk: Buffer) => {
-      err += chunk.toString();
-    });
-    child.on('error', (e) => {
-      clearTimeout(timer);
-      reject(new Error(`${bin} failed to start. ${e.message}`));
-    });
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      resolve({ code: code ?? 1, out, err });
-    });
-    if (stdin !== undefined && child.stdin) {
-      // A CLI that exits early closes the pipe; its exit code tells the story.
-      child.stdin.on('error', () => undefined);
-      child.stdin.end(stdin);
-    }
+  signal?.throwIfAborted();
+  const child = spawnProcess(bin, args, {
+    stdio: [stdin === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
+    detached: process.platform !== 'win32',
+    cwd,
   });
+  const supervised = new ProcessSupervisor(child, { ownsProcessGroup: process.platform !== 'win32', timeoutMs, onTerminationError: (error) => console.error(`Extract cleanup failed: ${error.message}`) });
+  const cancel = () => { void supervised.stop('Extract cancelled').catch(() => undefined); };
+  signal?.addEventListener('abort', cancel, { once: true });
+  let out = ''; let err = '';
+  child.stdout?.setEncoding('utf8'); child.stderr?.setEncoding('utf8');
+  child.stdout?.on('data', (chunk: string) => { out += chunk; });
+  child.stderr?.on('data', (chunk: string) => { err += chunk; });
+  if (stdin !== undefined && child.stdin) {
+    child.stdin.on('error', () => undefined);
+    child.stdin.end(stdin);
+  }
+  return supervised.completion.then(({ code, error }) => {
+    if (error) throw new Error(`${bin}: ${error}`);
+    return { code, out, err };
+  }).finally(() => signal?.removeEventListener('abort', cancel));
 }

@@ -72,9 +72,15 @@ lesson by hand, and the mobile menu. It also confirms the bundled flag font
 loaded, which is what keeps Windows from showing "ES" instead of a flag.
 
 `HORNBOOK_BROWSER` picks the channel (`chrome`, `msedge`, `chromium`).
-`HORNBOOK_UI=http://localhost:4200` walks a dev server you already run
-instead (with `HORNBOOK_API` for its server, default `http://127.0.0.1:8787`);
-the throwaway pair is then deleted through that API.
+The UI walk always starts its own server with a fresh copy of the demo journal.
+External targets (`HORNBOOK_UI` / `HORNBOOK_API`) are refused before any request.
+Each run gets a unique journal folder; failures never clean up another run’s data.
+
+The walk runs separate keyboard, appearance, mutations, progress, settings,
+study and navigation scenarios, each with its own journal and browser context.
+Run one with `npx tsx harness/ui.ts --scenario=keyboard` (or another scenario
+name). Keyboard checks exercise focused native controls and answer/Next focus.
+Appearance checks cover eight routes at desktop and phone widths in both themes.
 
 ## Packaged desktop
 

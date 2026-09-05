@@ -1,0 +1,120 @@
+@mixin shortcut {
+/* ---------- Floating cheatsheet button ---------- */
+.il-fab {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px 0 18px;
+  height: 60px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 15px;
+  border: 1.5px solid rgba(244, 236, 223, 0.16);
+  box-shadow: 0 14px 40px -10px rgba(20, 18, 16, 0.55), 0 4px 12px rgba(20, 18, 16, 0.25);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.18s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.il-fab:hover {
+  transform: translateY(-2px);
+  background: #1f1b18;
+  box-shadow: 0 18px 44px -10px rgba(20, 18, 16, 0.6);
+}
+.il-fab:active { transform: translateY(0); }
+.il-fab:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+
+.il-fab-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: grid;
+  place-items: center;
+  color: #fff8ee;
+  flex-shrink: 0;
+}
+.il-fab-sub {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+}
+
+@mixin shortcut-night {
+/* Floating action button */
+[data-theme="night"] .il-fab {
+  background: #262119;
+  color: var(--ink);
+  border-color: rgba(217, 201, 168, 0.12);
+  box-shadow: 0 14px 40px -10px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+[data-theme="night"] .il-fab:hover { background: #2f291f; }
+
+}
+
+@mixin page {
+/* ---------- Cheat sheet: long-form reference rail ---------- */
+.il-sheet-page { width: min(100%, 1100px); min-height: 100vh; margin: 0 auto; padding: 48px 40px 64px; }
+.il-sheet-head { margin-bottom: 26px; }
+.il-sheet-title-row p { margin: 5px 0 0; color: var(--muted); font-size: 13.5px; }
+.il-sheet-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.il-sheet-provider-note { max-width: 720px; margin: 12px 0 0; color: var(--ink-2); font-size: 13px; }
+.il-sheet-provider-note a { color: var(--primary-ink); text-decoration: underline; }
+.il-sheet-error { color: #a33; }
+.il-sheet-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: start; gap: 36px; }
+.il-sheet-rail {
+  position: sticky;
+  top: 96px;
+  max-height: calc(100vh - 116px);
+  overflow-y: auto;
+  align-self: start;
+  scrollbar-width: thin;
+}
+.il-sheet-rail-search { display: flex; align-items: center; gap: 8px; height: 40px; margin-bottom: 12px; padding: 0 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper-2); color: var(--muted); }
+.il-sheet-rail-search:focus-within { border-color: var(--primary); }
+.il-sheet-rail-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: 12.5px var(--font-body); }
+.il-sheet-rail-group { margin-bottom: 11px; }
+.il-sheet-rail-category { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 4px 11px; font: 600 16px var(--font-display); }
+.il-sheet-rail-category small { color: var(--muted); font: 10px var(--font-mono); }
+.il-sheet-rail-link { display: block; margin: 1px 0; padding: 6px 10px 6px 12px; overflow: hidden; border-left: 2px solid transparent; border-radius: 0 9px 9px 0; color: var(--ink-2); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.il-sheet-rail-link:hover { color: var(--primary-ink); }
+.il-sheet-rail-link.active { border-left-color: var(--primary); background: var(--paper-2); color: var(--ink); }
+.il-sheet-rail-empty { margin: 8px 11px; color: var(--muted); font-size: 12px; }
+.il-sheet-category + .il-sheet-category { margin-top: 28px; }
+.il-sheet-category-head { display: flex; align-items: center; gap: 13px; margin-bottom: 9px; }
+.il-sheet-category-head h2 { margin: 0; color: var(--muted); font: 500 9.5px var(--font-mono); letter-spacing: .18em; text-transform: uppercase; }
+.il-sheet-category-head span { height: 1px; flex: 1; background: var(--line); }
+.il-sheet-section { scroll-margin-top: 96px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--paper-2); }
+.il-sheet-section + .il-sheet-section { margin-top: 14px; }
+.il-sheet-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 18px 21px 12px; }
+.il-sheet-section-head h3 { margin: 0; font-family: var(--font-display); font-size: 25px; font-weight: 500; }
+.il-sheet-sources { display: flex; justify-content: flex-end; gap: 5px; flex-wrap: wrap; }
+.il-sheet-sources a { display: inline-flex; min-height: 24px; align-items: center; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink-2); font: 9.5px var(--font-mono); }
+.il-sheet-section-body { display: grid; gap: 14px; padding: 0 21px 20px; }
+.il-sheet-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 11px; }
+.il-sheet-table-wrap table { width: 100%; min-width: 420px; border-collapse: collapse; font-size: 13px; }
+.il-sheet-table-wrap th,
+.il-sheet-table-wrap td { padding: 8px 10px; border-top: 1px solid var(--line-soft); color: var(--ink-2); text-align: left; }
+.il-sheet-table-wrap th { border-top: 0; background: var(--paper); color: var(--ink); font-size: 11px; font-weight: 600; }
+.il-sheet-table-label { color: var(--muted) !important; font-weight: 600; }
+.il-sheet-exception summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--accent); font-size: 12.5px; font-weight: 600; cursor: pointer; list-style: none; }
+.il-sheet-exception summary::-webkit-details-marker { display: none; }
+.il-sheet-exception[open] summary > span:last-child { transform: rotate(180deg); }
+.il-sheet-exception .il-sheet-table-wrap { margin-top: 9px; border-color: color-mix(in srgb, var(--accent) 38%, transparent); }
+.il-sheet-notes { display: grid; gap: 5px; margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 13.5px; }
+.il-sheet-notes li::marker { color: var(--primary); }
+
+}

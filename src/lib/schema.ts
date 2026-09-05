@@ -115,7 +115,7 @@ export const Slide = z.object({
   extracted_table: z.array(z.array(z.string())).optional(),
 });
 
-const LessonShape = z.object({
+export const LessonShape = z.object({
   id: z.string().min(1),
   date: z.string().regex(DateRegex),
   slug: z.string().regex(SlugRegex),

@@ -2,6 +2,14 @@ import type { Catalog } from './i18n.js';
 
 /** Default chrome copy. Keys are stable; values are what the UI used to hardcode. */
 export const EN = {
+  'progress.problem': 'Study progress — {section}',
+  'progress.recovery': 'The damaged file has been preserved in the journal. Start new progress only if you want to continue with an empty history.',
+  'progress.startFresh': 'Start new progress',
+  'progress.retry': 'Retry',
+  'progress.retained': 'Your unsaved changes are retained. Download a copy before choosing to discard them.',
+  'progress.download': 'Download unsaved progress',
+  'progress.useSaved': 'Discard unsaved changes and use saved progress',
+  'progress.pending': 'Study progress is waiting to be saved.',
   // ── nav / chrome ──────────────────────────────────────────────────────────
   'nav.main': 'Main',
   'nav.homeAria': '{brand} — home',

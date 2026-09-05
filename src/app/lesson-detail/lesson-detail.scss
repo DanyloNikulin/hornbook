@@ -1,0 +1,633 @@
+@mixin content {
+/* ---------- Lesson detail page ---------- */
+
+.il-lesson-page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 40px 32px 80px;
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+/* Breadcrumb */
+.il-lesson-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.il-lesson-bc-link {
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.il-lesson-bc-link:hover { color: var(--primary); }
+.il-lesson-bc-sep { color: var(--muted); opacity: 0.6; }
+.il-lesson-bc-active { color: var(--ink); }
+
+/* Sticky lesson contents rail */
+.il-lesson-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+}
+.il-lesson-content {
+  flex: 1;
+  min-width: 0;
+}
+.il-lesson-rail {
+  position: sticky;
+  top: 96px;
+  align-self: flex-start;
+  flex: 0 0 200px;
+}
+.il-lesson-rail-title {
+  margin: 0 0 10px 14px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.il-lesson-rail-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.il-lesson-rail-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px 9px 14px;
+  border-left: 2px solid transparent;
+  border-radius: 10px;
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  text-transform: capitalize;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.il-lesson-rail-link:hover,
+.il-lesson-rail-link:focus-visible {
+  border-left-color: var(--primary);
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.il-lesson-rail-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.il-lesson-rail-count {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.il-lesson-rail-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 22px 0 0 14px;
+}
+.il-lesson-rail-actions .il-btn {
+  width: 100%;
+  padding-inline: 14px;
+  white-space: normal;
+}
+.il-lesson-rail-quiz {
+  color: var(--primary-ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.il-lesson-rail-quiz:hover { color: var(--primary); }
+.il-lesson-section[id] { scroll-margin-top: 96px; }
+
+/* Hero card */
+.il-lesson-hero {
+  background: var(--paper-2);
+  border-radius: var(--r-xl);
+  padding: 40px 44px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-2);
+  margin-bottom: 56px;
+}
+
+.il-lesson-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.il-lesson-num {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 22px;
+  color: var(--primary-ink);
+  font-weight: 500;
+}
+.il-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink-2);
+  font-size: 12px;
+  border: 1px solid var(--line);
+}
+.il-lesson-title {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 4.5vw, 52px);
+  font-weight: 500;
+  line-height: 1.07;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin: 0 0 14px;
+}
+.il-lesson-intro {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  margin: 0 0 28px;
+  max-width: 760px;
+}
+.il-lesson-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Topic chips (lesson header) — neutral, smaller than the primary CTA but
+   tall enough for a 32px touch target. Quieter than .il-meta-pill (which
+   uses the page accent) so they don't compete with date/duration. */
+.il-topic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 24px;
+}
+.il-topic-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-family: var(--font-mono);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.il-topic-chip:hover {
+  background: var(--paper);
+  border-color: rgba(192, 101, 63, 0.32);
+  color: var(--primary-ink);
+}
+.il-topic-chip:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Section pattern (label + rule + heading) */
+.il-lesson-section { margin-bottom: 56px; }
+.il-lesson-section-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.il-lesson-section-label {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+.il-lesson-section-line {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.il-lesson-section-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0 0 22px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.il-lesson-section-title--italic { font-style: italic; }
+
+/* Vocabulary grid */
+.il-vocab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.il-vocab-card {
+  background: var(--paper-2);
+  border-radius: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.il-vocab-card:hover {
+  border-color: rgba(192, 101, 63, 0.28);
+  box-shadow: var(--shadow-2);
+}
+.il-vocab-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.il-vocab-it {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 22px;
+  color: var(--primary-ink);
+  font-weight: 500;
+}
+.il-vocab-level {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.il-vocab-uk { font-size: 14px; color: var(--ink-2); }
+.il-vocab-example {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+  font-style: italic;
+  line-height: 1.4;
+}
+.il-vocab-example-uk {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Grammar blocks */
+.il-grammar-block {
+  background: var(--paper-2);
+  border-radius: 20px;
+  padding: 24px 28px;
+  border: 1px solid var(--line);
+  margin-bottom: 14px;
+}
+.il-grammar-rule {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0 0 14px;
+}
+.il-grammar-examples {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 14px;
+}
+.il-grammar-examples li {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+}
+.il-grammar-table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  overflow-x: auto;
+}
+.il-grammar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.il-grammar-table td {
+  padding: 10px 14px;
+  color: var(--ink-2);
+}
+.il-grammar-table-head-row td {
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+  color: var(--ink);
+}
+.il-grammar-table tr + tr td { border-top: 1px solid var(--line-soft); }
+
+/* Slides extracted from a recording */
+.il-slide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.il-slide-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: var(--shadow-1);
+}
+.il-slide-preview {
+  min-height: 170px;
+  padding: 22px 24px;
+  background: var(--secondary);
+  color: #fff8ee;
+}
+.il-slide-markdown {
+  font-size: 13px;
+  line-height: 1.55;
+}
+.il-slide-markdown > :first-child { margin-top: 0; }
+.il-slide-markdown > :last-child { margin-bottom: 0; }
+.il-slide-markdown h1,
+.il-slide-markdown h2,
+.il-slide-markdown h3 {
+  margin: 0 0 8px;
+  color: inherit;
+  font-size: 22px;
+  font-weight: 500;
+}
+.il-slide-markdown p,
+.il-slide-markdown ul { margin: 0 0 10px; }
+.il-slide-markdown ul { padding-left: 20px; }
+.il-slide-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+.il-slide-meta {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.il-slide-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.il-slide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.il-slide-table td {
+  padding: 8px 10px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.il-slide-table-head-row td {
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-2);
+  color: var(--ink);
+  font-weight: 600;
+}
+.il-slide-table tr + tr td { border-top: 1px solid var(--line-soft); }
+
+}
+
+@mixin references {
+/* Examples / quotes */
+.il-examples-table {
+  background: var(--paper-2);
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.il-example-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr;
+  padding: 20px 28px;
+  align-items: baseline;
+  gap: 24px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.il-example-row:last-child { border-bottom: none; }
+.il-example-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.il-example-it {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--ink);
+  line-height: 1.4;
+  font-style: italic;
+}
+.il-example-uk {
+  font-size: 14px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+.il-example-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  margin-top: 4px;
+}
+
+/* Related */
+.il-lesson-related-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin: -14px 0 16px;
+}
+.il-lesson-related-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.il-lesson-related-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 500;
+  transition: border-color 0.15s;
+}
+.il-lesson-related-link:hover { border-color: var(--primary); }
+.il-lesson-related-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.il-lesson-related-title { flex: 1; min-width: 0; }
+.il-lesson-related-overlap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-weight: 400;
+  min-width: 0;
+}
+.il-lesson-related-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(192, 101, 63, 0.12);
+  color: var(--primary-ink);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.il-lesson-related-shared {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+  color: var(--muted);
+}
+.il-lesson-related-shared-topic { white-space: nowrap; }
+
+/* Prev / Next nav */
+.il-lesson-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 32px;
+}
+.il-lesson-nav-card {
+  display: block;
+  background: var(--paper-2);
+  border-radius: 16px;
+  padding: 20px 24px;
+  border: 1px solid var(--line);
+  text-decoration: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.il-lesson-nav-card:hover {
+  border-color: rgba(192, 101, 63, 0.3);
+  box-shadow: var(--shadow-2);
+}
+.il-lesson-nav-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.il-lesson-nav-card--right { text-align: right; }
+.il-lesson-nav-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+}
+.il-lesson-nav-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  color: var(--ink);
+  line-height: 1.25;
+}
+
+/* Lesson article markdown overrides */
+.il-lesson-article {
+  --tw-prose-body: var(--ink-2);
+  --tw-prose-headings: var(--ink);
+  --tw-prose-lead: var(--ink-2);
+  --tw-prose-links: var(--primary);
+  --tw-prose-bold: var(--ink);
+  --tw-prose-counters: var(--muted);
+  --tw-prose-bullets: var(--muted);
+  --tw-prose-hr: var(--line);
+  --tw-prose-quotes: var(--ink-2);
+  --tw-prose-quote-borders: var(--primary);
+  --tw-prose-captions: var(--muted);
+  --tw-prose-code: var(--ink);
+  --tw-prose-pre-code: var(--ink);
+  --tw-prose-pre-bg: var(--paper-2);
+  --tw-prose-th-borders: var(--line);
+  --tw-prose-td-borders: var(--line-soft);
+}
+
+/* Night: lesson page tweaks */
+[data-theme="night"] .il-vocab-card:hover {
+  border-color: rgba(217, 201, 168, 0.18);
+}
+[data-theme="night"] .il-lesson-nav-card:hover {
+  border-color: rgba(138, 172, 204, 0.3);
+}
+[data-theme="night"] .il-lesson-related-link:hover {
+  border-color: var(--primary);
+}
+[data-theme="night"] .il-topic-chip:hover {
+  background: rgba(217, 201, 168, 0.06);
+  border-color: rgba(138, 172, 204, 0.32);
+  color: var(--ink);
+}
+[data-theme="night"] .il-lesson-related-badge {
+  background: rgba(138, 172, 204, 0.15);
+  color: var(--primary-ink);
+}
+[data-theme="night"] .il-filter-clear:hover {
+  background: rgba(217, 201, 168, 0.06);
+  border-color: rgba(138, 172, 204, 0.32);
+  color: var(--ink);
+}
+
+/* Responsive */
+@media (max-width: 880px) {
+  .il-lesson-page { padding: 24px 20px 60px; }
+  .il-lesson-layout { display: block; }
+  .il-lesson-rail {
+    position: static;
+    width: 100%;
+    margin-bottom: 24px;
+  }
+  .il-lesson-rail-title { margin-left: 0; }
+  .il-lesson-rail-links {
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 2px 2px 8px;
+  }
+  .il-lesson-rail-link {
+    flex: 0 0 auto;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 11px;
+    font-size: 12.5px;
+  }
+  .il-lesson-rail-link:hover,
+  .il-lesson-rail-link:focus-visible { border-color: var(--primary); }
+  .il-lesson-rail-actions { display: none; }
+  .il-lesson-hero { padding: 28px 24px; }
+  .il-vocab-grid { grid-template-columns: repeat(2, 1fr); }
+  .il-example-row { grid-template-columns: 28px 1fr; }
+  .il-example-uk { grid-column: 2; }
+  .il-lesson-nav { grid-template-columns: 1fr; }
+  .il-lesson-nav-card--right { text-align: left; }
+}
+@media (max-width: 480px) {
+  .il-slide-grid { grid-template-columns: 1fr; }
+  .il-vocab-grid { grid-template-columns: 1fr; }
+  .il-example-row { grid-template-columns: 1fr; gap: 6px; }
+  .il-example-num { display: none; }
+}
+
+}

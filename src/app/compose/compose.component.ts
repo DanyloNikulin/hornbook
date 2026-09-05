@@ -1,13 +1,9 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { NavigationStart, Router, RouterLink } from '@angular/router';
 import { Lesson, type LessonT } from '../../lib/schema';
 import type { JobStageView, JobView } from '../../lib/api-types';
-import type { ImportConflictStrategy, LessonImportConflict, LessonImportResult } from '../../lib/api-types';
-import { LessonsService } from '../lessons.service';
-import { VocabService } from '../vocab.service';
-import { CardsService } from '../cards.service';
-import { SearchService } from '../search.service';
+import type { ImportConflictStrategy, LessonImportConflict } from '../../lib/api-types';
 import { providersFor } from '../../lib/journal-config';
 import { canHear } from '../../lib/pipeline';
 import { SectionService } from '../section.service';
@@ -15,7 +11,11 @@ import { JournalService } from '../journal.service';
 import { TPipe } from '../i18n.pipe';
 import { I18nService } from '../i18n.service';
 import { JobsService } from '../jobs.service';
-import { ApiError, ApiService, fileToBase64 } from '../api.service';
+import { ApiError, fileToBase64 } from '../api.service';
+
+import { SectionMutations } from '../section-mutations.service';
+
+interface MutationTarget { id: string; date: string; title: string; current(): boolean }
 
 type From = 'video' | 'audio' | 'transcript' | 'json';
 type ComposeMode = 'hand' | 'transcript' | 'recording' | 'import';
@@ -44,15 +44,13 @@ const ACCEPTED_EXTENSIONS = new Set([
 export class ComposeComponent {
   protected readonly sec = inject(SectionService);
   private readonly journal = inject(JournalService);
-  private readonly lessons = inject(LessonsService);
-  private readonly vocab = inject(VocabService);
-  private readonly cards = inject(CardsService);
-  private readonly search = inject(SearchService);
   private readonly jobs = inject(JobsService);
   private readonly router = inject(Router);
   private readonly i18n = inject(I18nService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly api = inject(ApiService);
+
+  private readonly mutations = inject(SectionMutations);
+  private navigationVersion = 0;
 
   protected title = '';
   protected date = new Date().toISOString().slice(0, 10);
@@ -73,8 +71,18 @@ export class ComposeComponent {
   private copyReset: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
+    const navigation = this.router.events.subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        this.navigationVersion++;
+        this.busy.set(false);
+        this.error.set(null);
+        this.ok.set(null);
+        this.importConflict.set(null);
+      }
+    });
     const clock = setInterval(() => this.now.set(Date.now()), 1000);
     this.destroyRef.onDestroy(() => {
+      navigation.unsubscribe();
       clearInterval(clock);
       if (this.copyReset) clearTimeout(this.copyReset);
     });
@@ -85,7 +93,7 @@ export class ComposeComponent {
     return file ? inferFrom(file.name) : null;
   });
 
-  protected readonly job = computed(() => this.jobs.current());
+  protected readonly job = computed(() => { const job = this.jobs.current(); return job?.section === this.sec.id() ? job : null; });
   protected readonly jobRunning = computed(() => {
     const j = this.job();
     return j?.status === 'queued' || j?.status === 'running';
@@ -136,27 +144,30 @@ export class ComposeComponent {
     return parsed.data;
   }
 
-  private invalidate(): void {
-    this.vocab.invalidate();
-    this.cards.invalidate();
-    this.search.invalidate();
+  private target(): MutationTarget {
+    const id = this.sec.id();
+    const version = this.navigationVersion;
+    const url = this.router.url;
+    return Object.freeze({ id, date: this.date, title: this.title.trim(), current: () =>
+      !this.destroyRef.destroyed && this.sec.id() === id && this.navigationVersion === version && this.router.url === url });
   }
 
   /** Write the lesson into the section folder and open it. */
   protected async save(): Promise<void> {
+    const target = this.target();
     this.error.set(null);
     this.ok.set(null);
     const lesson = this.draft();
     if (!lesson) return;
     this.busy.set(true);
     try {
-      const saved = await this.lessons.save(lesson);
-      this.invalidate();
-      await this.router.navigate(this.sec.link('lesson', saved.slug));
+      const saved = await this.mutations.saveLesson(target.id, lesson);
+      if (target.current()) await this.router.navigate(['/', target.id, 'lesson', saved.slug]);
     } catch (err) {
+      if (!target.current()) return;
       this.error.set((err as Error).message);
     } finally {
-      this.busy.set(false);
+      if (target.current()) this.busy.set(false);
     }
   }
 
@@ -215,6 +226,7 @@ export class ComposeComponent {
   }
 
   protected async startFile(): Promise<void> {
+    const target = this.target();
     const file = this.pickedFile();
     if (!file) return;
     if (this.startBlocked()) {
@@ -226,8 +238,9 @@ export class ComposeComponent {
     this.busy.set(true);
     try {
       const base64 = await fileToBase64(file);
-      await this.runProcess(file.name, base64, inferFrom(file.name));
+      await this.runProcess(file.name, base64, inferFrom(file.name), target);
     } catch (err) {
+      if (!target.current()) return;
       this.error.set((err as Error).message);
       this.busy.set(false);
     }
@@ -252,27 +265,24 @@ export class ComposeComponent {
   }
 
   protected async importLesson(strategy: ImportConflictStrategy = 'error'): Promise<void> {
+    const target = this.target();
     const file = this.importFile();
     if (!file || this.busy()) return;
     this.busy.set(true);
     this.error.set(null);
     this.ok.set(null);
     try {
-      const lesson: unknown = JSON.parse(await file.text());
-      const result = await this.api.post<LessonImportResult>(`${this.sec.apiBase()}/lessons/import`, {
-        lesson,
-        conflict: strategy,
-      });
-      await this.lessons.reload();
-      this.invalidate();
+      const result = await this.mutations.importLesson(target.id, file, strategy);
+      if (!target.current()) return;
       this.importConflict.set(null);
-      await this.router.navigate(this.sec.link('lesson', result.lesson.slug));
+      await this.router.navigate(['/', target.id, 'lesson', result.lesson.slug]);
     } catch (error) {
+      if (!target.current()) return;
       const conflict = error instanceof ApiError && error.status === 409 ? firstConflict(error.details) : null;
       this.importConflict.set(conflict);
       if (!conflict) this.error.set((error as Error).message);
     } finally {
-      this.busy.set(false);
+      if (target.current()) this.busy.set(false);
     }
   }
 
@@ -327,35 +337,33 @@ export class ComposeComponent {
     this.pickedFile.set(file);
   }
 
-  private async runProcess(filename: string, base64: string, from: From): Promise<void> {
-    this.error.set(null);
-    this.ok.set(null);
-    this.busy.set(true);
+  private async runProcess(filename: string, base64: string, from: From, target = this.target()): Promise<void> {
+    if (target.current()) { this.error.set(null); this.ok.set(null); this.busy.set(true); }
     try {
-      const job: JobView = await this.jobs.run({
+      const job: JobView = await this.mutations.runJob(target.id, {
         kind: 'process',
         filename,
         base64,
-        date: this.date,
-        title: this.title.trim() || undefined,
+        date: target.date,
+        title: target.title || undefined,
         from,
       });
+      if (!target.current()) return;
       if (job.status !== 'done') {
         this.error.set(job.error ?? this.i18n.t('compose.failed'));
         return;
       }
-      await this.lessons.reload();
-      this.invalidate();
       const slug = job.result?.slug;
       if (slug) {
-        await this.router.navigate(this.sec.link('lesson', slug));
+        await this.router.navigate(['/', target.id, 'lesson', slug]);
       } else {
         this.ok.set(this.i18n.t('compose.added'));
       }
     } catch (err) {
+      if (!target.current()) return;
       this.error.set((err as Error).message);
     } finally {
-      this.busy.set(false);
+      if (target.current()) this.busy.set(false);
     }
   }
 }

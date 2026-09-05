@@ -6,6 +6,7 @@
 // Usage: tsx scripts/extract.ts <work_dir> <date_hint>
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { serializeLesson } from './lib/lesson-storage.ts';
 import { ensureUniqueSlug } from './lib/slug.ts';
 import { join } from 'node:path';
 import type { LessonT, TopicT } from '../src/lib/schema.ts';
@@ -26,7 +27,7 @@ import {
   readTopicCatalog,
   resolveSectionArg,
   sectionDir,
-} from './lib/journal.ts';
+} from './lib/cli-journal.ts';
 import { isMain } from './lib/is-main.ts';
 
 // Everything below reads the section the CLI/server selected (journal.ts).
@@ -282,7 +283,7 @@ export async function extract(workDir: string, dateHint: string, hooks: ExtractH
   }
 
   const lessonPath = join(workDir, 'lesson.json');
-  writeFileSync(lessonPath, JSON.stringify(result.data, null, 2), 'utf8');
+  writeFileSync(lessonPath, serializeLesson(result.data).json, 'utf8');
   console.log(`✓ Valid lesson.json -> ${lessonPath} (related: ${result.data.related.length})`);
 
   return result.data;

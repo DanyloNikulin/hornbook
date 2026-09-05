@@ -147,6 +147,8 @@ keys. If the extract model has no vision, slides are skipped.
 
 Ollama is called through its native API. Set `OLLAMA_NUM_CTX=32768` for real lessons; 16k is the code default and cuts off a 10-minute extract.
 
+Lesson-processing jobs allow up to 24 hours by default, to accommodate slow CPU transcription. Other background jobs allow one hour. Set `HORNBOOK_JOB_TIMEOUT_MINUTES` before starting Hornbook to override both limits (a positive number, at most 10080). For example, in PowerShell, `$env:HORNBOOK_JOB_TIMEOUT_MINUTES = '2880'` allows two days. A timeout error names this setting; the separate extraction-provider deadline still applies to individual model requests.
+
 ## Local tools
 
 Application settings has a **Local tools** section for the zero-cost path. For ffmpeg,
@@ -211,6 +213,12 @@ you bind-mount a host folder instead, make that folder writable by uid 1000.
 
 The password is HTTP Basic auth on every request. For anything beyond one owner, put an access
 proxy (Cloudflare Access, Tailscale, a VPN) in front instead.
+
+For an HTTPS reverse proxy, set `HORNBOOK_ORIGIN` (or `--origin`) to the exact
+public origin, for example `https://lessons.example.com`. Browser mutations must
+come from that origin; forwarded headers are not trusted. JSON endpoints require
+`Content-Type: application/json`. Media processing uses `POST /api/sections/:id/uploads`;
+ordinary jobs use `POST /api/sections/:id/jobs` with a 1 MiB body limit.
 
 ## Tests
 

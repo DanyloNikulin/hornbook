@@ -29,8 +29,7 @@ import { join } from 'node:path';
 import { Lesson, type TopicT } from '../src/lib/schema.ts';
 import { detectTopics, formatTopics } from './lib/topics.ts';
 import { computeTopicsHash } from './lib/topics-hash.ts';
-import { lessonToMarkdown } from './lib/markdown.ts';
-import { configPath, journalDir, lessonFiles, listSections, readTopicCatalog, sectionDir } from './lib/journal.ts';
+import { configPath, journalDir, lessonFiles, listSections, readTopicCatalog, sectionDir, writeCanonicalLesson } from './lib/cli-journal.ts';
 
 const dryRun = process.argv.includes('--dry-run');
 const autoMode = process.argv.includes('--auto');
@@ -169,8 +168,7 @@ for (const section of sections) {
 
     if (!dryRun) {
       lesson.topics = nextTopics;
-      writeFileSync(path, JSON.stringify(lesson, null, 2) + '\n', 'utf8');
-      writeFileSync(path.replace(/\.json$/, '.md'), lessonToMarkdown(lesson), 'utf8');
+      writeCanonicalLesson(section.id, lesson);
     }
   }
 
