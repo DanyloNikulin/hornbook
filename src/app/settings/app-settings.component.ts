@@ -8,6 +8,7 @@ import { TPipe } from '../i18n.pipe';
 import { I18nService } from '../i18n.service';
 import { ApiService } from '../api.service';
 import { SectionService } from '../section.service';
+import { JournalService } from '../journal.service';
 import { SettingsNavComponent } from './settings-nav.component';
 import { PipelineSetupComponent } from './pipeline-setup.component';
 import { LocalSetupComponent } from './local-setup.component';
@@ -26,6 +27,7 @@ import { UpdateService } from '../update.service';
 export class AppSettingsComponent {
   protected readonly sec = inject(SectionService);
   private readonly api = inject(ApiService);
+  private readonly journal = inject(JournalService);
   private readonly i18n = inject(I18nService);
   private readonly route = inject(ActivatedRoute);
   protected readonly desktop = inject(DesktopService);
@@ -39,6 +41,7 @@ export class AppSettingsComponent {
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly saved = signal<string | null>(null);
+  protected readonly advanced = signal(false);
   protected readonly settings = signal<SettingsView | null>(null);
 
   protected defaults: ProvidersT = {
@@ -89,6 +92,12 @@ export class AppSettingsComponent {
     void this.updates.check(true);
   }
 
+  protected localActivated(settings: SettingsView): void {
+    this.settings.set(settings);
+    this.defaults = structuredClone(settings.providers);
+    this.saved.set(this.i18n.t('settings.saved'));
+  }
+
   private async load(): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
@@ -114,6 +123,7 @@ export class AppSettingsComponent {
         else if (this.connectionInput[key].trim()) connections[key] = this.connectionInput[key].trim();
       }
       const s = await this.api.put<SettingsView>('/api/settings', { providers: this.defaults, connections });
+      this.journal.publishProviders(s.providers);
       this.settings.set(s);
       for (const key of CONNECTION_KEYS) {
         this.connectionInput[key] = '';

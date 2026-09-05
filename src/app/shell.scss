@@ -20,12 +20,35 @@
   gap: 28px;
 }
 
-.il-update-banner {
+.il-titlebar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  height: 36px;
+  padding-inline: 90px 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background: #f4ecdf;
+  color: #302a22;
+  font: 600 12px var(--font-body);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.il-titlebar span { font: italic 20px var(--font-display); }
+body:has(.il-titlebar) .il-nav { top: 36px; }
+.il-update-toast {
+  position: fixed;
+  right: 18px;
+  bottom: 100px;
+  z-index: 70;
+  width: min(370px, calc(100vw - 36px));
+  box-sizing: border-box;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
   gap: 12px;
-  margin: -6px 0 14px;
   padding: 11px 13px;
   border: 1px solid color-mix(in srgb, var(--accent) 58%, transparent);
   border-radius: 13px;
@@ -33,6 +56,17 @@
   color: var(--ink);
   box-shadow: var(--shadow-2);
 }
+.il-update-toast .il-update-action { grid-column: 2; justify-self: start; }
+.il-update-toast .il-update-dismiss { grid-column: 3; grid-row: 1; min-width: 28px; min-height: 28px; }
+.il-update-toast .il-update-copy { display: grid; }
+.il-setup-guide { margin-block: 26px; padding: 26px; border: 1px solid var(--line); border-left: 3px solid var(--primary); border-radius: var(--r-md); background: var(--paper-2); }
+.il-setup-guide h2 { margin: 6px 0; font: 500 30px var(--font-display); }
+.il-setup-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; padding-left: 20px; margin-block: 24px; }
+.il-setup-steps li::marker { color: var(--primary-ink); font-family: var(--font-mono); }
+.il-setup-steps strong, .il-setup-steps span { display: block; }
+.il-setup-steps span { color: var(--muted); font-size: 12px; margin-top: 6px; }
+.il-advanced-settings { margin-block: 22px; border-top: 1px solid var(--line); padding-top: 16px; }
+.il-advanced-settings > summary { cursor: pointer; font-weight: 600; color: var(--primary-ink); }
 .il-update-mark {
   width: 27px;
   height: 27px;
@@ -108,7 +142,7 @@
 .il-setup-pill--update { border-color: color-mix(in srgb, var(--accent) 65%, transparent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
 
 @media (max-width: 720px) {
-  .il-update-banner { grid-template-columns: auto 1fr auto; }
+  .il-setup-steps { grid-template-columns: 1fr; gap: 16px; }
   .il-update-action { grid-column: 2; width: max-content; }
   .il-update-dismiss { grid-column: 3; grid-row: 1; }
   .il-desktop-card,

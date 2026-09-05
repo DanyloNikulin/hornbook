@@ -27,6 +27,7 @@ import { mutationsScenario } from './ui/mutations.ts';
 import { keyboardScenario } from './ui/keyboard.ts';
 import { appearanceScenario } from './ui/appearance.ts';
 import { jobsScenario } from './ui/jobs.ts';
+import { repairsScenario } from './ui/repairs.ts';
 import {
   Report,
   launchBrowser,
@@ -43,6 +44,7 @@ import {
 const PORT = Number(process.env['HORNBOOK_HARNESS_PORT'] ?? 8796);
 const SCREENS = join(outDir, 'screens');
 const SCENARIOS = {
+  repairs: repairsScenario,
   jobs: jobsScenario,
   keyboard: keyboardScenario,
   appearance: appearanceScenario,

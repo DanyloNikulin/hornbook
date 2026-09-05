@@ -124,6 +124,8 @@ export async function settingsScenario({
   await page.getByRole('radio', { name: /English/i }).click();
   await seen('Interface');
 
+  r.rec('guided setup is shown before advanced providers', await page.getByRole('heading', { name: 'From a lesson to a study note' }).isVisible() && await page.locator('.il-pipe').count() === 0);
+  await page.getByText('Advanced: model providers & connections', { exact: true }).click();
   const hear = page.locator('.il-pipe').nth(0);
   const chips = hear.locator('[role=radiogroup] .il-chip');
   r.rec(
@@ -275,6 +277,7 @@ export async function settingsScenario({
   // Local tools: the five rows and the one button. A plan (source, size,
   // checksum) is shown before any download; this walk fetches nothing.
   const toolRows = page.locator('.il-setup-row');
+  await page.getByText('Tool details & other models', { exact: true }).click();
   r.rec(
     'local tools list the five rows',
     (await toolRows.count()) === 5,
@@ -282,7 +285,7 @@ export async function settingsScenario({
   );
   const setupAll = page
     .locator('button')
-    .filter({ hasText: /Set up everything|Setting up|Prepara tutto|Preparazione/ })
+    .filter({ hasText: /Set up everything|Setting up|Prepara tutto|Preparazione|Check & use local tools/ })
     .first();
   r.rec('the one setup button is there', (await setupAll.count()) === 1);
   if (await reachable('https://huggingface.co/', 4000)) {

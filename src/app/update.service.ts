@@ -26,7 +26,7 @@ export class UpdateService {
   readonly banner = computed(() => {
     const state = this.state();
     if (!state.release || this.dismissed() === state.release.version) return null;
-    return ['available', 'downloading', 'ready'].includes(state.phase) ? state : null;
+    return ['available', 'downloading', 'ready', 'error'].includes(state.phase) ? state : null;
   });
 
   async initialize(): Promise<void> {

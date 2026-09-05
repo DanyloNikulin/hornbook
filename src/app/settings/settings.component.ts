@@ -1,6 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { NavigationStart, Router, RouterLink } from '@angular/router';
 import type { ProvidersT, SectionThemeT } from '../../lib/journal-config';
 import { DEFAULT_PRESET_ID, DISPLAY_FONTS, THEME_PRESETS, type ThemePreset } from '../../lib/themes';
 import { type JobView, type SectionSummary, type SettingsView } from '../../lib/api-types';
@@ -31,6 +31,9 @@ export class SettingsComponent {
   private readonly journal = inject(JournalService);
   private readonly jobs = inject(JobsService);
   private readonly theme = inject(ThemeService);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private navigationVersion = 0;
 
   protected readonly presets = THEME_PRESETS;
   protected readonly displayFonts = DISPLAY_FONTS;
@@ -69,11 +72,31 @@ export class SettingsComponent {
   });
 
   constructor() {
+    const navigation = this.router.events.subscribe((event) => {
+      if (event instanceof NavigationStart) this.navigationVersion++;
+    });
+    this.destroyRef.onDestroy(() => navigation.unsubscribe());
+    effect(() => {
+      this.sec.id();
+      untracked(() => this.reset());
+    });
+  }
+
+  private reset(): void {
+    this.saving.set(false);
+    this.backdropBusy.set(false);
+    this.saved.set(null);
     const t = this.sec.theme();
     this.preset.set(t?.preset ?? DEFAULT_PRESET_ID);
     this.displayFont.set(t?.display_font ?? '');
     this.backdrop.set(t?.backdrop);
     void this.load();
+  }
+
+  private target() {
+    const id = this.sec.id();
+    const version = this.navigationVersion;
+    return { base: this.sec.apiBase(), current: () => !this.destroyRef.destroyed && this.sec.id() === id && version === this.navigationVersion };
   }
 
   protected backdropUrl(): string {
@@ -110,6 +133,7 @@ export class SettingsComponent {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+    const target = this.target();
     this.backdropBusy.set(true);
     this.error.set(null);
     try {
@@ -119,36 +143,39 @@ export class SettingsComponent {
         reader.onerror = () => reject(reader.error);
         reader.readAsDataURL(file);
       });
-      const updated = await this.api.put<SectionSummary>(`${this.sec.apiBase()}/backdrop`, {
+      const updated = await this.api.put<SectionSummary>(`${target.base}/backdrop`, {
         filename: file.name,
         base64,
       });
+      await this.journal.refresh();
+      if (!target.current()) return;
       this.sec.set(updated);
       this.backdrop.set(updated.theme?.backdrop);
       this.backdropStamp.set(Date.now());
       this.theme.preview(this.draftTheme());
-      await this.journal.refresh();
     } catch (err) {
-      this.error.set((err as Error).message);
+      if (target.current()) this.error.set((err as Error).message);
     } finally {
-      this.backdropBusy.set(false);
+      if (target.current()) this.backdropBusy.set(false);
       input.value = '';
     }
   }
 
   protected async removeBackdrop(): Promise<void> {
+    const target = this.target();
     this.backdropBusy.set(true);
     this.error.set(null);
     try {
-      const updated = await this.api.delete<SectionSummary>(`${this.sec.apiBase()}/backdrop`);
+      const updated = await this.api.delete<SectionSummary>(`${target.base}/backdrop`);
+      await this.journal.refresh();
+      if (!target.current()) return;
       this.sec.set(updated);
       this.backdrop.set(undefined);
       this.theme.preview(this.draftTheme());
-      await this.journal.refresh();
     } catch (err) {
-      this.error.set((err as Error).message);
+      if (target.current()) this.error.set((err as Error).message);
     } finally {
-      this.backdropBusy.set(false);
+      if (target.current()) this.backdropBusy.set(false);
     }
   }
 
@@ -157,12 +184,14 @@ export class SettingsComponent {
   }
 
   private async load(): Promise<void> {
+    const target = this.target();
+    const current = this.sec.current();
     this.loading.set(true);
     this.error.set(null);
     try {
       const s = await this.api.get<SettingsView>('/api/settings');
+      if (!target.current()) return;
       this.defaults = structuredClone(s.providers);
-      const current = this.sec.current();
       const p = current?.providers;
       this.override = { transcribe: !!p?.transcribe, extract: !!p?.extract };
       this.overrides = {
@@ -170,13 +199,14 @@ export class SettingsComponent {
         extract: { ...(p?.extract ?? s.providers.extract) },
       };
     } catch (err) {
-      this.error.set((err as Error).message);
+      if (target.current()) this.error.set((err as Error).message);
     } finally {
-      this.loading.set(false);
+      if (target.current()) this.loading.set(false);
     }
   }
 
   protected async save(): Promise<void> {
+    const target = this.target();
     this.saving.set(true);
     this.error.set(null);
     this.saved.set(null);
@@ -185,18 +215,19 @@ export class SettingsComponent {
       if (this.override.transcribe) sectionProviders.transcribe = { ...this.overrides.transcribe };
       if (this.override.extract) sectionProviders.extract = { ...this.overrides.extract };
       const hasOverride = Object.keys(sectionProviders).length > 0;
-      const updated = await this.api.patch<SectionSummary>(this.sec.apiBase(), {
+      const updated = await this.api.patch<SectionSummary>(target.base, {
         providers: hasOverride ? sectionProviders : null,
         theme: this.themeToSave(),
       });
+      await this.journal.refresh();
+      if (!target.current()) return;
       this.sec.set(updated);
       this.theme.restore();
-      await this.journal.refresh();
       this.saved.set(this.i18n.t('settings.saved'));
     } catch (err) {
-      this.error.set((err as Error).message);
+      if (target.current()) this.error.set((err as Error).message);
     } finally {
-      this.saving.set(false);
+      if (target.current()) this.saving.set(false);
     }
   }
 

@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type {
   DownloadPlan,
@@ -8,10 +8,16 @@ import type {
   ToolId,
   ToolStatus,
   WhisperVariant,
+  SettingsView,
+  ProbeResult,
+  ConnectionKey,
 } from '../../lib/api-types';
+import type { ProvidersT } from '../../lib/journal-config';
 import { TPipe } from '../i18n.pipe';
 import { ApiService } from '../api.service';
 import { JobsService } from '../jobs.service';
+import { JournalService } from '../journal.service';
+import { I18nService } from '../i18n.service';
 
 /** What a tool's row is doing right now. A plan is shown before anything is fetched. */
 interface RowState {
@@ -42,6 +48,12 @@ function idleRows(): Record<ToolId, RowState> {
 export class LocalSetupComponent {
   private readonly api = inject(ApiService);
   private readonly jobs = inject(JobsService);
+  private readonly journal = inject(JournalService);
+  private readonly i18n = inject(I18nService);
+  private readonly destroyRef = inject(DestroyRef);
+  readonly activated = output<SettingsView>();
+  protected readonly activating = signal(false);
+  protected readonly verified = signal(false);
 
   protected readonly order = TOOL_ORDER;
   protected readonly view = signal<SetupView | null>(null);
@@ -71,7 +83,7 @@ export class LocalSetupComponent {
       return !tool?.installed || !!tool.update;
     });
   });
-  protected readonly ready = computed(() => this.missing().length === 0);
+  protected readonly ready = computed(() => !!this.view() && this.missing().length === 0);
   protected readonly cudaOffered = computed(() => {
     const v = this.view();
     return !!v && v.platform === 'win32' && v.machine.arch === 'x64';
@@ -192,18 +204,58 @@ export class LocalSetupComponent {
 
   /** The missing tools, in order, each planned and then fetched. Stops at the first failure. */
   protected async setupAll(): Promise<void> {
+    if (this.allRunning()) return;
     this.allRunning.set(true);
     this.allDone.set(false);
     try {
       for (const id of this.missing()) {
+        if (this.destroyRef.destroyed) return;
+        if (id === 'ollama-model' && !this.view()?.ollama.running) await this.startOllama();
         this.allStep.set(id);
         if (!(await this.prepare(id))) return;
         if (!(await this.download(id))) return;
       }
       this.allDone.set(this.ready());
+      if (!this.destroyRef.destroyed && this.ready()) await this.activate();
     } finally {
       this.allRunning.set(false);
       this.allStep.set(null);
+    }
+  }
+
+  protected async activate(): Promise<void> {
+    if (this.activating() || !this.ready()) return;
+    this.activating.set(true);
+    this.verified.set(false);
+    this.error.set(null);
+    try {
+      if (!this.view()?.ollama.running) await this.startOllama();
+      if (this.destroyRef.destroyed) return;
+      const model = this.status('whisper-model')?.path;
+      const models = this.status('ollama-model')?.models ?? [];
+      const extractModel = models.includes(this.ollamaModel()) ? this.ollamaModel() : models[0];
+      if (!model || !extractModel || !this.view()?.ollama.running) throw new Error(this.i18n.t('setup.guide.unavailable'));
+      const providers: ProvidersT = { transcribe: { driver: 'whisper-cli', model }, extract: { driver: 'ollama', model: extractModel } };
+      const connections: Partial<Record<ConnectionKey, string>> = { OLLAMA_HOST: this.view()!.ollama.host, WHISPER_MODEL: model };
+      const whisper = this.status('whisper')?.path;
+      const ffmpeg = this.status('ffmpeg')?.path;
+      if (whisper) connections.WHISPER_BIN = whisper;
+      if (ffmpeg) connections.FFMPEG_BIN = ffmpeg;
+      for (const job of ['transcribe', 'extract'] as const) {
+        const probe = await this.api.post<ProbeResult>('/api/settings/probe', { job, ...providers[job], connections });
+        if (!probe.ok || probe.pick) throw new Error(probe.detail);
+        if (this.destroyRef.destroyed) return;
+      }
+      const settings = await this.api.put<SettingsView>('/api/settings', { providers, connections });
+      this.journal.publishProviders(settings.providers);
+      if (!this.destroyRef.destroyed) {
+        this.verified.set(true);
+        this.activated.emit(settings);
+      }
+    } catch (err) {
+      if (!this.destroyRef.destroyed) this.error.set((err as Error).message);
+    } finally {
+      this.activating.set(false);
     }
   }
 

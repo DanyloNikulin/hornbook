@@ -91,7 +91,7 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
     if (raw && typeof raw === 'object' && raw['slug'] !== p['slug']) {
       throw new HttpError(400, `Body slug "${String(raw['slug'])}" does not match URL slug "${p['slug']}"`);
     }
-    return store.saveLesson(p['id'], raw);
+    return store.saveLesson(p['id'], raw, 'replace');
   }, LESSON_BYTES);
   on('DELETE', '/api/sections/:id/lessons/:slug', (_r, _s, p) => {
     store.deleteLesson(p['id'], p['slug']);

@@ -1,26 +1,48 @@
-<h2 id="local-tools" class="il-compose-h il-anchor-target" style="margin-top: 28px;">{{ 'setup.tools.title' | t }}</h2>
-<p class="il-section-sub">{{ 'setup.tools.sub' | t }}</p>
+<section class="il-setup-guide">
+<p class="il-card-kicker">{{ 'setup.guide.kicker' | t }}</p>
+<h2 id="local-tools" class="il-compose-h il-anchor-target">{{ 'setup.guide.title' | t }}</h2>
+<p class="il-section-sub">{{ 'setup.guide.sub' | t }}</p>
+<ol class="il-setup-steps">
+  <li><strong>{{ 'setup.guide.hear' | t }}</strong><span>{{ 'setup.guide.hearSub' | t }}</span></li>
+  <li><strong>{{ 'setup.guide.write' | t }}</strong><span>{{ 'setup.guide.writeSub' | t }}</span></li>
+  <li><strong>{{ 'setup.guide.use' | t }}</strong><span>{{ 'setup.guide.useSub' | t }}</span></li>
+</ol>
 
 @if (loading() && !view()) {
   <p class="il-stat-sub">{{ 'common.loading' | t }}</p>
 } @else if (view(); as v) {
-  <p class="il-settings-help">
-    {{ 'setup.tools.machine' | t: { ram: ramGb(), gpu: gpuLabel() ?? ('setup.tools.noGpu' | t) } }}
-    {{ v.recommend.note }}
-  </p>
-  <p class="il-settings-help il-setup-path">{{ 'setup.tools.dir' | t: { dir: v.toolsDir } }}</p>
-
   <div class="il-setup-actions" style="margin: 12px 0 18px;">
-    <button type="button" class="il-btn" [disabled]="allRunning() || ready()" (click)="setupAll()">
+    @if (!ready()) {
+    <button type="button" class="il-btn" [disabled]="allRunning() || activating()" (click)="setupAll()">
       {{ allRunning() ? ('setup.tools.allRunning' | t: { step: allStep() ? (('setup.tool.' + allStep()) | t) : '' }) : ('setup.tools.all' | t) }}
     </button>
+    } @else {
+      <button type="button" class="il-btn" [disabled]="activating() || allRunning()" (click)="activate()">{{ (activating() ? 'setup.guide.checking' : 'setup.guide.activate') | t }}</button>
+    }
     <button type="button" class="il-btn ghost sm" [disabled]="loading() || allRunning()" (click)="load()">{{ 'setup.tools.refresh' | t }}</button>
-    @if (ready()) {
-      <span style="color: var(--success);">{{ 'setup.tools.allDone' | t }}</span>
+    @if (verified()) {
+      <span role="status" style="color: var(--success);">{{ 'setup.guide.verified' | t }}</span>
+    } @else if (ready()) {
+      <span>{{ 'setup.guide.installed' | t }}</span>
     } @else {
       <span class="il-settings-help">{{ 'setup.tools.allSub' | t: { n: missing().length } }}</span>
     }
   </div>
+  @if (allRunning() && allStep(); as step) {
+    @if (progress(step); as p) {
+      <progress class="il-setup-progress" max="100" [value]="p.pct"></progress>
+      <p role="status">{{ 'setup.progress' | t: { stage: p.stage, pct: p.pct } }}</p>
+    }
+    @if (row(step).error) { <p role="alert">{{ row(step).error }}</p> }
+  }
+  @for (id of order; track id) {
+    @if (row(id).phase === 'failed') { <p role="alert">{{ row(id).error }}</p> }
+  }
+  <p class="il-settings-help">{{ 'setup.guide.overrides' | t }}</p>
+  <details class="il-advanced-settings">
+  <summary>{{ 'setup.guide.tools' | t }}</summary>
+  <p class="il-settings-help">{{ 'setup.tools.machine' | t: { ram: ramGb(), gpu: gpuLabel() ?? ('setup.tools.noGpu' | t) } }} {{ v.recommend.note }}</p>
+  <p class="il-settings-help il-setup-path">{{ 'setup.tools.dir' | t: { dir: v.toolsDir } }}</p>
 
   @for (id of order; track id) {
     @if (status(id); as s) {
@@ -130,7 +152,9 @@
   @if (v.ollama.running) {
     <p class="il-settings-help">{{ (v.ollama.managed ? 'setup.ollama.managed' : 'setup.ollama.external') | t: { host: v.ollama.host } }}</p>
   }
+  </details>
 }
+</section>
 
 @if (error()) {
   <p style="color: #a33; margin-top: 1rem;" role="alert">{{ error() }}</p>

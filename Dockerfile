@@ -35,7 +35,6 @@ WORKDIR /app
 COPY --from=build /app/package.json /app/package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
 COPY --from=build --chown=node:node /app/dist ./dist
-COPY --from=build --chown=node:node /app/journal ./journal
 RUN mkdir -p /journal && chown node:node /journal
 USER node
 VOLUME ["/journal"]

@@ -124,7 +124,6 @@
     "bin",
     "dist/node",
     "dist/hornbook/browser",
-    "journal",
     "build/icon.png",
     "tsconfig.json",
     "tsconfig.scripts.json",

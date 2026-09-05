@@ -2,6 +2,23 @@ import type { Catalog } from './i18n.js';
 
 /** Italian chrome copy. Same keys as `EN`; missing keys fall back to English. */
 export const IT = {
+  'setup.guide.kicker': 'Consigliato · senza abbonamento',
+  'setup.guide.title': 'Dalla lezione agli appunti',
+  'setup.guide.sub': 'Configura una volta gli strumenti locali gratuiti. I download possono richiedere diversi minuti e GB; le registrazioni restano su questo computer.',
+  'setup.guide.hear': 'Ascolta la lezione',
+  'setup.guide.hearSub': 'Trasforma una registrazione in testo.',
+  'setup.guide.write': 'Crea gli appunti',
+  'setup.guide.writeSub': 'Organizza il testo in un conspect, schede e un quiz.',
+  'setup.guide.use': 'Verifica e attiva',
+  'setup.guide.useSub': 'Verifica gli strumenti e salvali come predefiniti.',
+  'setup.guide.activate': 'Verifica e usa gli strumenti locali',
+  'setup.guide.checking': 'Verifica degli strumenti…',
+  'setup.guide.verified': 'Predefiniti salvati. Gli strumenti per registrazioni e trascrizioni sono pronti; controlla gli appunti generati.',
+  'setup.guide.installed': 'Strumenti installati. Attivali per usarli in Aggiungi.',
+  'setup.guide.unavailable': 'Un modello locale o il servizio di scrittura non è disponibile. Apri i dettagli per installarlo o avviarlo, poi riprova.',
+  'setup.guide.overrides': 'Le sezioni con modelli personalizzati mantengono le proprie scelte. Modificale nelle impostazioni della sezione.',
+  'setup.guide.tools': 'Dettagli degli strumenti e altri modelli',
+  'setup.guide.advanced': 'Avanzate: fornitori di modelli e connessioni',
   'progress.problem': 'Progressi di studio — {section}',
   'progress.recovery': 'Il file danneggiato è stato conservato nel diario. Avvia nuovi progressi solo se vuoi continuare con una cronologia vuota.',
   'progress.startFresh': 'Avvia nuovi progressi',

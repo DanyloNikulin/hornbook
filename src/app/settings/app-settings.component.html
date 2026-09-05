@@ -63,6 +63,10 @@
     @if (loading()) {
       <p class="il-stat-sub">{{ 'common.loading' | t }}</p>
     } @else {
+      <app-local-setup (activated)="localActivated($event)" />
+      <details class="il-advanced-settings" [open]="advanced()" (toggle)="advanced.set($any($event.target).open)">
+      <summary>{{ 'setup.guide.advanced' | t }}</summary>
+      @if (advanced()) {
       <h2 class="il-compose-h" style="margin-top: 24px">{{ 'settings.providers' | t }}</h2>
       <p class="il-section-sub">{{ 'pipeline.lead' | t }}</p>
       <p class="il-settings-help" style="margin-bottom: 12px">{{ 'pipeline.needBoth' | t }}</p>
@@ -112,7 +116,8 @@
         }
       </div>
 
-      <app-local-setup />
+      }
+      </details>
     }
 
     <section class="il-update-settings" aria-labelledby="update-settings-title">
@@ -132,6 +137,18 @@
         >
       </label>
       <div class="il-update-settings-action">
+        @if (updates.state().release; as release) {
+          <div class="il-update-copy">
+            <strong>{{ 'update.out' | t: { version: updates.displayVersion(release.version) } }}</strong>
+            @if (updates.state().phase === 'ready') {
+              <button type="button" class="il-btn sm" (click)="updates.restart()">{{ 'update.restart' | t }}</button>
+            } @else if (updates.state().phase === 'downloading') {
+              <span>{{ 'update.downloading' | t: { pct: updates.state().progress ?? 0 } }}</span>
+            }
+            @if (release.url) { <a class="il-btn ghost sm" [href]="release.url" target="_blank" rel="noopener noreferrer">{{ 'update.openRelease' | t }}</a> }
+            <details><summary>{{ 'update.notes' | t }}</summary><pre>{{ release.notes }}</pre></details>
+          </div>
+        }
         <button
           type="button"
           class="il-btn ghost sm"

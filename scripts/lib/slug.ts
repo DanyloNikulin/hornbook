@@ -7,12 +7,10 @@
 // the lesson is written.
 
 /**
- * Return `slug` if no *other* lesson uses it, otherwise the first free
+ * Return `slug` if no lesson uses it, otherwise the first free
  * `slug-2`, `slug-3`, … variant.
  *
- * `existing` maps slug → file name for every committed lesson. A slug is not
- * considered taken when its file is exactly `${date}-${slug}.json`: that is
- * the lesson being re-processed, and process.ts overwrites it in place.
+ * `existing` maps slug → file name for every committed lesson.
  */
 export function slugify(title: string): string {
   return title
@@ -26,12 +24,11 @@ export function slugify(title: string): string {
 
 export function ensureUniqueSlug(
   slug: string,
-  date: string,
+  _date: string,
   existing: ReadonlyMap<string, string>,
 ): string {
   const takenByAnother = (candidate: string): boolean => {
-    const file = existing.get(candidate);
-    return file !== undefined && file !== `${date}-${candidate}.json`;
+    return existing.has(candidate);
   };
 
   if (!takenByAnother(slug)) return slug;

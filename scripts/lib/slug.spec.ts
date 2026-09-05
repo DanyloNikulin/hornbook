@@ -12,8 +12,8 @@ describe('ensureUniqueSlug', () => {
     expect(ensureUniqueSlug('condizionale', '2026-09-05', existing)).toBe('condizionale');
   });
 
-  it('keeps the slug when the only match is the same lesson being re-processed', () => {
-    expect(ensureUniqueSlug('passato-prossimo', '2026-06-20', existing)).toBe('passato-prossimo');
+  it('reserves existing lessons even on the same date', () => {
+    expect(ensureUniqueSlug('passato-prossimo', '2026-06-20', existing)).toBe('passato-prossimo-2');
   });
 
   it('suffixes -2 when another lesson (different date) already owns the slug', () => {
@@ -26,9 +26,9 @@ describe('ensureUniqueSlug', () => {
     );
   });
 
-  it('treats a taken suffix as free when it belongs to the same lesson', () => {
+  it('reserves same-date suffixes too', () => {
     expect(ensureUniqueSlug('futuro', '2026-08-22', new Map([...existing, ['futuro', '2026-08-15-futuro.json']]))).toBe(
-      'futuro-2',
+      'futuro-3',
     );
   });
 

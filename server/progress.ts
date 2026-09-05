@@ -25,6 +25,13 @@ const RecoveryMarker = z.object({
 export class JournalProgress {
   constructor(private readonly journal: JournalRepository) {}
 
+  /** Read canonical history while the caller holds the journal writer lock. */
+  readForImport(id: string): ProgressT {
+    const current = this.current(id);
+    if (current.recovery) throw new ProgressError(409, 'Progress needs explicit recovery before importing');
+    return current.value;
+  }
+
   private current(id: string): {
     value: ProgressT;
     revision: string;

@@ -33,9 +33,9 @@ import {
   type LessonImportResult,
   type SectionImportResult,
 } from '../src/lib/api-types.ts';
-import { connectionViews, updateSecrets } from './secrets.ts';
+import { connectionViews, planSecretsUpdate } from './secrets.ts';
 import { parseProbeInput, probePipeline } from './probe.ts';
-import { JournalRepository, SectionNotEmptyError, defaultJournalDir, DERIVED_FORMAT_VERSION, lessonFileStem } from '../scripts/lib/journal.ts';
+import { JournalRepository, LessonConflictError, SectionNotEmptyError, defaultJournalDir, DERIVED_FORMAT_VERSION, lessonFileStem } from '../scripts/lib/journal.ts';
 import { z } from 'zod';
 import { JournalProgress, ProgressError } from './progress.ts';
 import type { ProgressView } from '../src/lib/api-types.ts';
@@ -235,12 +235,8 @@ export class FolderStore {
     catch (error) { throw new HttpError(500, `Lesson "${slug}" is malformed: ${(error as Error).message}`); }
   }
 
-  /**
-   * Create or replace a lesson. The file is `<date>-<slug>.json`; a slug that
-   * already belongs to a lesson with a different date is a conflict (routes
-   * key by slug alone).
-   */
-  saveLesson(id: string, input: unknown): LessonT {
+  /** POST creates; only an explicit PUT or import replacement may overwrite. */
+  saveLesson(id: string, input: unknown, mode: 'create' | 'replace' = 'create'): LessonT {
     this.section(id);
     const parsed = Lesson.safeParse(input);
     if (!parsed.success) throw new HttpError(400, 'Invalid lesson', parsed.error.format());
@@ -251,7 +247,11 @@ export class FolderStore {
     if (existing && !existing.endsWith(`${stem}.json`)) {
       throw new HttpError(409, `Slug "${lesson.slug}" is already used by another lesson (${existing})`);
     }
-    return this.journal.writeLesson(id, lesson);
+    try { return this.journal.writeLesson(id, lesson, mode); }
+    catch (error) {
+      if (error instanceof LessonConflictError) throw new HttpError(409, error.message);
+      throw error;
+    }
   }
 
   exportLesson(id: string, slug: string): { filename: string; data: Buffer } {
@@ -271,7 +271,7 @@ export class FolderStore {
     return this.journal.commit(() => {
       const section = this.section(id);
       const existing = this.journal.readSectionLessons(id).map((entry) => entry.lesson);
-      const plan = planImport(existing, [incoming.data], parsed.data.conflict);
+      const plan = planImport(existing, [incoming.data], parsed.data.conflict, new JournalProgress(this.journal).readForImport(id));
       if (plan.conflicts.length && parsed.data.conflict === 'error') {
         throw new HttpError(409, `Lesson "${incoming.data.slug}" already exists`, { conflicts: plan.conflicts });
       }
@@ -332,7 +332,7 @@ export class FolderStore {
         throw new HttpError(409, `Pair "${id}" uses different languages in this journal`);
       }
       const lessons = existing ? this.journal.readSectionLessons(id).map((entry) => entry.lesson) : [];
-      const plan = planImport(lessons, archive.lessons, parsed.data.conflict);
+      const plan = planImport(lessons, archive.lessons, parsed.data.conflict, new JournalProgress(this.journal).readForImport(id), archive.progress);
       if (plan.conflicts.length && parsed.data.conflict === 'error') {
         throw new HttpError(409, `${plan.conflicts.length} imported lessons already exist`, { conflicts: plan.conflicts });
       }
@@ -464,13 +464,12 @@ export class FolderStore {
   updateSettings(input: unknown): SettingsView {
     const parsed = SettingsUpdateInput.safeParse(input);
     if (!parsed.success) throw new HttpError(400, 'Invalid settings', parsed.error.format());
-    if (parsed.data.providers) {
-      const providers = parsed.data.providers;
-      this.journal.updateJournalConfig((config) => ({ ...config, providers }));
-    }
-    if (parsed.data.connections) {
-      updateSecrets(this.journal.journalDir(), parsed.data.connections);
-    }
+    this.journal.commit(() => {
+      const changes: FileChange[] = [];
+      if (parsed.data.providers) changes.push({ path: 'journal.config.json', data: JSON.stringify({ ...this.journal.loadJournalConfig(), providers: parsed.data.providers }, null, 2) + '\n' });
+      if (parsed.data.connections) changes.push(planSecretsUpdate(this.dir, parsed.data.connections).change);
+      return { changes, result: undefined };
+    });
     return this.settings();
   }
 

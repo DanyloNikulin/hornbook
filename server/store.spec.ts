@@ -124,8 +124,8 @@ describe('FolderStore — lessons and derived data', () => {
     expect(() => store.saveLesson('es-en', { id: 'x' })).toThrow(HttpError);
     store.saveLesson('es-en', lesson('greetings', '2026-01-01'));
     expect(() => store.saveLesson('es-en', lesson('greetings', '2026-02-02'))).toThrow(/already used/);
-    // Same date + slug is an overwrite, not a conflict.
-    store.saveLesson('es-en', lesson('greetings', '2026-01-01', { title: 'Updated' }));
+    expect(() => store.saveLesson('es-en', lesson('greetings', '2026-01-01', { title: 'Lost' }))).toThrow(/already used/);
+    store.saveLesson('es-en', lesson('greetings', '2026-01-01', { title: 'Updated' }), 'replace');
     expect(store.lesson('es-en', 'greetings').title).toBe('Updated');
   });
 

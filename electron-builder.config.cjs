@@ -27,7 +27,6 @@ module.exports = {
   files: [
     'dist/hornbook/browser/**/*',
     'dist/node/**/*',
-    'journal/**/*',
     'build/icon.png',
     'public/favicon.svg',
     'package.json',

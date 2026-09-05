@@ -28,6 +28,7 @@ import { defaultJournalDir } from '../server/cli.ts';
 import { compareVersions, ReleaseChecker, UPDATE_INTERVAL_MS } from '../server/releases.ts';
 import { packageRoot } from '../scripts/lib/runtime.ts';
 import { countLessons, seedJournal } from '../server/launch.ts';
+import { DEMO_JOURNAL } from '../scripts/lib/demo-journal.ts';
 import { loadPreferences, savePreferences, type DesktopPreferences } from './preferences.ts';
 
 const APP_ID = 'io.github.danylonikulin.hornbook';
@@ -134,6 +135,8 @@ function createWindow(route = '/'): BrowserWindow {
     minHeight: 540,
     show: false,
     backgroundColor: '#f4ecdf',
+    titleBarStyle: 'hidden',
+    ...(process.platform !== 'darwin' ? { titleBarOverlay: { color: '#f4ecdf', symbolColor: '#302a22', height: 36 } } : {}),
     icon: join(appRoot, 'build', 'icon.png'),
     webPreferences: {
       preload: join(appRoot, 'dist', 'node', 'electron', 'preload.cjs'),
@@ -144,6 +147,7 @@ function createWindow(route = '/'): BrowserWindow {
     },
   });
   mainWindow = window;
+  if (process.platform !== 'darwin') window.setMenu(null);
 
   window.once('ready-to-show', () => window.show());
   window.on('close', (event) => {
@@ -383,7 +387,7 @@ async function start(): Promise<void> {
   preferencesPath = join(app.getPath('userData'), 'preferences.json');
   preferences = loadPreferences(preferencesPath);
   journal = resolve(argValue('--journal') ?? preferences.journal ?? defaultJournalDir());
-  if (seedJournal(join(appRoot, 'journal'), journal)) {
+  if (seedJournal(DEMO_JOURNAL, journal)) {
     console.log(`Created journal at ${journal} with ${countLessons(journal)} demo lesson(s).`);
   }
 

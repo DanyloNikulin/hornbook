@@ -17,6 +17,7 @@ import { join, resolve } from 'node:path';
 import { isMain } from '../scripts/lib/is-main.ts';
 import { parseArgs, startServer } from './main.ts';
 import { countLessons, openUrl, seedJournal } from './launch.ts';
+import { DEMO_JOURNAL } from '../scripts/lib/demo-journal.ts';
 import { pipelineEnv } from './secrets.ts';
 import { defaultToolsDeps, machineInfo, toolStatuses } from './tools.ts';
 import { DEFAULT_MANAGED_OLLAMA_PORT, recommend, toolsDir } from '../scripts/lib/tools.ts';
@@ -54,7 +55,7 @@ export async function cli(argv: readonly string[]): Promise<void> {
   const journal = resolve(opts.journal ?? defaultJournalDir());
   const compiledScripts = join(repoRoot, 'dist', 'node', 'scripts');
 
-  if (seedJournal(join(repoRoot, 'journal'), journal)) {
+  if (seedJournal(DEMO_JOURNAL, journal)) {
     console.log(`Created your journal at ${journal} with ${countLessons(journal)} demo lesson(s). Delete the demo pairs whenever you like.`);
   }
 

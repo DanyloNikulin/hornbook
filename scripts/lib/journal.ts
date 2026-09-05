@@ -61,6 +61,7 @@ export interface LoadedLesson {
 }
 
 export class SectionNotEmptyError extends Error {}
+export class LessonConflictError extends Error {}
 
 function configChange(config: JournalConfigT): FileChange {
   return { path: 'journal.config.json', data: JSON.stringify(normalizeJournalConfig(config), null, 2) + '\n' };
@@ -89,13 +90,14 @@ export class JournalRepository {
     finally { this.writing = false; this.invalidateConfig(); }
   }
 
-  writeLesson(id: string, input: unknown): LessonT {
+  writeLesson(id: string, input: unknown, mode: 'create' | 'replace' = 'create'): LessonT {
     const lesson = finalizeLesson(input);
     return this.commit(() => {
       const section = this.getSection(id);
       const existing = this.readSectionLessons(id).map((entry) => entry.lesson);
       const prior = existing.find((entry) => entry.slug === lesson.slug);
-      if (prior && prior.id !== lesson.id) throw new Error(`Slug "${lesson.slug}" is already used by another date`);
+      if (prior && (mode === 'create' || prior.id !== lesson.id)) throw new LessonConflictError(`Slug "${lesson.slug}" is already used by another lesson`);
+      if (!prior && mode === 'replace') throw new LessonConflictError(`No lesson "${lesson.slug}" to replace`);
       const final = [...existing.filter((entry) => entry.slug !== lesson.slug), lesson];
       return { changes: sectionWriteChanges(section, final, [lesson]), result: lesson };
     });

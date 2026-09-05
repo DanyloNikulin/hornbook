@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import type { ConfigView, SectionSummary } from '../lib/api-types';
+import type { ProvidersT } from '../lib/journal-config';
 import { STOCK_TAGLINE } from '../lib/i18n';
 import { ApiService } from './api.service';
 
@@ -28,14 +29,21 @@ export class JournalService {
   readonly sections = computed(() => this.config().sections);
 
   private inflight: Promise<void> | null = null;
+  private revision = 0;
+
+  publishProviders(providers: ProvidersT): void {
+    this.revision++;
+    this.config.update((config) => ({ ...config, providers: structuredClone(providers) }));
+  }
 
   /** Fetch the config; concurrent callers share one request. */
   load(): Promise<void> {
     if (this.inflight) return this.inflight;
+    const revision = this.revision;
     this.inflight = this.api
       .get<ConfigView>('/api/config')
       .then((c) => {
-        this.config.set(c);
+        if (revision === this.revision) this.config.set(c);
         this.loaded.set(true);
         this.loadError.set(null);
       })
@@ -55,6 +63,7 @@ export class JournalService {
 
   /** Re-fetch after a write (new section, renamed section). */
   async refresh(): Promise<void> {
+    if (this.inflight) await this.inflight;
     this.loaded.set(false);
     await this.load();
   }

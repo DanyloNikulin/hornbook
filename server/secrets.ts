@@ -3,7 +3,7 @@
 // reports only whether a value is set plus a short hint, and the job runner
 // injects them into the pipeline's environment.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   CONNECTION_KEYS,
@@ -14,6 +14,7 @@ import {
 import { toolsDir } from '../scripts/lib/tools.ts';
 import { activeManagedHost } from './managed-ollama.ts';
 import { toolsEnv } from './tools.ts';
+import { checkedJournalPath, commitFiles, type FileChange } from '../scripts/lib/file-commit.ts';
 
 export type Secrets = Partial<Record<ConnectionKey, string>>;
 
@@ -22,10 +23,11 @@ export function secretsPath(journalDir: string): string {
 }
 
 export function readSecrets(journalDir: string): Secrets {
-  const path = secretsPath(journalDir);
+  const path = checkedJournalPath(journalDir, 'secrets.json');
   if (!existsSync(path)) return {};
   try {
     const raw = JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || Object.values(raw).some((v) => typeof v !== 'string')) throw new Error('Invalid connections');
     const out: Secrets = {};
     for (const key of CONNECTION_KEYS) {
       const v = raw[key];
@@ -33,17 +35,21 @@ export function readSecrets(journalDir: string): Secrets {
     }
     return out;
   } catch {
-    return {};
+    throw new Error('Stored connections are unreadable. Restore secrets.json from a backup before saving; the original file has been preserved.');
   }
 }
 
 export function writeSecrets(journalDir: string, secrets: Secrets): void {
+  commitFiles(journalDir, () => ({ changes: [secretsChange(secrets)], result: undefined }));
+}
+
+function secretsChange(secrets: Secrets): FileChange {
   const clean: Secrets = {};
   for (const key of CONNECTION_KEYS) {
     const v = secrets[key];
     if (v && v.trim()) clean[key] = v.trim();
   }
-  writeFileSync(secretsPath(journalDir), JSON.stringify(clean, null, 2) + '\n', 'utf8');
+  return { path: 'secrets.json', data: JSON.stringify(clean, null, 2) + '\n' };
 }
 
 /**
@@ -53,6 +59,14 @@ export function updateSecrets(
   journalDir: string,
   patch: Partial<Record<ConnectionKey, string | null>>,
 ): Secrets {
+  return commitFiles(journalDir, () => {
+    const { next, change } = planSecretsUpdate(journalDir, patch);
+    return { changes: [change], result: next };
+  });
+}
+
+/** Called inside the same journal transaction as provider changes. */
+export function planSecretsUpdate(journalDir: string, patch: Partial<Record<ConnectionKey, string | null>>): { next: Secrets; change: FileChange } {
   const next = { ...readSecrets(journalDir) };
   for (const key of CONNECTION_KEYS) {
     if (!(key in patch)) continue;
@@ -60,8 +74,7 @@ export function updateSecrets(
     if (v === null || v === undefined || !v.trim()) delete next[key];
     else next[key] = v.trim();
   }
-  writeSecrets(journalDir, next);
-  return next;
+  return { next, change: secretsChange(next) };
 }
 
 /**

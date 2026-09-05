@@ -23,7 +23,8 @@
 // stays bounded regardless of cheat sheet size.
 
 import { retainFailedCleanup } from './lib/cli-failure.ts';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { JournalRepository, defaultJournalDir, type LoadedLesson } from './lib/journal.ts';
+import { readCheatsheetBuild, publishCheatsheet } from './lib/cheatsheet-storage.ts';
 import {
   Cheatsheet,
   type CheatsheetT,
@@ -41,17 +42,9 @@ import {
 import { applyPatches, type CheatsheetPatch, type PatchOperation } from './lib/cheatsheet-patch.ts';
 import { learnerLanguageName, targetLanguageName } from './lib/config.ts';
 import {
-  cheatsheetPath,
-  currentSection,
-  readSectionLessons,
-  readTopicCatalog,
   resolveSectionArg,
 } from './lib/cli-journal.ts';
 import { getExtractor } from './providers/index.ts';
-
-// The section is selected once in main() (--section); every path below
-// derives from it.
-const CHEATSHEET_PATH = (): string => cheatsheetPath(currentSection().id);
 
 // ── Tool definition (JSON schema: a forced tool call on Anthropic, a
 // structured-output schema on OpenAI and Ollama) ─────────────────────────
@@ -179,19 +172,6 @@ RULES:
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function loadCheatsheet(): CheatsheetT {
-  if (!existsSync(CHEATSHEET_PATH())) {
-    return { processed_lessons: [], categories: [] };
-  }
-  const raw = JSON.parse(readFileSync(CHEATSHEET_PATH(), 'utf8'));
-  const result = Cheatsheet.safeParse(raw);
-  if (!result.success) {
-    console.warn('⚠ cheatsheet.json failed validation — starting fresh.');
-    return { processed_lessons: [], categories: [] };
-  }
-  return result.data;
-}
-
 interface NewLessonInput {
   slug: string;
   title: string;
@@ -201,8 +181,8 @@ interface NewLessonInput {
   affectedCategories: readonly CheatsheetCategoryId[];
 }
 
-function loadNewLessons(processedSlugs: Set<string>, catalog: TopicCatalogT): NewLessonInput[] {
-  return readSectionLessons(currentSection().id).flatMap(({ lesson }) => {
+function loadNewLessons(lessons: LoadedLesson[], processedSlugs: Set<string>, catalog: TopicCatalogT): NewLessonInput[] {
+  return lessons.flatMap(({ lesson }) => {
     if (processedSlugs.has(lesson.slug)) return [];
     const affected = computeAffectedCategories(lesson.topics, catalog);
     // Skip lessons that can't affect the cheat sheet at all. A lesson with
@@ -351,15 +331,17 @@ function summarisePatches(patches: readonly CheatsheetPatch[]): string {
 async function main(): Promise<void> {
   const section = resolveSectionArg(process.argv);
   console.log(`Section: ${section.id}`);
-  const catalog = readTopicCatalog(section.id);
+  const journal = new JournalRepository(defaultJournalDir());
+  const source = readCheatsheetBuild(journal, section.id);
+  const catalog = source.catalog;
   const force = process.argv.includes('--force');
   const dryRun = process.argv.includes('--dry-run');
 
-  const current = force ? { processed_lessons: [], categories: [] } : loadCheatsheet();
+  const current = force ? { processed_lessons: [], categories: [] } : source.sheet;
   if (force) console.log('--force: rebuilding cheatsheet from scratch');
 
   const processedSlugs = new Set(current.processed_lessons);
-  const newLessons = loadNewLessons(processedSlugs, catalog);
+  const newLessons = loadNewLessons(source.lessons, processedSlugs, catalog);
 
   if (newLessons.length === 0) {
     console.log('✓ Cheat sheet is up to date — no new lessons to process.');
@@ -418,7 +400,7 @@ async function main(): Promise<void> {
     throw new Error('Updated cheatsheet failed Zod validation.');
   }
 
-  writeFileSync(CHEATSHEET_PATH(), JSON.stringify(validation.data, null, 2) + '\n', 'utf8');
+  publishCheatsheet(journal, section.id, source.revision, validation.data);
   console.log(`✓ ${section.id}/_cheatsheet.json updated (${validation.data.categories.length} categories)`);
 }
 

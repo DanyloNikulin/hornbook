@@ -1,4 +1,7 @@
 <a class="il-skip-link" href="#main-content">{{ 'common.skipToContent' | t }}</a>
+@if (updates.desktop.available()) {
+  <div class="il-titlebar" aria-hidden="true"><span>hb</span> Hornbook</div>
+}
 
 <!-- Fixed photo backdrop -->
 <div class="il-backdrop" aria-hidden="true"></div>
@@ -6,11 +9,8 @@
 <!-- Page wrapper (above backdrop) -->
 <div class="il-page">
 
-  <!-- Navigation -->
-  <nav class="il-nav" [attr.aria-label]="'nav.main' | t">
-
     @if (updateBanner(); as update) {
-      <aside class="il-update-banner" role="status">
+      <aside class="il-update-toast" role="status">
         <span class="il-update-mark" aria-hidden="true">↑</span>
         <div class="il-update-copy">
           <strong>{{ 'update.out' | t: { version: updates.displayVersion(update.release!.version) } }}</strong>
@@ -18,18 +18,12 @@
             <span>{{ 'update.downloading' | t: { pct: update.progress ?? 0 } }}</span>
           } @else if (update.phase === 'ready') {
             <span>{{ 'update.ready' | t }}</span>
+          } @else if (update.phase === 'error') {
+            <span>{{ update.error }}</span>
           } @else if (!updates.desktop.available()) {
             <span>{{ 'update.cloneLead' | t }}</span>
           }
-          <details>
-            <summary>{{ 'update.notes' | t }}</summary>
-            @if (update.release!.notes) { <pre>{{ update.release!.notes }}</pre> }
-            @if (!updates.desktop.available()) {
-              <pre>git pull
-npm install
-npm run build</pre>
-            }
-          </details>
+          <a [routerLink]="inSection() ? section.link('application') : ['/settings']" fragment="update-settings-title">{{ 'update.notes' | t }}</a>
         </div>
         @if (update.phase === 'ready') {
           <button type="button" class="il-update-action" (click)="restartToUpdate()">{{ 'update.restart' | t }}</button>
@@ -39,6 +33,9 @@ npm run build</pre>
         <button type="button" class="il-update-dismiss" (click)="dismissUpdate()" [attr.aria-label]="'update.dismiss' | t">×</button>
       </aside>
     }
+
+  <!-- Navigation -->
+  <nav class="il-nav" [attr.aria-label]="'nav.main' | t">
 
     <!-- Main row: brand + desktop links + mobile controls -->
     <div class="il-nav-row">

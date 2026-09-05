@@ -28,11 +28,18 @@ export function planImport(
   existing: readonly LessonT[],
   incoming: readonly LessonT[],
   strategy: ImportConflictStrategy,
+  currentProgress?: ProgressT,
+  incomingProgress?: ProgressT,
 ): ImportPlan {
   const bySlug = new Map(existing.map((lesson) => [lesson.slug, lesson]));
   const ids = new Map<string, string>();
   const slugs = new Map<string, string>();
-  const used = new Set([...bySlug.keys(), ...incoming.map((lesson) => lesson.slug)]);
+  const historySlugs = (progress?: ProgressT): string[] => progress ? [
+    ...Object.keys(progress.quiz),
+    ...Object.keys(progress.sm2).flatMap((key) => /^\d{4}-\d{2}-\d{2}-([^:]+)/.exec(key)?.[1] ?? []),
+  ] : [];
+  const destinationHistory = new Set(historySlugs(currentProgress));
+  const used = new Set([...bySlug.keys(), ...incoming.map((lesson) => lesson.slug), ...destinationHistory, ...historySlugs(incomingProgress)]);
   const conflicts: LessonImportConflict[] = [];
   const removed: LessonT[] = [];
   const results: LessonImportResult[] = [];
@@ -44,8 +51,8 @@ export function planImport(
     const prior = bySlug.get(original.slug);
     let slug = original.slug;
     let action: LessonImportResult['action'] = 'imported';
-    if (prior) {
-      conflicts.push({ slug, incomingId: original.id, existingId: prior.id });
+    if (prior || destinationHistory.has(slug)) {
+      conflicts.push({ slug, incomingId: original.id, existingId: prior?.id ?? original.id });
       if (strategy === 'keep-both') {
         let suffix = 2;
         while (used.has(`${slug}-${suffix}`)) suffix++;
@@ -53,7 +60,7 @@ export function planImport(
         action = 'kept-both';
       } else {
         action = 'replaced';
-        removed.push(structuredClone(prior));
+        if (prior) removed.push(structuredClone(prior));
       }
     }
     used.add(slug);
@@ -91,10 +98,14 @@ export function mergeImportProgress(
   imported: ProgressT,
   plan: ImportPlan,
 ): ProgressT {
-  const sm2 = Object.fromEntries(
+  const uniqueEntries = <T>(entries: [string, T][]): Record<string, T> => {
+    if (new Set(entries.map(([key]) => key)).size !== entries.length) throw new Error('Import would combine distinct study histories; no changes were saved');
+    return Object.fromEntries(entries);
+  };
+  const sm2 = uniqueEntries(
     Object.entries(imported.sm2).map(([key, state]) => [plan.mapId(key), state]),
   );
-  const quiz = Object.fromEntries(
+  const quiz = uniqueEntries(
     Object.entries(imported.quiz).map(([slug, state]) => [plan.mapSlug(slug), state]),
   );
   const activity = { ...current.activity };

@@ -2,6 +2,23 @@ import type { Catalog } from './i18n.js';
 
 /** Default chrome copy. Keys are stable; values are what the UI used to hardcode. */
 export const EN = {
+  'setup.guide.kicker': 'Recommended · no subscription',
+  'setup.guide.title': 'From a lesson to a study note',
+  'setup.guide.sub': 'Set up the free local tools once. Downloads can take several minutes and several GB; your recordings stay on this computer.',
+  'setup.guide.hear': 'Hear the lesson',
+  'setup.guide.hearSub': 'Turn a recording into text.',
+  'setup.guide.write': 'Make your notes',
+  'setup.guide.writeSub': 'Organize the text into a conspect, cards and a quiz.',
+  'setup.guide.use': 'Check & activate',
+  'setup.guide.useSub': 'Verify the tools and save them as your defaults.',
+  'setup.guide.activate': 'Check & use local tools',
+  'setup.guide.checking': 'Checking your tools…',
+  'setup.guide.verified': 'Defaults saved. Recording and transcript tools are ready; review generated notes for accuracy.',
+  'setup.guide.installed': 'Tools installed. Activate them to use them in Add.',
+  'setup.guide.unavailable': 'A local model or the writing service is unavailable. Open tool details to install or start it, then retry.',
+  'setup.guide.overrides': 'Sections with their own model choices keep those choices. Change them in Section settings.',
+  'setup.guide.tools': 'Tool details & other models',
+  'setup.guide.advanced': 'Advanced: model providers & connections',
   'progress.problem': 'Study progress — {section}',
   'progress.recovery': 'The damaged file has been preserved in the journal. Start new progress only if you want to continue with an empty history.',
   'progress.startFresh': 'Start new progress',

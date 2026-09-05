@@ -2,26 +2,49 @@
 // the UI in a browser tab or in a chromeless app window. Pure where
 // possible so they can be tested without launching anything.
 
-import { cpSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
+import { commitFiles, recoverJournal, type CommitObserver, type FileChange } from '../scripts/lib/file-commit.ts';
+import { normalizeJournalConfig } from '../src/lib/journal-config.ts';
 
 /** Files inside a journal that belong to one machine or one run, never to a copy. */
-const SKIP_IN_SEED = new Set(['_derived', '_progress.json', '_uploads', 'secrets.json']);
+const SKIP_IN_SEED = new Set(['_derived', '_progress.json', '_uploads', 'secrets.json', '_transaction', '_write.lock', '_write.reclaim']);
 
 /**
  * Copy the demo journal into `dst` when `dst` has no journal yet. Returns
  * true when something was seeded. Per-machine files are left out.
  */
-export function seedJournal(src: string, dst: string): boolean {
-  if (existsSync(join(dst, 'journal.config.json'))) return false;
-  if (!existsSync(join(src, 'journal.config.json'))) return false;
-  mkdirSync(dst, { recursive: true });
-  cpSync(src, dst, {
-    recursive: true,
-    filter: (path) => !SKIP_IN_SEED.has(path.split(/[\\/]/).pop() ?? '') && !/_progress\.corrupt-/.test(path),
-  });
-  return true;
+export function seedJournal(src: string | readonly FileChange[], dst: string, observe?: CommitObserver): boolean {
+  recoverJournal(dst);
+  if (existsSync(join(dst, 'journal.config.json'))) {
+    normalizeJournalConfig(JSON.parse(readFileSync(join(dst, 'journal.config.json'), 'utf8')));
+    return false;
+  }
+  if (typeof src === 'string' && !existsSync(join(src, 'journal.config.json'))) return false;
+  return commitFiles(dst, () => {
+    if (existsSync(join(dst, 'journal.config.json'))) return { changes: [], result: false };
+    if (readdirSync(dst).some((name) => name !== '_write.lock')) throw new Error('This folder is not empty and has no journal.config.json. Restore its configuration from a backup or choose a new empty folder; existing files have been preserved.');
+    const changes: FileChange[] = [];
+    const collect = (parts: string[]) => {
+      if (typeof src !== 'string') return;
+      for (const entry of readdirSync(join(src, ...parts), { withFileTypes: true })) {
+        if (SKIP_IN_SEED.has(entry.name) || entry.name.startsWith('.') || /(?:corrupt-|recovery|_pending-)/.test(entry.name)) continue;
+        if (entry.isSymbolicLink()) throw new Error('Demo data contains a symbolic link');
+        const child = [...parts, entry.name];
+        if (entry.isDirectory()) collect(child);
+        else changes.push({ path: child.join('/'), data: readFileSync(join(src, ...child)) });
+      }
+    };
+    if (typeof src === 'string') collect([]);
+    else changes.push(...src);
+    const config = changes.find((change) => change.path === 'journal.config.json');
+    if (typeof config?.data !== 'string' && !(config?.data instanceof Uint8Array)) throw new Error('Demo configuration is missing');
+    normalizeJournalConfig(JSON.parse(typeof config.data === 'string' ? config.data : Buffer.from(config.data).toString('utf8')));
+    // Publish configuration last; recovery rolls back an interrupted first run.
+    changes.sort((a, b) => Number(a.path === 'journal.config.json') - Number(b.path === 'journal.config.json'));
+    return { changes, result: true };
+  }, observe);
 }
 
 export interface BrowserCommand {
