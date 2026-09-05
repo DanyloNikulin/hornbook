@@ -51,4 +51,7 @@ The `gate` status is the branch-protection check: it combines deterministic
 checks, browser/API smoke, Docker smoke and packaged desktop walks.
 
 Use short comments only for constraints that are not obvious from the code.
-English and Italian interface catalogs must remain in lockstep.
+All interface catalogs (`src/lib/i18n.*.ts`) must remain in lockstep with
+the English keys and preserve interpolation variables. Portuguese copy uses
+European Portuguese. Exercise plural counts and language switching when
+adding a locale.

@@ -6,6 +6,19 @@ All notable changes to Hornbook.
 
 - Nothing yet.
 
+## 0.9.1 — 2026-09-05
+
+- Added complete interface translations for Spanish, French, German, European
+  Portuguese, Dutch, Swedish and Ukrainian: nine interface languages in total.
+  Learning languages remain independent of the interface language.
+- Added locale-aware plural forms, including Ukrainian counts, and checks that
+  every translation preserves all message keys and placeholders.
+- Load additional translations on demand, restore the saved interface language
+  at startup, and keep the current language when a download fails so it can be
+  retried. Rapid language changes keep the most recent selection.
+- Keep the mobile navigation accessible with longer translated header text,
+  and wrap long setup button labels within the screen width.
+
 ## 0.9.0 — 2026-09-05
 
 Alpha preview: the complete local-first lesson workflow is packaged for

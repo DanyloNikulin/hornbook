@@ -2,6 +2,8 @@ import type { Catalog } from './i18n.js';
 
 /** Italian chrome copy. Same keys as `EN`; missing keys fall back to English. */
 export const IT = {
+  'settings.localeFailed':
+    'Impossibile caricare la lingua dell’interfaccia. Controlla la connessione e selezionala di nuovo.',
   'setup.guide.kicker': 'Consigliato · senza abbonamento',
   'setup.guide.title': 'Dalla lezione agli appunti',
   'setup.guide.sub': 'Configura una volta gli strumenti locali gratuiti. I download possono richiedere diversi minuti e GB; le registrazioni restano su questo computer.',

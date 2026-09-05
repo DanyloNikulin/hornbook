@@ -82,6 +82,10 @@ Run one with `npx tsx harness/ui.ts --scenario=keyboard` (or another scenario
 name). Keyboard checks exercise focused native controls and answer/Next focus.
 Appearance checks cover eight routes at desktop and phone widths in both themes.
 
+The `locales` scenario switches all seven additional interface languages at desktop
+and phone widths, verifies reload persistence, and checks that the picker and
+mobile navigation fit. Run it with `npm run harness:ui -- --scenario=locales`.
+
 ## Packaged desktop
 
 Playwright launches the actual unpacked Electron executable with an isolated

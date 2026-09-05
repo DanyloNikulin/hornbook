@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -11,8 +11,12 @@ import {
   type ProbeDeps,
 } from './probe.ts';
 
+let managedTools: string;
+beforeAll(() => { managedTools = mkdtempSync(join(tmpdir(), 'hornbook-probe-tools-')); });
+afterAll(() => { rmSync(managedTools, { recursive: true, force: true }); });
+
 function deps(fetchImpl: ProbeDeps['fetch'], exists: ProbeDeps['exists'] = () => false): ProbeDeps {
-  return { fetch: fetchImpl, exists, env: {} };
+  return { fetch: fetchImpl, exists, env: { HORNBOOK_TOOLS: managedTools } };
 }
 
 describe('parseProbeInput', () => {

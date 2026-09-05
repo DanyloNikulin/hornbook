@@ -177,8 +177,10 @@ body:has(.il-titlebar) .il-page { min-height: calc(100vh - 36px); }
   gap: 12px;
   color: var(--paper);
   text-decoration: none;
-  flex-shrink: 0;
+  min-width: 0;
+  flex-shrink: 1;
 }
+.il-brand > span:last-child { min-width: 0; }
 .il-nav.solid .il-brand { color: var(--ink); }
 
 .il-brand-mark {
@@ -205,6 +207,9 @@ body:has(.il-titlebar) .il-page { min-height: calc(100vh - 36px); }
   letter-spacing: 0.01em;
 }
 .il-brand-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -292,6 +297,7 @@ body:has(.il-titlebar) .il-page { min-height: calc(100vh - 36px); }
   align-items: center;
   gap: 8px;
   margin-left: auto;
+  flex-shrink: 0;
 }
 
 .il-hamburger {

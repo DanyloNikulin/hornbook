@@ -184,7 +184,8 @@ en, el, ar, he (see `src/lib/articles.ts`). Other targets compare the full typed
 Gender/number slash variants (`bello/a`, `гарний/а`) work for any target.
 
 Learner-side text is written by the model in `learner`. UI chrome goes through
-locale catalogs (`src/lib/i18n.en.ts`, `src/lib/i18n.it.ts`). English is the
+locale catalogs (`src/lib/i18n.*.ts`). The interface supports English, Italian,
+Spanish, French, German, Portuguese (Portugal), Dutch, Swedish, and Ukrainian. English is the
 default; the interface language is chosen on **Application** settings, not
 from the open pair. Pair settings (look, model overrides, topic review) stay
 on that pair's ⚙ page. Models are set as two steps — hear the recording, then
