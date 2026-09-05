@@ -20,6 +20,7 @@ import axe from 'axe-core';
 import type { Browser } from 'playwright-core';
 import type { JournalConfigT } from '../src/lib/journal-config.ts';
 import { settingsScenario } from './ui/settings.ts';
+import { localesScenario } from './ui/locales.ts';
 import { studyScenario } from './ui/study.ts';
 import { navigationScenario } from './ui/navigation.ts';
 import { progressScenario } from './ui/progress.ts';
@@ -44,6 +45,7 @@ import {
 const PORT = Number(process.env['HORNBOOK_HARNESS_PORT'] ?? 8796);
 const SCREENS = join(outDir, 'screens');
 const SCENARIOS = {
+  locales: localesScenario,
   repairs: repairsScenario,
   jobs: jobsScenario,
   keyboard: keyboardScenario,

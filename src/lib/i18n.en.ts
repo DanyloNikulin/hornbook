@@ -2,6 +2,8 @@ import type { Catalog } from './i18n.js';
 
 /** Default chrome copy. Keys are stable; values are what the UI used to hardcode. */
 export const EN = {
+  'settings.localeFailed':
+    'Could not load that interface language. Check your connection and select it again.',
   'setup.guide.kicker': 'Recommended · no subscription',
   'setup.guide.title': 'From a lesson to a study note',
   'setup.guide.sub': 'Set up the free local tools once. Downloads can take several minutes and several GB; your recordings stay on this computer.',

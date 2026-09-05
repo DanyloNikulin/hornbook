@@ -6,6 +6,7 @@ import { routes } from './app.routes';
 import { JournalService } from './journal.service';
 import { SectionRouteReuse } from './route-reuse';
 import { UpdateService } from './update.service';
+import { I18nService } from './i18n.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -17,6 +18,7 @@ export const appConfig: ApplicationConfig = {
     ),
     { provide: RouteReuseStrategy, useClass: SectionRouteReuse },
     provideAppInitializer(() => inject(ViewportScroller).setOffset([0, 96])),
+    provideAppInitializer(() => inject(I18nService).initialize()),
     // Brand and the section list are needed before the first paint.
     provideAppInitializer(() => inject(JournalService).load()),
     provideAppInitializer(() => inject(UpdateService).initialize()),

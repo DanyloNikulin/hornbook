@@ -38,6 +38,7 @@ export class AppSettingsComponent {
   protected readonly locales = SUPPORTED_LOCALES;
   protected readonly localeMeta = LOCALE_META;
   protected readonly locale = this.i18n.locale;
+  protected readonly localeLoadFailed = this.i18n.loadFailed;
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -66,7 +67,7 @@ export class AppSettingsComponent {
   }
 
   protected setLocale(id: LocaleId): void {
-    this.i18n.set(id);
+    void this.i18n.set(id);
   }
 
   protected async chooseJournal(): Promise<void> {

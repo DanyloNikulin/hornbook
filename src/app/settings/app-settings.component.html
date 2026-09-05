@@ -60,6 +60,10 @@
       }
     </div>
 
+    @if (localeLoadFailed()) {
+      <p role="alert">{{ 'settings.localeFailed' | t }}</p>
+    }
+
     @if (loading()) {
       <p class="il-stat-sub">{{ 'common.loading' | t }}</p>
     } @else {
