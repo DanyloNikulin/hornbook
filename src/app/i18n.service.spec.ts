@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as catalogs from '../lib/i18n';
 import { EN } from '../lib/i18n.en';
 import { I18nService, LOCALE_LOADER } from './i18n.service';
@@ -17,10 +17,23 @@ function deferredCatalog() {
 }
 
 describe('I18nService language loading', () => {
+  beforeAll(async () => {
+    // Other suites may have filled the shared cache before these loading tests.
+    await Promise.all(catalogs.SUPPORTED_LOCALES.map(catalogs.loadCatalog));
+  });
+
   beforeEach(() => {
     localStorage.removeItem('hornbook-locale');
     TestBed.configureTestingModule({
-      providers: [{ provide: LOCALE_LOADER, useValue: loadLocale }],
+      providers: [
+        {
+          provide: LOCALE_LOADER,
+          useValue: {
+            load: loadLocale,
+            isLoaded: (locale: catalogs.LocaleId) => locale === 'en' || locale === 'it',
+          },
+        },
+      ],
     });
     loadLocale.mockReset().mockResolvedValue(EN);
   });

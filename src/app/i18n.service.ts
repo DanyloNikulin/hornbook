@@ -13,9 +13,12 @@ import {
 } from '../lib/i18n';
 
 const LOCALE_KEY = 'hornbook-locale';
-export const LOCALE_LOADER = new InjectionToken<typeof loadCatalog>('Locale loader', {
+export const LOCALE_LOADER = new InjectionToken<{
+  load: typeof loadCatalog;
+  isLoaded: typeof isCatalogLoaded;
+}>('Locale loader', {
   providedIn: 'root',
-  factory: () => loadCatalog,
+  factory: () => ({ load: loadCatalog, isLoaded: isCatalogLoaded }),
 });
 
 /**
@@ -26,7 +29,7 @@ export const LOCALE_LOADER = new InjectionToken<typeof loadCatalog>('Locale load
 export class I18nService {
   private readonly initialLocale = this.savedLocale();
   private readonly pending = inject(PendingTasks);
-  private readonly loadLocale = inject(LOCALE_LOADER);
+  private readonly catalogs = inject(LOCALE_LOADER);
   private selection = 0;
   private readonly committed = signal(false);
   readonly locale = signal<LocaleId>(DEFAULT_LOCALE);
@@ -59,13 +62,14 @@ export class I18nService {
   set(locale: LocaleId): Promise<void> {
     const selection = ++this.selection;
     this.loadFailed.set(false);
-    if (isCatalogLoaded(locale)) {
+    if (this.catalogs.isLoaded(locale)) {
       this.locale.set(locale);
       this.committed.set(true);
       return Promise.resolve();
     }
     const done = this.pending.add();
-    return this.loadLocale(locale)
+    return this.catalogs
+      .load(locale)
       .then(
         () => {
           if (selection === this.selection) {
