@@ -1,9 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import { planRelease, prepareAutomaticRelease, trustedMainRun } from './auto-release.ts';
+import {
+  planRelease,
+  prepareAutomaticRelease,
+  previousTaggedVersion,
+  trustedMainRun,
+} from './auto-release.ts';
 
 const bump = {
   version: '0.9.2',
-  previousVersion: '0.9.1',
+  previousTaggedVersion: '0.9.1',
   revision: 'verified',
   mainRevision: 'verified',
   published: false,
@@ -17,7 +22,7 @@ describe('automatic release planning', () => {
   });
 
   it.each([
-    { ...bump, previousVersion: '0.9.2' },
+    { ...bump, existingTagRevision: 'earlier-main', published: true },
     { ...bump, mainRevision: 'newer-main' },
     { ...bump, existingTagRevision: 'verified', published: true },
   ])('does not tag or publish an unchanged, stale or published version: %j', async (input) => {
@@ -34,12 +39,33 @@ describe('automatic release planning', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('rejects a tag owned by another commit even if its release exists', async () => {
+  it('rejects an unpublished tag owned by another commit', async () => {
     const create = vi.fn(async () => {});
     await expect(
-      prepareAutomaticRelease({ ...bump, existingTagRevision: 'other', published: true }, create),
+      prepareAutomaticRelease({ ...bump, existingTagRevision: 'other' }, create),
     ).rejects.toThrow(/another commit/);
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it('picks up an untagged bump carried by a later main merge', async () => {
+    const create = vi.fn(async () => {});
+    expect(
+      await prepareAutomaticRelease(
+        { ...bump, revision: 'later-merge', mainRevision: 'later-merge' },
+        create,
+      ),
+    ).toBe(true);
+    expect(create).toHaveBeenCalledExactlyOnceWith('v0.9.2', 'later-merge');
+  });
+
+  it('finds the highest other stable tag numerically for pending-release recovery', () => {
+    expect(
+      previousTaggedVersion(
+        ['v0.9.2', 'v0.10.0', 'v0.11.0', 'nightly', 'v1.0.0-beta.1'],
+        'v0.11.0',
+      ),
+    ).toBe('0.10.0');
+    expect(previousTaggedVersion([], 'v0.9.2')).toBe('0.0.0');
   });
 
   it('stops if tag creation fails instead of proceeding with publication', async () => {

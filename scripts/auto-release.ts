@@ -5,7 +5,7 @@ import { isMain } from './lib/is-main.ts';
 
 interface ReleaseInput {
   version: string;
-  previousVersion: string;
+  previousTaggedVersion: string;
   revision: string;
   mainRevision: string;
   existingTagRevision?: string;
@@ -13,25 +13,43 @@ interface ReleaseInput {
 }
 
 export function planRelease(input: ReleaseInput): 'skip' | 'create' | 'resume' {
-  if (input.revision !== input.mainRevision || input.version === input.previousVersion)
-    return 'skip';
-  if (![input.version, input.previousVersion].every((version) => /^\d+\.\d+\.\d+$/.test(version))) {
+  if (input.revision !== input.mainRevision || input.published) return 'skip';
+  if (
+    ![input.version, input.previousTaggedVersion].every((version) =>
+      /^\d+\.\d+\.\d+$/.test(version),
+    )
+  ) {
     throw new Error('Automatic releases require stable semantic versions');
   }
-  const current = input.version.split('.').map(Number);
-  const previous = input.previousVersion.split('.').map(Number);
-  const difference = current
-    .map((part, index) => part - previous[index])
-    .find((part) => part !== 0);
-  if (!difference || difference < 0)
+  if (compareStableVersions(input.version, input.previousTaggedVersion) <= 0)
     throw new Error('An automatic release requires an increased version');
   if (input.existingTagRevision && input.existingTagRevision !== input.revision) {
     throw new Error(
       `Version v${input.version} already belongs to another commit; increase the version`,
     );
   }
-  if (input.published) return 'skip';
   return input.existingTagRevision ? 'resume' : 'create';
+}
+
+function compareStableVersions(a: string, b: string): number {
+  const right = b.split('.').map(Number);
+  return (
+    a
+      .split('.')
+      .map(Number)
+      .map((part, index) => part - right[index])
+      .find((part) => part !== 0) ?? 0
+  );
+}
+
+export function previousTaggedVersion(tags: readonly string[], currentTag: string): string {
+  return tags
+    .filter((tag) => tag !== currentTag && /^v\d+\.\d+\.\d+$/.test(tag))
+    .map((tag) => tag.slice(1))
+    .reduce(
+      (latest, version) => (compareStableVersions(version, latest) > 0 ? version : latest),
+      '0.0.0',
+    );
 }
 
 export function trustedMainRun(event: unknown, repository: string): boolean {
@@ -97,8 +115,10 @@ async function main(): Promise<void> {
     const mainResponse = await api('git/ref/heads/main');
     if (!mainResponse.ok) throw new Error(`Cannot read main: HTTP ${mainResponse.status}`);
     const mainRef = (await mainResponse.json()) as { object: { sha: string } };
-    const previousVersion = (JSON.parse(git('show', 'HEAD^:package.json')) as { version: string })
-      .version;
+    const previousVersion = previousTaggedVersion(
+      git('tag', '--merged', 'HEAD').split('\n'),
+      metadata.tag,
+    );
     let existingTagRevision: string | undefined;
     if (git('tag', '--list', metadata.tag))
       existingTagRevision = git('rev-parse', `${metadata.tag}^{commit}`);
@@ -110,7 +130,7 @@ async function main(): Promise<void> {
     ready = await prepareAutomaticRelease(
       {
         version: metadata.version,
-        previousVersion,
+        previousTaggedVersion: previousVersion,
         revision,
         mainRevision: mainRef.object.sha,
         existingTagRevision,

@@ -31,11 +31,14 @@ artifact, Docker image and release note.
 
 Publishing is automatic. When the `PR gate` workflow succeeds for a push to
 `main`, `Release` checks the verified commit against the current main head.
-If its package version increased from its first parent, it validates the
-lockfile and dated changelog, creates `v<version>`, and builds and publishes
+If its package version has not been published and is newer than the other
+version tags reachable from that commit, it validates the lockfile and dated
+changelog, creates `v<version>`, and builds and publishes
 the release in the same workflow. No manual tag or extra token is needed.
 
-Ordinary merges without a version bump and superseded main runs are skipped.
+Ordinary merges of an already published version and superseded main runs are skipped.
+The latest successful main run still picks up an untagged version if its bump
+was in an earlier commit, including when newer queued runs replace older ones.
 An existing tag is never moved: a conflicting tag requires a new version.
 Re-running the same verified release commit can resume an unpublished tag;
 an already published version is skipped. Release runs are serialized.
