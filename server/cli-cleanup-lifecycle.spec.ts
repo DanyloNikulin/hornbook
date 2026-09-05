@@ -36,7 +36,14 @@ it('retains a failed CLI parent until Jobs can retry termination of its real des
     expect(readdirSync(join(root, '_uploads'))).toHaveLength(1);
     await jobs.retryCleanup(job.id);
     await jobs.idle();
-    expect(() => process.kill(pid, 0)).toThrow();
+    // The OS may reap a terminated descendant after the parent exits.
+    await expect.poll(() => {
+      try { process.kill(pid, 0); return true; }
+      catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+        return false;
+      }
+    }, { timeout: 5000 }).toBe(false);
     expect(jobs.get(job.id)?.cleanup).toBeUndefined();
     expect(readdirSync(join(root, '_uploads'))).toHaveLength(0);
   } finally { await jobs.stop(); rmSync(root, { recursive: true, force: true }); }
