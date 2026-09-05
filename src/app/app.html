@@ -195,6 +195,12 @@ npm run build</pre>
       <aside class="il-server-error" role="alert">
         <strong>{{ 'progress.problem' | t: { section: notice.id } }}</strong>
         <p>{{ notice.message }}</p>
+        @if (notice.draftRecovery) {
+          <p>{{ 'progress.draftRecovery' | t }}</p>
+        }
+        @if (notice.draftDisabled) {
+          <p>{{ 'progress.draftDisabled' | t }}</p>
+        }
         @if (notice.recovery) {
           <p>{{ 'progress.recovery' | t }}</p>
           @if (!notice.dirty) {
@@ -207,13 +213,13 @@ npm run build</pre>
           <p>{{ 'progress.retained' | t }}</p>
           <button type="button" (click)="downloadProgress(notice.id)">{{ 'progress.download' | t }}</button>
         }
-        @if (notice.conflict) {
+        @if (notice.conflict || notice.draftRecovery) {
           <button type="button" (click)="progress.useSaved(notice.id)">{{ 'progress.useSaved' | t }}</button>
         }
       </aside>
     }
     @if (progress.dirty()) { <p role="status">{{ 'progress.pending' | t }}</p> }
-    <div [attr.inert]="inSection() && progress.state() !== 'ready' ? '' : null">
+    <div [attr.inert]="inSection() && !progress.canStudy() ? '' : null">
       <router-outlet />
     </div>
   </main>

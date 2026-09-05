@@ -7,10 +7,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename } from 'node:path';
 import {
   Cheatsheet,
-  EMPTY_PROGRESS,
   Lesson,
   LessonMeta,
-  Progress,
   type CheatsheetT,
   type LessonMetaT,
   type LessonT,
@@ -351,11 +349,16 @@ export class FolderStore {
         if (archive.backdrop) changes.push({ path: `${id}/${archive.backdrop.name}`, data: archive.backdrop.data });
       }
       if (archive.progress) {
-        const path = existing ? this.journal.progressPath(id) : undefined;
-        // Import planning must not quarantine or normalize the destination's progress as a side effect.
-        const current = path && existsSync(path) ? Progress.parse(JSON.parse(readFileSync(path, 'utf8'))) : structuredClone(EMPTY_PROGRESS);
-        const progress = Progress.parse(mergeImportProgress(current, archive.progress, plan));
-        changes.push({ path: `${id}/_progress.json`, data: JSON.stringify(progress, null, 2) + '\n' });
+        const imported = archive.progress;
+        try {
+          const progress = new JournalProgress(this.journal).planWrite(id, (current) =>
+            mergeImportProgress(current, imported, plan),
+          );
+          changes.push(...progress.changes);
+        } catch (error) {
+          if (error instanceof ProgressError) throw new HttpError(error.status, error.message);
+          throw error;
+        }
       }
       const savedSection = existing ?? section;
       return { changes, result: {

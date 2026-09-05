@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FolderStore } from './store.ts';
@@ -28,6 +36,29 @@ beforeEach(() => {
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 describe('import preservation', () => {
+  it.each([false, true])(
+    'requires explicit progress recovery before import (quarantined=%s)',
+    (quarantined) => {
+      const path = join(root, 'es-en/_progress.json');
+      writeFileSync(path, '{broken');
+      if (quarantined) store.progressView('es-en');
+      const before = snapshot(root);
+      const archive = buildSectionArchive({
+        section: { id: 'es-en', target: 'es', learner: 'en' },
+        lessons: [lesson('new')],
+        progress: EMPTY_PROGRESS,
+      });
+      const input = { base64: archive.toString('base64'), conflict: 'error' };
+      expect(() => store.importSection(input)).toThrow(expect.objectContaining({ status: 409 }));
+      expect(snapshot(root)).toEqual(before);
+      const recovery = store.progressView('es-en');
+      store.saveProgress('es-en', EMPTY_PROGRESS, recovery.revision, true);
+      store.importSection(input);
+      expect(store.lesson('es-en', 'new').slug).toBe('new');
+      expect(existsSync(join(root, 'es-en/_progress-recovery.json'))).toBe(false);
+      expect(readFileSync(join(root, 'es-en', recovery.recovery!), 'utf8')).toBe('{broken');
+    },
+  );
   function snapshot(dir: string, base = ''): Record<string, string> {
     return Object.assign(
       {},

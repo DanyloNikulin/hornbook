@@ -91,4 +91,70 @@ export async function progressScenario({
     const index = pageErrors.indexOf(expected);
     if (index >= 0) pageErrors.splice(index, 1);
   }
+
+  const brokenKey = `hornbook-progress:${saved.journalKey}:es-en:broken`;
+  await page.evaluate((key) => localStorage.setItem(key, '{broken'), brokenKey);
+  await page.reload();
+  const useSaved = page.getByRole('button', {
+    name: 'Discard unsaved changes and use saved progress',
+  });
+  await useSaved.waitFor();
+  await page.locator('main [inert]').waitFor({ state: 'attached' });
+  r.rec(
+    'an unreadable backup offers recovery while study is blocked',
+    (await page.locator('main [inert]').count()) === 1,
+  );
+  await useSaved.click();
+  await page.waitForFunction(() => !document.querySelector('main [inert]'));
+  r.rec(
+    'choosing saved progress removes the corrupt backup',
+    await page.evaluate((key) => localStorage.getItem(key) === null, brokenKey),
+  );
+
+  await page.addInitScript(`(() => {
+    const getItem = Storage.prototype.getItem;
+    const setItem = Storage.prototype.setItem;
+    const removeItem = Storage.prototype.removeItem;
+    const check = (key) => {
+      if (key.startsWith('hornbook-progress:'))
+        throw new DOMException('Storage unavailable (fixture)', 'SecurityError');
+    };
+    Storage.prototype.getItem = function (key) {
+      check(key);
+      return getItem.call(this, key);
+    };
+    Storage.prototype.setItem = function (key, value) {
+      check(key);
+      setItem.call(this, key, value);
+    };
+    Storage.prototype.removeItem = function (key) {
+      check(key);
+      removeItem.call(this, key);
+    };
+  })()`);
+  await page.reload();
+  await page.locator('main [inert]').waitFor({ state: 'attached' });
+  await useSaved.click();
+  await page.waitForFunction(() => !document.querySelector('main [inert]'));
+  r.rec(
+    'unavailable local storage can be bypassed explicitly',
+    await page
+      .getByText('Local backups are unavailable for this session.', { exact: false })
+      .isVisible(),
+  );
+  const input = page.getByPlaceholder(/your answer/i);
+  await input.fill('zzzz-wrong');
+  await input.press('Enter');
+  const save = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/es-en/progress') && response.request().method() === 'PUT',
+  );
+  await page.getByRole('button', { name: /^Next/ }).click();
+  r.rec('studying still saves to the journal with local storage unavailable', (await save).ok());
+  const studied = await (await context.request.get(`${base}/api/sections/es-en/progress`)).json();
+  r.rec(
+    'recovered study preserves history and records the reviewed card',
+    studied.activity['2026-09-04'] === 7 &&
+      JSON.stringify(studied.sm2) !== JSON.stringify(after.sm2),
+  );
 }

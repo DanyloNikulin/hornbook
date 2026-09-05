@@ -3,6 +3,20 @@ import { ProgressDrafts } from './progress-drafts.service';
 import { EMPTY_PROGRESS } from '../lib/schema';
 
 beforeEach(() => localStorage.clear());
+it("can discard the exact unreadable draft without deleting another tab's newer copy", () => {
+  const key = 'hornbook-progress:journal:es-en:old';
+  localStorage.setItem(key, '{broken');
+  const drafts = new ProgressDrafts();
+  expect(() => drafts.read('journal', 'es-en')).toThrow();
+  const newer = JSON.stringify({ revision: 'r1', snapshot: structuredClone(EMPTY_PROGRESS) });
+  localStorage.setItem(key, newer);
+  drafts.write('journal', 'es-en', null);
+  expect(localStorage.getItem(key)).toBe(newer);
+  localStorage.setItem(key, '{broken');
+  expect(() => drafts.read('journal', 'es-en')).toThrow();
+  drafts.write('journal', 'es-en', null);
+  expect(localStorage.getItem(key)).toBeNull();
+});
 it('preserves newer draft changes made by another tab while a recovered copy is being saved', () => {
   const first = new ProgressDrafts();
   const second = new ProgressDrafts();

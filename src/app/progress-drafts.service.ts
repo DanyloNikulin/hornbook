@@ -25,9 +25,8 @@ export class ProgressDrafts {
       const key = localStorage.key(i)!;
       if (!key.startsWith(prefix)) continue;
       const text = localStorage.getItem(key)!;
-      const draft = ProgressDraft.parse(JSON.parse(text));
       this.recovered.set(prefix, { key, text });
-      return draft;
+      return ProgressDraft.parse(JSON.parse(text));
     }
     return null;
   }

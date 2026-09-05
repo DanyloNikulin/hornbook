@@ -9,6 +9,10 @@ export const EN = {
   'progress.retained': 'Your unsaved changes are retained. Download a copy before choosing to discard them.',
   'progress.download': 'Download unsaved progress',
   'progress.useSaved': 'Discard unsaved changes and use saved progress',
+  'progress.draftRecovery':
+    'The local backup could not be read. Retry, or discard it and use the progress saved in your journal.',
+  'progress.draftDisabled':
+    'Local backups are unavailable for this session. Progress still saves to your journal; keep this window open until saving finishes.',
   'progress.pending': 'Study progress is waiting to be saved.',
   // ── nav / chrome ──────────────────────────────────────────────────────────
   'nav.main': 'Main',

@@ -54,6 +54,62 @@ afterEach(() => {
 });
 
 describe('progress ownership and acknowledgement', () => {
+  it('keeps valid server progress available when a local draft cannot be read', async () => {
+    get.mockResolvedValue({ ...view(), activity: { '2026-09-05': 4 } });
+    const store = setup();
+    const storage = TestBed.inject(ProgressDrafts);
+    vi.spyOn(storage, 'read').mockImplementation(() => {
+      throw new Error('Local storage denied');
+    });
+    const write = vi.spyOn(storage, 'write').mockImplementation(() => {
+      throw new Error('Local storage denied');
+    });
+    await store.load('es-en');
+    expect(store.state()).toBe('ready');
+    expect(store.loadError()).toBeNull();
+    expect(store.activity()).toEqual({ '2026-09-05': 4 });
+    expect(store.canStudy()).toBe(false);
+    expect(store.notices()[0].draftRecovery).toBe(true);
+    store.setActivity({ '2026-09-05': 99 });
+    expect(write).not.toHaveBeenCalled();
+    await store.retry('es-en');
+    expect(store.notices()[0].draftRecovery).toBe(true);
+    await store.useSaved('es-en');
+    expect(store.canStudy()).toBe(true);
+    expect(store.notices()[0].draftDisabled).toBe(true);
+    expect(store.activity()).toEqual({ '2026-09-05': 4 });
+    store.setActivity({ '2026-09-05': 5 });
+    await store.flush();
+    expect(put.mock.calls[0][1].activity).toEqual({ '2026-09-05': 5 });
+    expect(store.dirty()).toBe(false);
+    expect(write).toHaveBeenCalledTimes(1);
+  });
+  it('retains an unreadable draft when fetching the chosen saved copy fails', async () => {
+    const store = setup();
+    const storage = TestBed.inject(ProgressDrafts);
+    vi.spyOn(storage, 'read').mockImplementation(() => {
+      throw new Error('Corrupt draft');
+    });
+    const write = vi.spyOn(storage, 'write');
+    await store.load('es-en');
+    get.mockRejectedValue(new Error('offline'));
+    await store.useSaved('es-en');
+    expect(store.canStudy()).toBe(false);
+    expect(store.notices()[0].draftRecovery).toBe(true);
+    expect(write).not.toHaveBeenCalled();
+  });
+  it('does not fail a server load when deleting an already acknowledged draft fails', async () => {
+    drafts.set('es-en', { revision: 'r0', snapshot: structuredClone(EMPTY_PROGRESS) });
+    const store = setup();
+    vi.spyOn(TestBed.inject(ProgressDrafts), 'write').mockImplementation(() => {
+      throw new Error('denied');
+    });
+    await store.load('es-en');
+    expect(store.state()).toBe('ready');
+    expect(store.canStudy()).toBe(true);
+    expect(store.loadError()).toBeNull();
+    expect(store.notices()[0].draftRecovery).toBe(false);
+  });
   it('keeps an in-memory copy and warns on close if both draft storage and saving fail', async () => {
     const store = setup();
     await store.load('es-en');

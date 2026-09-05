@@ -14,7 +14,10 @@ function makeRunner(programs: Record<string, string>): JobRunner {
     journalDir: () => dir,
     env: () => ({ ...process.env, HORNBOOK_TEST_ENV: 'yes' }),
     // `--` keeps Node from reading the job flags (--section …) as its own options.
-    runner: (script) => ({ cmd: process.execPath, args: ['-e', programs[script] ?? 'process.exit(3)', '--'] }),
+    runner: (script) => ({
+      cmd: process.execPath,
+      args: ['-e', programs[script] ?? 'process.exit(3)', '--'],
+    }),
   });
 }
 
@@ -29,7 +32,7 @@ describe('JobRunner', () => {
   it('runs a process job, captures the log, parses the result and deletes the upload', async () => {
     const runner = makeRunner({
       'process.ts':
-        'const a=process.argv.slice(1);const s=(id,status)=>console.log("HORNBOOK_STAGE "+JSON.stringify({id,status}));console.log("args:"+a.join(" "));console.log("env:"+process.env.HORNBOOK_TEST_ENV);s("writing","running");s("writing","done");s("checking","running");s("checking","done");console.log("HORNBOOK_RESULT "+JSON.stringify({slug:"greetings",id:"2026-01-01-greetings"}))',
+        'const a=process.argv.slice(1);const s=(id,status)=>process.send({type:"stage",id,status});console.log("args:"+a.join(" "));console.log("env:"+process.env.HORNBOOK_TEST_ENV);s("writing","running");s("writing","done");s("checking","running");s("checking","done");process.send({type:"result",result:{slug:"greetings",id:"2026-01-01-greetings"}})',
     });
     const job = runner.enqueue('es-en', {
       kind: 'process',
@@ -79,7 +82,8 @@ describe('JobRunner', () => {
 
   it('marks the active process stage failed and leaves later stages waiting', async () => {
     const runner = makeRunner({
-      'process.ts': 'console.log("HORNBOOK_STAGE "+JSON.stringify({id:"hearing",status:"running"}));console.error("microphone broke");process.exit(1)',
+      'process.ts':
+        'process.send({type:"stage",id:"hearing",status:"running"});console.error("microphone broke");process.exit(1)',
     });
     const job = runner.enqueue('es-en', {
       kind: 'process',
@@ -110,19 +114,28 @@ describe('JobRunner', () => {
         cmd: process.execPath,
         args: [
           '-e',
-          'const a=process.argv.slice(1);console.log("args:"+a.join(" "));console.log("HORNBOOK_PROGRESS "+JSON.stringify({pct:10,bytes:1,total:10,stage:"downloading"}));console.log("HORNBOOK_PROGRESS "+JSON.stringify({pct:100,stage:"done"}));console.log("HORNBOOK_RESULT "+JSON.stringify({tool:"whisper",path:"C:/t/whisper/whisper-cli.exe",version:"b4938"}))',
+          'const a=process.argv.slice(1);console.log("args:"+a.join(" "));process.send({type:"progress",progress:{pct:10,bytes:1,total:10,stage:"downloading"}});process.send({type:"progress",progress:{pct:100,stage:"done"}});process.send({type:"result",result:{tool:"whisper",path:"C:/t/whisper/whisper-cli.exe",version:"b4938"}})',
           '--',
         ],
       }),
     });
-    const job = runner.enqueue('_setup', { kind: 'setup', tool: 'whisper', variant: 'cuda', sha256: 'ab'.repeat(32) });
+    const job = runner.enqueue('_setup', {
+      kind: 'setup',
+      tool: 'whisper',
+      variant: 'cuda',
+      sha256: 'ab'.repeat(32),
+    });
     expect(job.label).toBe('Set up whisper');
     await runner.idle();
     const done = runner.get(job.id)!;
     expect(done.status).toBe('done');
     expect(done.log).toContain('--tool whisper --variant cuda --expect-sha256 ' + 'ab'.repeat(32));
     expect(done.progress).toEqual({ pct: 100, stage: 'done' });
-    expect(done.result).toEqual({ tool: 'whisper', path: 'C:/t/whisper/whisper-cli.exe', version: 'b4938' });
+    expect(done.result).toEqual({
+      tool: 'whisper',
+      path: 'C:/t/whisper/whisper-cli.exe',
+      version: 'b4938',
+    });
     expect(finished).toEqual(['setup:done']);
     expect(runner.list('_setup').map((j) => j.id)).toEqual([job.id]);
   });
@@ -143,7 +156,8 @@ describe('JobRunner', () => {
 
   it('marks a failing job failed with the last error line and keeps going', async () => {
     const runner = makeRunner({
-      'build-cheatsheet.ts': 'console.error("✘ ANTHROPIC_API_KEY env var is required");process.exit(1)',
+      'build-cheatsheet.ts':
+        'console.error("✘ ANTHROPIC_API_KEY env var is required");process.exit(1)',
       'review-vocab.ts': 'console.log("ok")',
     });
     const a = runner.enqueue('es-en', { kind: 'cheatsheet', force: true });

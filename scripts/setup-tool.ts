@@ -11,8 +11,7 @@
 //   --expect-sha256 <hex>   override the published checksum (tests)
 //   --tools <dir>           override the tools folder (HORNBOOK_TOOLS)
 //
-// Progress: lines `HORNBOOK_PROGRESS {"pct":42,"bytes":…,"total":…,"stage":"downloading"}`.
-// Result:   `HORNBOOK_RESULT {"tool":"whisper","path":"…","version":"b4938"}`.
+// Progress and results use the worker IPC channel, or JSON lines in a standalone terminal.
 
 import { createHash } from 'node:crypto';
 import { createWriteStream, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -20,7 +19,8 @@ import { spawnProcess as spawn } from './lib/process.ts';
 import { basename, dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import type { DownloadPlan } from '../src/lib/api-types.ts';
+import type { DownloadPlan, JobProgress } from '../src/lib/api-types.ts';
+import { emitJobEvent } from './lib/job-protocol.ts';
 import {
   TOOL_IDS,
   executableName,
@@ -40,11 +40,11 @@ function arg(name: string): string | undefined {
 }
 
 let lastPct = -1;
-function progress(pct: number, extra: Record<string, unknown> = {}): void {
+function progress(pct: number, extra: Omit<JobProgress, 'pct'> = {}): void {
   const rounded = Math.max(0, Math.min(100, Math.floor(pct)));
   if (rounded === lastPct && !extra['stage']) return;
   lastPct = rounded;
-  console.log(`HORNBOOK_PROGRESS ${JSON.stringify({ pct: rounded, ...extra })}`);
+  emitJobEvent({ type: 'progress', progress: { pct: rounded, ...extra } });
 }
 
 export interface SetupArgs {
@@ -260,7 +260,7 @@ async function cli(): Promise<void> {
     fetch,
   });
   console.log(`✓ ${result.tool} → ${result.path}`);
-  console.log(`HORNBOOK_RESULT ${JSON.stringify(result)}`);
+  emitJobEvent({ type: 'result', result });
 }
 
 if (isMain(import.meta.url)) {

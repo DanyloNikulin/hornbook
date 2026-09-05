@@ -24,163 +24,55 @@
 // (wholesale topic taxonomy redesign). Use --auto for normal regex tweaks so
 // AI-curated topics survive.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { Lesson, type TopicT } from '../src/lib/schema.ts';
-import { detectTopics, formatTopics } from './lib/topics.ts';
-import { computeTopicsHash } from './lib/topics-hash.ts';
-import { configPath, journalDir, lessonFiles, listSections, readTopicCatalog, sectionDir, writeCanonicalLesson } from './lib/cli-journal.ts';
+import { existsSync } from 'node:fs';
+import { JournalRepository, defaultJournalDir } from './lib/journal.ts';
+import { backfillSection } from './lib/topic-backfill.ts';
+import { formatTopics } from './lib/topics.ts';
 
 const dryRun = process.argv.includes('--dry-run');
-const autoMode = process.argv.includes('--auto');
-const explicitOnlyEmpty = process.argv.includes('--only-empty');
-const rebuildMode = process.argv.includes('--rebuild');
-const sectionIdx = process.argv.indexOf('--section');
-const onlySection = sectionIdx >= 0 ? process.argv[sectionIdx + 1] : null;
-
-interface TopicsVersion {
-  hash: string;
-  updated_at: string;
-}
-
-function readStoredHash(versionPath: string): string | null {
-  if (!existsSync(versionPath)) return null;
-  try {
-    const data = JSON.parse(readFileSync(versionPath, 'utf8')) as Partial<TopicsVersion>;
-    return typeof data.hash === 'string' ? data.hash : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredHash(versionPath: string, hash: string): void {
-  const payload: TopicsVersion = { hash, updated_at: new Date().toISOString() };
-  writeFileSync(versionPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
-}
-
-if (!existsSync(configPath())) {
-  console.log(`No journal at ${journalDir()} — nothing to backfill.`);
+const auto = process.argv.includes('--auto');
+const onlyEmpty = process.argv.includes('--only-empty');
+const rebuild = process.argv.includes('--rebuild');
+const sectionIndex = process.argv.indexOf('--section');
+const onlySection = sectionIndex >= 0 ? process.argv[sectionIndex + 1] : null;
+const journal = new JournalRepository(defaultJournalDir());
+if (!existsSync(journal.configPath())) {
+  console.log('No journal at ' + journal.root + ' — nothing to backfill.');
   process.exit(0);
 }
-
-const sections = listSections().filter((s) => !onlySection || s.id === onlySection);
+const sections = journal
+  .listSections()
+  .filter((section) => !onlySection || section.id === onlySection);
 if (onlySection && sections.length === 0) {
-  console.error(`✘ Unknown section "${onlySection}".`);
+  console.error('Unknown section: ' + onlySection);
   process.exit(1);
 }
-if (rebuildMode) {
-  console.log('Mode: rebuild (destructive — overwriting all topics with regex output).');
-}
-
+if (rebuild) console.log('Mode: rebuild (destructive — overwriting all topics with regex output).');
 let totalUpdated = 0;
-
 for (const section of sections) {
-  const dir = sectionDir(section.id);
-  const versionPath = join(dir, '_topics-version.json');
-  const catalog = readTopicCatalog(section.id);
-  const currentHash = autoMode ? computeTopicsHash(catalog) : null;
-
-  // Auto mode: hash same → only-empty (safe). Hash changed → UNION mode
-  // (additive, preserves AI curation). The stored hash is updated at the end
-  // when it changed or none existed.
-  let onlyEmpty = explicitOnlyEmpty;
-  let hashChanged = false;
-  if (autoMode && currentHash) {
-    const storedHash = readStoredHash(versionPath);
-    if (storedHash === currentHash) {
-      onlyEmpty = true;
-    } else {
-      hashChanged = true;
-      console.log(
-        `[${section.id}] Topics hash changed: ${storedHash ?? '(first run)'} → ${currentHash}. Mode: union.`,
-      );
-    }
+  const result = backfillSection(journal, section.id, { dryRun, auto, onlyEmpty, rebuild });
+  console.log(
+    '[' + section.id + '] Scanned ' + result.total + ' lesson(s)' + (dryRun ? ' (dry-run)' : ''),
+  );
+  if (result.hashChanged)
+    console.log(
+      'Topics hash changed: ' + (result.previousHash ?? '(first run)') + ' → ' + result.hash,
+    );
+  for (const update of result.updates) {
+    console.log('+ ' + section.id + '/' + update.slug);
+    console.log('    was: ' + formatTopics(update.previous));
+    console.log('    now: ' + formatTopics(update.topics));
   }
-
-  const files = lessonFiles(section.id);
-  const modeNote = [
-    dryRun ? '(dry run)' : '',
-    onlyEmpty ? '(only-empty)' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-  console.log(`[${section.id}] Scanning ${files.length} lesson(s)... ${modeNote}`);
-
-  let updated = 0;
-  let unchanged = 0;
-  let skipped = 0;
-
-  for (const f of files) {
-    const path = join(dir, f);
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(readFileSync(path, 'utf8'));
-    } catch (e) {
-      console.error(`✘ ${section.id}/${f}: parse error: ${(e as Error).message}`);
-      skipped++;
-      continue;
-    }
-    const result = Lesson.safeParse(parsed);
-    if (!result.success) {
-      console.error(`✘ ${section.id}/${f}: invalid schema, skipping`);
-      skipped++;
-      continue;
-    }
-    const lesson = result.data;
-
-    if (onlyEmpty && lesson.topics.length > 0) {
-      skipped++;
-      continue;
-    }
-
-    // Quote text and vocab examples are skipped — single sentences match too
-    // easily on common words and noise the regex.
-    const text = [
-      lesson.title,
-      lesson.summary,
-      lesson.article_md,
-      ...lesson.grammar.map((g) => g.rule),
-      ...lesson.grammar.flatMap((g) => g.examples),
-      ...lesson.slides.map((s) => s.text_md),
-    ].join('\n');
-
-    const detected = detectTopics(text, catalog);
-    const existing = lesson.topics;
-
-    let nextTopics: TopicT[];
-    if (rebuildMode || existing.length === 0) {
-      nextTopics = detected;
-    } else {
-      const existingSet = new Set<TopicT>(existing);
-      nextTopics = [...existing, ...detected.filter((t) => !existingSet.has(t))];
-    }
-
-    const same = nextTopics.length === existing.length && nextTopics.every((t, i) => existing[i] === t);
-    if (same) {
-      unchanged++;
-      continue;
-    }
-
-    console.log(`+ ${section.id}/${lesson.slug}`);
-    console.log(`    was: ${formatTopics(existing)}`);
-    console.log(`    now: ${formatTopics(nextTopics)}`);
-    updated++;
-
-    if (!dryRun) {
-      lesson.topics = nextTopics;
-      writeCanonicalLesson(section.id, lesson);
-    }
-  }
-
-  console.log(`[${section.id}] ${dryRun ? '(dry-run) ' : ''}updated ${updated}, unchanged ${unchanged}, skipped ${skipped}.`);
-  totalUpdated += updated;
-
-  if (autoMode && currentHash && hashChanged && !dryRun) {
-    writeStoredHash(versionPath, currentHash);
-    console.log(`[${section.id}] wrote _topics-version.json: ${currentHash}`);
-  }
+  console.log(
+    'Updated ' +
+      result.updates.length +
+      ', unchanged ' +
+      result.unchanged +
+      ', skipped ' +
+      result.skipped +
+      '.',
+  );
+  totalUpdated += result.updates.length;
+  if (result.hashChanged && !dryRun) console.log('Saved topic version: ' + result.hash);
 }
-
-if (dryRun && totalUpdated > 0) {
-  console.log('\nRun without --dry-run to write changes.');
-}
+if (dryRun && totalUpdated > 0) console.log('Run without --dry-run to write changes.');

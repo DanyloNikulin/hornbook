@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
+import { z } from 'zod';
+import { SectionConfig } from '../src/lib/journal-config.ts';
 import { Progress, EMPTY_PROGRESS, DerivedCard, type ProgressT } from '../src/lib/schema.ts';
 import type { ProgressView } from '../src/lib/api-types.ts';
 import { DERIVED_FORMAT_VERSION, type JournalRepository } from '../scripts/lib/journal.ts';
-import type { FileChange } from '../scripts/lib/file-commit.ts';
+import { checkedJournalPath, type FileChange } from '../scripts/lib/file-commit.ts';
 import { buildDerived } from '../scripts/lib/derived.ts';
 
 export class ProgressError extends Error {
@@ -16,6 +18,9 @@ export class ProgressError extends Error {
 }
 const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex');
 const serialize = (value: ProgressT) => JSON.stringify(value, null, 2) + '\n';
+const RecoveryMarker = z.object({
+  backup: z.string().regex(/^_progress\.corrupt-[a-f0-9]{64}\.json$/),
+});
 
 export class JournalProgress {
   constructor(private readonly journal: JournalRepository) {}
@@ -26,11 +31,12 @@ export class JournalProgress {
     recovery?: string;
     changes: FileChange[];
   } {
-    const path = this.journal.progressPath(id);
-    const marker = this.journal.sectionPath(id, '_progress-recovery.json');
+    SectionConfig.shape.id.parse(id);
+    const path = checkedJournalPath(this.journal.root, `${id}/_progress.json`);
+    const marker = checkedJournalPath(this.journal.root, `${id}/_progress-recovery.json`);
     if (!existsSync(path)) {
       const recovery = existsSync(marker)
-        ? (JSON.parse(readFileSync(marker, 'utf8')).backup as string)
+        ? RecoveryMarker.parse(JSON.parse(readFileSync(marker, 'utf8'))).backup
         : undefined;
       return {
         value: structuredClone(EMPTY_PROGRESS),
@@ -45,7 +51,7 @@ export class JournalProgress {
       value = Progress.parse(JSON.parse(raw.toString('utf8')));
     } catch {
       const backup = `_progress.corrupt-${hash(raw)}.json`;
-      const target = this.journal.sectionPath(id, backup);
+      const target = checkedJournalPath(this.journal.root, `${id}/${backup}`);
       if (existsSync(target) && !readFileSync(target).equals(raw))
         throw new Error('Progress backup already exists with different contents');
       return {
@@ -117,25 +123,33 @@ export class JournalProgress {
   write(id: string, input: unknown, revision?: string, recover = false): ProgressView {
     const parsed = Progress.safeParse(input);
     if (!parsed.success) throw new ProgressError(400, 'Invalid progress');
-    return this.journal.commit(() => {
-      const current = this.current(id);
-      if (revision !== undefined && revision !== current.revision)
-        throw new ProgressError(409, 'Progress changed elsewhere. Your unsaved copy is retained.');
-      if (current.recovery && !recover)
-        throw new ProgressError(409, 'Progress needs explicit recovery before saving');
-      const text = serialize(parsed.data);
-      return {
-        changes: [
-          ...current.changes.filter(
-            (change) =>
-              !change.path.endsWith('/_progress.json') &&
-              !change.path.endsWith('/_progress-recovery.json'),
-          ),
-          { path: `${id}/_progress.json`, data: text },
-          { path: `${id}/_progress-recovery.json`, data: null },
-        ],
-        result: this.view(id, parsed.data, hash(text)),
-      };
-    });
+    return this.journal.commit(() => this.planWrite(id, () => parsed.data, { revision, recover }));
+  }
+
+  /** Compose under the journal writer lock; planning never quarantines or writes files. */
+  planWrite(
+    id: string,
+    update: (current: ProgressT) => ProgressT,
+    options: { revision?: string; recover?: boolean } = {},
+  ): { changes: FileChange[]; result: ProgressView } {
+    const current = this.current(id);
+    if (options.revision !== undefined && options.revision !== current.revision)
+      throw new ProgressError(409, 'Progress changed elsewhere. Your unsaved copy is retained.');
+    if (current.recovery && !options.recover)
+      throw new ProgressError(409, 'Progress needs explicit recovery before saving');
+    const value = Progress.parse(update(current.value));
+    const text = serialize(value);
+    return {
+      changes: [
+        ...current.changes.filter(
+          (change) =>
+            !change.path.endsWith('/_progress.json') &&
+            !change.path.endsWith('/_progress-recovery.json'),
+        ),
+        { path: `${id}/_progress.json`, data: text },
+        { path: `${id}/_progress-recovery.json`, data: null },
+      ],
+      result: this.view(id, value, hash(text)),
+    };
   }
 }

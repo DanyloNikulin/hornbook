@@ -33,7 +33,7 @@ it('keeps successful work successful and retries a failed upload cleanup', async
   const process = child(); const jobs = runner(process);
   const job = jobs.enqueue('es-en', input);
   fault.upload = true;
-  process.stdout?.emit('data', Buffer.from('HORNBOOK_RESULT {"slug":"saved"}\n'));
+  process.emit('message', { type: 'result', result: { slug: 'saved' } });
   process.emit('close', 0);
   await jobs.idle();
   expect(jobs.get(job.id)).toMatchObject({ status: 'done', result: { slug: 'saved' }, cleanup: { status: 'failed', error: expect.stringContaining('upload denied') } });

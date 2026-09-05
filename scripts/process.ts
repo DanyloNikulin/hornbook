@@ -10,6 +10,7 @@
 //        [--from video|audio|transcript|json] [--workdir dir]
 
 import { retainFailedCleanup } from './lib/cli-failure.ts';
+import { emitJobEvent } from './lib/job-protocol.ts';
 import { writeFileSync, mkdirSync, rmSync, existsSync, readFileSync, copyFileSync } from 'node:fs';
 import { join, basename, extname } from 'node:path';
 import { transcribe } from './transcribe.ts';
@@ -27,7 +28,7 @@ type ProcessStage = 'hearing' | 'slides' | 'writing' | 'checking';
 type ProcessStageStatus = 'running' | 'done' | 'skipped';
 
 function reportStage(id: ProcessStage, status: ProcessStageStatus): void {
-  console.log(`HORNBOOK_STAGE ${JSON.stringify({ id, status })}`);
+  emitJobEvent({ type: 'stage', id, status });
 }
 
 interface Args {
@@ -124,7 +125,7 @@ async function main(): Promise<void> {
     const out = writeLesson(section.id, lesson);
     reportStage('checking', 'done');
     console.log(`✓ ${out.jsonPath}`);
-    console.log(`HORNBOOK_RESULT ${JSON.stringify({ slug: lesson.slug, id: lesson.id })}`);
+    emitJobEvent({ type: 'result', result: { slug: lesson.slug, id: lesson.id } });
     return;
   }
 
@@ -180,7 +181,7 @@ async function main(): Promise<void> {
   console.log(`✓ ${out.jsonPath}`);
   console.log(`✓ ${out.mdPath}`);
   console.log(`Workdir kept at ${workdir}`);
-  console.log(`HORNBOOK_RESULT ${JSON.stringify({ slug: lesson.slug, id: lesson.id })}`);
+  emitJobEvent({ type: 'result', result: { slug: lesson.slug, id: lesson.id } });
   console.log('\nDone.');
 }
 

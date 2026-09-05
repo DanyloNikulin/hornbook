@@ -12,6 +12,8 @@ import { ApiService, ApiError } from './api.service';
 import { ProgressDrafts } from './progress-drafts.service';
 
 type LoadState = 'unloaded' | 'loading' | 'ready' | 'failed';
+type DraftState =
+  { status: 'ready' } | { status: 'unreadable' | 'disabled' | 'failed'; error: string };
 interface Entry {
   id: string;
   state: LoadState;
@@ -25,7 +27,7 @@ interface Entry {
   timer?: ReturnType<typeof setTimeout>;
   loadError: string | null;
   saveError: string | null;
-  draftError: string | null;
+  draft: DraftState;
   recovery?: string;
   conflict: boolean;
 }
@@ -35,6 +37,8 @@ export interface ProgressNotice {
   recovery: boolean;
   conflict: boolean;
   dirty: boolean;
+  draftRecovery: boolean;
+  draftDisabled: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -44,6 +48,7 @@ export class ProgressStore {
   private readonly entries = new Map<string, Entry>();
   readonly sectionId = signal<string | null>(null);
   readonly state = signal<LoadState>('unloaded');
+  readonly canStudy = signal(false);
   readonly sm2 = signal<Record<string, Sm2StateT>>({});
   readonly daily = signal<DailyStateT | null>(null);
   readonly quiz = signal<Record<string, QuizResultT>>({});
@@ -59,7 +64,7 @@ export class ProgressStore {
         [...this.entries.values()].some(
           (entry) =>
             entry.version !== entry.acknowledged &&
-            (!globalThis.window?.hornbookDesktop || entry.draftError),
+            (!globalThis.window?.hornbookDesktop || entry.draft.status !== 'ready'),
         )
       ) {
         event.preventDefault();
@@ -84,21 +89,32 @@ export class ProgressStore {
   private publish(): void {
     const entry = this.entries.get(this.sectionId() ?? '');
     this.state.set(entry?.state ?? 'unloaded');
+    this.canStudy.set(entry?.state === 'ready' && entry.draft.status !== 'unreadable');
     this.apply(entry?.value ?? structuredClone(EMPTY_PROGRESS));
     this.loadError.set(entry?.loadError ?? null);
-    this.saveError.set(entry?.saveError ?? entry?.draftError ?? null);
+    this.saveError.set(
+      entry?.saveError ?? (entry && entry.draft.status !== 'ready' ? entry.draft.error : null),
+    );
     this.dirty.set(
       [...this.entries.values()].some((value) => value.version !== value.acknowledged),
     );
     this.notices.set(
       [...this.entries.values()]
-        .filter((value) => value.loadError || value.saveError || value.draftError || value.recovery)
+        .filter(
+          (value) =>
+            value.loadError || value.saveError || value.draft.status !== 'ready' || value.recovery,
+        )
         .map((value) => ({
           id: value.id,
-          message: value.loadError ?? value.saveError ?? value.draftError ?? value.recovery!,
+          message:
+            value.loadError ??
+            value.saveError ??
+            (value.draft.status !== 'ready' ? value.draft.error : value.recovery!),
           recovery: !!value.recovery,
           conflict: value.conflict,
           dirty: value.version !== value.acknowledged,
+          draftRecovery: value.draft.status === 'unreadable',
+          draftDisabled: value.draft.status === 'disabled',
         })),
     );
   }
@@ -125,7 +141,7 @@ export class ProgressStore {
         acknowledged: 0,
         loadError: null,
         saveError: null,
-        draftError: null,
+        draft: { status: 'ready' },
         conflict: false,
       };
       this.entries.set(id, entry);
@@ -147,21 +163,7 @@ export class ProgressStore {
         selected.journal = view.journalKey;
         selected.recovery = view.recovery;
         selected.state = view.recovery ? 'failed' : 'ready';
-        const draft = this.drafts.read(view.journalKey, id);
-        if (draft) {
-          const same = JSON.stringify(draft.snapshot) === JSON.stringify(selected.value);
-          if (same && !view.recovery) this.drafts.write(view.journalKey, id, null);
-          else {
-            selected.value = draft.snapshot;
-            selected.revision = draft.revision;
-            selected.version++;
-            selected.conflict = draft.revision !== view.revision || !!view.recovery;
-            selected.saveError = selected.conflict
-              ? 'Saved progress changed while this copy was pending.'
-              : null;
-            if (!selected.conflict) void this.drain(selected);
-          }
-        }
+        this.restoreDraft(selected, view);
       })
       .catch((error: unknown) => {
         selected.state = 'failed';
@@ -174,9 +176,32 @@ export class ProgressStore {
     return selected.loading;
   }
 
+  private restoreDraft(selected: Entry, view: ProgressView): void {
+    selected.draft = { status: 'ready' };
+    try {
+      const draft = this.drafts.read(view.journalKey, selected.id);
+      if (draft) {
+        const same = JSON.stringify(draft.snapshot) === JSON.stringify(selected.value);
+        if (same && !view.recovery) this.clearDraft(selected);
+        else {
+          selected.value = draft.snapshot;
+          selected.revision = draft.revision;
+          selected.version++;
+          selected.conflict = draft.revision !== view.revision || !!view.recovery;
+          selected.saveError = selected.conflict
+            ? 'Saved progress changed while this copy was pending.'
+            : null;
+          if (!selected.conflict) void this.drain(selected);
+        }
+      }
+    } catch (error) {
+      selected.draft = { status: 'unreadable', error: (error as Error).message };
+    }
+  }
+
   private change(patch: Partial<ProgressT>): void {
     const entry = this.entries.get(this.sectionId() ?? '');
-    if (!entry || entry.state !== 'ready') return;
+    if (!entry || entry.state !== 'ready' || entry.draft.status === 'unreadable') return;
     entry.value = structuredClone({ ...entry.value, ...patch });
     entry.version++;
     this.persist(entry);
@@ -188,14 +213,24 @@ export class ProgressStore {
     }, 400);
   }
   private persist(entry: Entry): void {
+    if (entry.draft.status === 'disabled' || entry.draft.status === 'unreadable') return;
     try {
       this.drafts.write(entry.journal, entry.id, {
         revision: entry.revision,
         snapshot: entry.value,
       });
-      entry.draftError = null;
+      entry.draft = { status: 'ready' };
     } catch (error) {
-      entry.draftError = `Local backup failed: ${(error as Error).message}`;
+      entry.draft = { status: 'failed', error: (error as Error).message };
+    }
+  }
+  private clearDraft(entry: Entry): void {
+    if (entry.draft.status === 'disabled') return;
+    try {
+      this.drafts.write(entry.journal, entry.id, null);
+      entry.draft = { status: 'ready' };
+    } catch (error) {
+      entry.draft = { status: 'failed', error: (error as Error).message };
     }
   }
   setSm2(sm2: Record<string, Sm2StateT>): void {
@@ -225,7 +260,8 @@ export class ProgressStore {
       entry.timer = undefined;
     }
     if (entry.pending) return entry.pending;
-    if (entry.state !== 'ready' || entry.conflict) return Promise.resolve(false);
+    if (entry.state !== 'ready' || entry.conflict || entry.draft.status === 'unreadable')
+      return Promise.resolve(false);
     const run = async () => {
       while (entry.version !== entry.acknowledged) {
         const version = entry.version;
@@ -240,14 +276,7 @@ export class ProgressStore {
           entry.acknowledged = version;
           entry.saveError = null;
           if (entry.version !== version) this.persist(entry);
-          else {
-            try {
-              this.drafts.write(entry.journal, entry.id, null);
-              entry.draftError = null;
-            } catch (error) {
-              entry.draftError = (error as Error).message;
-            }
-          }
+          else this.clearDraft(entry);
         } catch (error) {
           entry.saveError = (error as Error).message;
           entry.conflict = error instanceof ApiError && error.status === 409;
@@ -279,6 +308,12 @@ export class ProgressStore {
   }
   async retry(id: string): Promise<void> {
     const entry = this.entries.get(id);
+    if (entry?.state === 'loading') return;
+    if (entry && entry.draft.status !== 'ready' && entry.version === entry.acknowledged) {
+      entry.state = 'unloaded';
+      await this.load(id, false);
+      return;
+    }
     if (entry?.state === 'ready') {
       entry.conflict = false;
       await this.drain(entry);
@@ -291,7 +326,8 @@ export class ProgressStore {
     if (entry.pending) await entry.pending;
     if (entry.version !== entry.acknowledged) {
       entry.conflict = true;
-      entry.saveError = 'Imported progress changed the saved history. Your unsaved copy is retained.';
+      entry.saveError =
+        'Imported progress changed the saved history. Your unsaved copy is retained.';
       this.publish();
       return;
     }
@@ -332,7 +368,6 @@ export class ProgressStore {
       const view = await this.api.get<ProgressView>(this.path(id));
       const value = Progress.parse(view);
       if (!view.revision || !view.journalKey) throw new Error('Progress response has no revision');
-      this.drafts.write(view.journalKey, id, null);
       entry.value = value;
       entry.revision = view.revision;
       entry.journal = view.journalKey;
@@ -340,7 +375,13 @@ export class ProgressStore {
       entry.conflict = false;
       entry.saveError = null;
       entry.loadError = null;
-      entry.draftError = null;
+      // A storage failure must not prevent the user's explicit choice of server progress.
+      try {
+        this.drafts.write(view.journalKey, id, null);
+        entry.draft = { status: 'ready' };
+      } catch (error) {
+        entry.draft = { status: 'disabled', error: (error as Error).message };
+      }
       entry.recovery = view.recovery;
       entry.state = view.recovery ? 'failed' : 'ready';
     } catch (error) {

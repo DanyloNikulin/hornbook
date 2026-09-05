@@ -10,10 +10,10 @@ import { extname, join } from 'node:path';
 import { ProcessSupervisor, type terminateProcessTree } from '../scripts/lib/process-supervisor.ts';
 import { jobTimeout } from './job-timeout.ts';
 import { JobEventStream } from './job-events.ts';
+import { JobEvent, type JobEventT } from '../scripts/lib/job-protocol.ts';
 import { randomBytes } from 'node:crypto';
 import type {
   JobKind,
-  JobProgress,
   JobStageStatus,
   JobStageView,
   JobView,
@@ -25,9 +25,6 @@ import type {
 
 const MAX_LOG_CHARS = 200_000;
 const MAX_JOBS_KEPT = 50;
-const RESULT_MARKER = 'HORNBOOK_RESULT ';
-const PROGRESS_MARKER = 'HORNBOOK_PROGRESS ';
-const STAGE_MARKER = 'HORNBOOK_STAGE ';
 const PROCESS_STAGES: readonly ProcessStageId[] = ['hearing', 'slides', 'writing', 'checking'];
 
 export interface JobRunnerOptions {
@@ -53,7 +50,6 @@ interface Job extends JobView {
   args: string[];
   releaseUpload?: () => void;
   cleanupFlight?: Promise<JobView>;
-
 }
 
 export class JobRunner {
@@ -61,7 +57,8 @@ export class JobRunner {
   private readonly order: string[] = [];
   private readonly queue: string[] = [];
   private running: { job: Job; process: ProcessSupervisor } | null = null;
-  private admission: { phase: 'open' | 'shutdown' } | { phase: 'cleanup-blocked'; error: string } = { phase: 'open' };
+  private admission: { phase: 'open' | 'shutdown' } | { phase: 'cleanup-blocked'; error: string } =
+    { phase: 'open' };
   private readonly idleWaiters = new Set<() => void>();
   private readonly spawnFn: typeof nodeSpawn;
   private readonly runner: (script: string) => { cmd: string; args: string[] };
@@ -70,7 +67,10 @@ export class JobRunner {
     this.spawnFn = opts.spawn ?? nodeSpawn;
     this.runner =
       opts.runner ??
-      ((script) => ({ cmd: process.execPath, args: ['--import', 'tsx', join(opts.repoRoot, 'scripts', script)] }));
+      ((script) => ({
+        cmd: process.execPath,
+        args: ['--import', 'tsx', join(opts.repoRoot, 'scripts', script)],
+      }));
   }
 
   /** Validate the request, stage any upload, and queue the job. */
@@ -119,7 +119,12 @@ export class JobRunner {
     }
 
     let command: { cmd: string; args: string[] };
-    try { command = this.runner(script); } catch (error) { cleanup?.(); throw error; }
+    try {
+      command = this.runner(script);
+    } catch (error) {
+      cleanup?.();
+      throw error;
+    }
     const { cmd, args } = command;
     const createdAt = new Date().toISOString();
     const job: Job = {
@@ -175,19 +180,28 @@ export class JobRunner {
 
   idle(): Promise<void> {
     if (this.activeCount() === 0) return Promise.resolve();
-    return new Promise((resolve) => { this.idleWaiters.add(resolve); });
+    return new Promise((resolve) => {
+      this.idleWaiters.add(resolve);
+    });
   }
 
   private view(job: Job): JobView {
     const { cmd: _cmd, args: _args, releaseUpload: _upload, cleanupFlight: _flight, ...view } = job;
-    return { ...view, log: visibleLog(view.log) };
+    return view;
   }
 
   private trim(): void {
     while (this.order.length > MAX_JOBS_KEPT) {
       const id = this.order[0];
       const job = this.jobs.get(id);
-      if (!job || job.status === 'queued' || job.status === 'running' || job.cleanup || this.running?.job === job) break;
+      if (
+        !job ||
+        job.status === 'queued' ||
+        job.status === 'running' ||
+        job.cleanup ||
+        this.running?.job === job
+      )
+        break;
       this.order.shift();
       this.jobs.delete(id);
     }
@@ -213,6 +227,7 @@ export class JobRunner {
         env: this.opts.env(),
         detached: process.platform !== 'win32',
         windowsHide: true,
+        stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
       });
     } catch (err) {
       this.finish(job, 1, (err as Error).message);
@@ -220,36 +235,28 @@ export class JobRunner {
     }
     const timeoutMs = jobTimeout(job.kind, this.opts.timeoutMs);
     const supervised = new ProcessSupervisor(child, {
-      ownsProcessGroup: process.platform !== 'win32', timeoutMs, terminate: this.opts.terminate,
+      ownsProcessGroup: process.platform !== 'win32',
+      timeoutMs,
+      terminate: this.opts.terminate,
       timeoutMessage: `Job reached its configured time limit (${timeoutMs / 60000} minutes). Set HORNBOOK_JOB_TIMEOUT_MINUTES to allow longer jobs.`,
       onTerminationError: (error) => this.blockForCleanup(job, error.message),
     });
     this.running = { job, process: supervised };
+    child.on('message', (message: unknown) => {
+      const event = JobEvent.safeParse(message);
+      if (event.success) this.applyEvent(job, event.data);
+    });
     const line = (text: string) => {
-      const marker = /HORNBOOK_(?:STAGE|PROGRESS|RESULT|CLEANUP) /.exec(text);
-      const event = marker ? text.slice(marker.index) : text;
-      if (event.startsWith('HORNBOOK_CLEANUP ')) {
-        try {
-          const raw: unknown = JSON.parse(event.slice('HORNBOOK_CLEANUP '.length));
-          if (raw && typeof raw === 'object' && 'error' in raw && typeof raw.error === 'string') {
-            this.blockForCleanup(job, raw.error);
-          }
-        } catch { /* Malformed child events remain harmless log text. */ }
-      }
-      if (event.startsWith(STAGE_MARKER)) this.applyStageLine(job, event);
-      else {
-        job.log += text + '\n';
-        if (job.log.length > MAX_LOG_CHARS) job.log = '…' + job.log.slice(-MAX_LOG_CHARS);
-      }
-      if (event.startsWith(PROGRESS_MARKER)) job.progress = parseProgress(event) ?? job.progress;
-      if (event.startsWith(RESULT_MARKER)) job.result = parseResult(event) ?? job.result;
+      job.log += text + '\n';
+      if (job.log.length > MAX_LOG_CHARS) job.log = '…' + job.log.slice(-MAX_LOG_CHARS);
     };
     const stdout = new JobEventStream(line);
     const stderr = new JobEventStream(line);
     child.stdout?.on('data', (chunk: Buffer) => stdout.write(chunk));
     child.stderr?.on('data', (chunk: Buffer) => stderr.write(chunk));
     void supervised.result.then(({ code, error }) => {
-      stdout.end(); stderr.end();
+      stdout.end();
+      stderr.end();
       this.finish(job, code, error);
     });
     void supervised.completion.then(() => {
@@ -270,7 +277,6 @@ export class JobRunner {
         if (stage.status === 'running') finishStage(stage, 'done', job.finishedAt);
         else if (stage.status === 'waiting') finishStage(stage, 'skipped', job.finishedAt);
       }
-
     } else {
       job.status = 'failed';
       const active = job.stages?.find((stage) => stage.status === 'running');
@@ -306,8 +312,12 @@ export class JobRunner {
         this.cleanUpload(job);
         if (job.cleanup?.status === 'failed') throw new Error(job.cleanup.error);
         return this.view(job);
-      } finally { this.changed(); }
-    })().finally(() => { job.cleanupFlight = undefined; });
+      } finally {
+        this.changed();
+      }
+    })().finally(() => {
+      job.cleanupFlight = undefined;
+    });
     return job.cleanupFlight;
   }
 
@@ -332,19 +342,32 @@ export class JobRunner {
     }
   }
 
-  private applyStageLine(job: Job, line: string): void {
-    const event = parseStageEvent(line);
-    if (!event) return;
+  private applyEvent(job: Job, event: JobEventT): void {
+    switch (event.type) {
+      case 'cleanup':
+        this.blockForCleanup(job, event.error);
+        return;
+      case 'progress':
+        job.progress = event.progress;
+        return;
+      case 'result':
+        job.result = event.result;
+        return;
+      case 'stage':
+        break;
+    }
     const stage = job.stages?.find((candidate) => candidate.id === event.id);
     if (!stage) return;
     const at = new Date().toISOString();
     if (event.status === 'running') {
-      stage.status = 'running'; stage.startedAt ??= at; delete stage.finishedAt;
+      stage.status = 'running';
+      stage.startedAt ??= at;
+      delete stage.finishedAt;
     } else {
-      stage.startedAt ??= at; finishStage(stage, event.status, at);
+      stage.startedAt ??= at;
+      finishStage(stage, event.status, at);
     }
   }
-
 }
 
 function initialProcessStages(input: StartProcessJob, createdAt: string): JobStageView[] {
@@ -354,7 +377,9 @@ function initialProcessStages(input: StartProcessJob, createdAt: string): JobSta
       (id === 'hearing' && (from === 'transcript' || from === 'json')) ||
       (id === 'slides' && from !== 'video') ||
       (id === 'writing' && from === 'json');
-    return skipped ? { id, status: 'skipped', startedAt: createdAt, finishedAt: createdAt } : { id, status: 'waiting' };
+    return skipped
+      ? { id, status: 'skipped', startedAt: createdAt, finishedAt: createdAt }
+      : { id, status: 'waiting' };
   });
 }
 
@@ -366,66 +391,17 @@ function inferProcessSource(filename: string): NonNullable<StartProcessJob['from
   return 'video';
 }
 
-function finishStage(stage: JobStageView, status: Exclude<JobStageStatus, 'waiting' | 'running'>, at: string): void {
+function finishStage(
+  stage: JobStageView,
+  status: Exclude<JobStageStatus, 'waiting' | 'running'>,
+  at: string,
+): void {
   stage.status = status;
   stage.finishedAt = at;
 }
 
-function parseStageEvent(line: string): { id: ProcessStageId; status: Exclude<JobStageStatus, 'waiting' | 'failed'> } | undefined {
-  if (!line.startsWith(STAGE_MARKER)) return undefined;
-  try {
-    const raw = JSON.parse(line.slice(STAGE_MARKER.length)) as { id?: unknown; status?: unknown };
-    if (
-      typeof raw.id === 'string' &&
-      PROCESS_STAGES.includes(raw.id as ProcessStageId) &&
-      (raw.status === 'running' || raw.status === 'done' || raw.status === 'skipped')
-    ) {
-      return { id: raw.id as ProcessStageId, status: raw.status };
-    }
-  } catch {
-    // Malformed status lines stay harmless log text.
-  }
-  return undefined;
-}
-
-function visibleLog(log: string): string {
-  return log
-    .split(/\r?\n/)
-    .filter((line) => !line.startsWith(STAGE_MARKER))
-    .join('\n');
-}
-
 function shellish(a: string): string {
   return /[\s"']/.test(a) ? JSON.stringify(a) : a;
-}
-
-function parseResult(log: string): JobView['result'] {
-  const idx = log.lastIndexOf(RESULT_MARKER);
-  if (idx === -1) return undefined;
-  const line = log.slice(idx + RESULT_MARKER.length).split('\n')[0];
-  try {
-    return JSON.parse(line) as JobView['result'];
-  } catch {
-    return undefined;
-  }
-}
-
-function parseProgress(log: string): JobProgress | undefined {
-  const idx = log.lastIndexOf(PROGRESS_MARKER);
-  if (idx === -1) return undefined;
-  const line = log.slice(idx + PROGRESS_MARKER.length).split('\n')[0];
-  try {
-    const raw = JSON.parse(line) as Partial<JobProgress>;
-    if (typeof raw.pct !== 'number') return undefined;
-    return {
-      pct: Math.max(0, Math.min(100, raw.pct)),
-      ...(typeof raw.bytes === 'number' ? { bytes: raw.bytes } : {}),
-      ...(typeof raw.total === 'number' ? { total: raw.total } : {}),
-      ...(typeof raw.stage === 'string' ? { stage: raw.stage } : {}),
-    };
-  } catch {
-    return undefined;
-  }
 }
 
 function setupLabel(input: StartSetupJob): string {

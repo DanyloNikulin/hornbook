@@ -9,6 +9,10 @@ export const IT = {
   'progress.retained': 'Le modifiche non salvate sono conservate. Scarica una copia prima di scegliere di eliminarle.',
   'progress.download': 'Scarica i progressi non salvati',
   'progress.useSaved': 'Elimina le modifiche non salvate e usa i progressi salvati',
+  'progress.draftRecovery':
+    'Impossibile leggere il backup locale. Riprova, oppure eliminalo e usa i progressi salvati nel diario.',
+  'progress.draftDisabled':
+    'I backup locali non sono disponibili in questa sessione. I progressi vengono comunque salvati nel diario; tieni aperta questa finestra fino al termine del salvataggio.',
   'progress.pending': 'I progressi di studio sono in attesa di salvataggio.',
   'nav.main': 'Principale',
   'nav.homeAria': '{brand} — inizio',
