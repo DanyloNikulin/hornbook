@@ -128,10 +128,12 @@ export async function settingsScenario({
   await page.getByText('Advanced: model providers & connections', { exact: true }).click();
   const hear = page.locator('.il-pipe').nth(0);
   const chips = hear.locator('[role=radiogroup] .il-chip');
+  await chips.nth(2).waitFor({ state: 'visible' });
+  const hearingChoices = await chips.allInnerTexts();
   r.rec(
     'hearing offers three places',
-    (await chips.count()) >= 3,
-    (await chips.allInnerTexts()).join(' | '),
+    hearingChoices.length === 3,
+    hearingChoices.join(' | '),
   );
   await chips.filter({ hasText: /paste the text/i }).click();
   await hear.getByRole('button', { name: /Check this step|Find models/i }).click();
