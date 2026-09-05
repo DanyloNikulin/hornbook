@@ -22,6 +22,17 @@ describe('parseProbeInput', () => {
 });
 
 describe('probePipeline', () => {
+  it('checks the explicitly selected Whisper file instead of a legacy fallback, including missing relative files', async () => {
+    const model = 'selected.bin';
+    const options: ProbeDeps = { fetch: vi.fn(), exists: (path) => path !== model, env: { WHISPER_BIN: 'whisper-cli', WHISPER_MODEL: 'legacy.bin' } };
+    const result = await probePipeline({ job: 'transcribe', driver: 'whisper-cli', model }, tmpdir(), options);
+    expect(result.ok).toBe(false);
+    expect(result.detail).toBe('No model file at selected.bin.');
+    options.exists = () => true;
+    const ready = await probePipeline({ job: 'transcribe', driver: 'whisper-cli', model }, tmpdir(), options);
+    expect(ready.detail).toContain('selected.bin');
+    expect(ready.detail).not.toContain('legacy.bin');
+  });
   it('accepts a coding CLI found on PATH and names the file it resolved to', async () => {
     const onPath: ProbeDeps = { fetch: vi.fn(), exists: () => true, env: { PATH: '/usr/local/bin' } };
     const claude = await probePipeline(

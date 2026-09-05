@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import type { ProvidersT } from '../../lib/journal-config';
@@ -28,6 +28,8 @@ export class AppSettingsComponent {
   protected readonly sec = inject(SectionService);
   private readonly api = inject(ApiService);
   private readonly journal = inject(JournalService);
+  private readonly destroyRef = inject(DestroyRef);
+  private saveRevision = 0;
   private readonly i18n = inject(I18nService);
   private readonly route = inject(ActivatedRoute);
   protected readonly desktop = inject(DesktopService);
@@ -93,6 +95,7 @@ export class AppSettingsComponent {
   }
 
   protected localActivated(settings: SettingsView): void {
+    this.saveRevision++;
     this.settings.set(settings);
     this.defaults = structuredClone(settings.providers);
     this.saved.set(this.i18n.t('settings.saved'));
@@ -113,6 +116,7 @@ export class AppSettingsComponent {
   }
 
   protected async save(): Promise<void> {
+    const revision = ++this.saveRevision;
     this.saving.set(true);
     this.error.set(null);
     this.saved.set(null);
@@ -122,16 +126,17 @@ export class AppSettingsComponent {
         if (this.clearConnection[key]) connections[key] = null;
         else if (this.connectionInput[key].trim()) connections[key] = this.connectionInput[key].trim();
       }
-      const s = await this.api.put<SettingsView>('/api/settings', { providers: this.defaults, connections });
-      this.journal.publishProviders(s.providers);
+      const s = await this.journal.saveSettings({ providers: structuredClone(this.defaults), connections });
+      if (!s || this.destroyRef.destroyed || revision !== this.saveRevision) return;
       this.settings.set(s);
+      this.defaults = structuredClone(s.providers);
       for (const key of CONNECTION_KEYS) {
         this.connectionInput[key] = '';
         this.clearConnection[key] = false;
       }
       this.saved.set(this.i18n.t('settings.saved'));
     } catch (err) {
-      this.error.set((err as Error).message);
+      if (!this.destroyRef.destroyed && revision === this.saveRevision) this.error.set((err as Error).message);
     } finally {
       this.saving.set(false);
     }

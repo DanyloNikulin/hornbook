@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -30,6 +30,22 @@ function demo(): string {
 }
 
 describe('seedJournal', () => {
+  it('diagnoses a legacy config-only seed without changing its files and can seed a separate recovery folder', () => {
+    const dst = join(root, 'legacy');
+    mkdirSync(dst);
+    const original = DEMO_JOURNAL.find((file) => file.path === 'journal.config.json')!.data as string;
+    writeFileSync(join(dst, 'journal.config.json'), original);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      expect(seedJournal(DEMO_JOURNAL, dst)).toBe(false);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('NEW empty journal folder'));
+      expect(readdirSync(dst)).toEqual(['journal.config.json']);
+      expect(readFileSync(join(dst, 'journal.config.json'), 'utf8')).toBe(original);
+      const recovered = join(root, 'recovered');
+      expect(seedJournal(DEMO_JOURNAL, recovered)).toBe(true);
+      expect(countLessons(recovered)).toBe(3);
+    } finally { warn.mockRestore(); }
+  });
   it('copies the demo journal without per-machine files', () => {
     const dst = join(root, 'mine');
     expect(seedJournal(demo(), dst)).toBe(true);

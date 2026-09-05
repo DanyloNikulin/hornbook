@@ -158,7 +158,7 @@ describe('PipelineSetupComponent', () => {
     expect(config.driver).toBe('kimi-cli');
   });
 
-  it('greys out a missing CLI and gives a concrete configuration line', async () => {
+  it('warns about a missing CLI but allows selecting it for configuration', async () => {
     post.mockImplementation(async (_url: string, body: { driver: string }) =>
       body.driver === 'grok-cli'
         ? { ok: false, detail: 'The grok CLI is not on PATH.' }
@@ -180,8 +180,39 @@ describe('PipelineSetupComponent', () => {
       card.textContent?.includes('Grok'),
     );
     expect(grokCard?.classList.contains('il-cli-option--missing')).toBe(true);
-    expect(grokCard?.querySelector<HTMLButtonElement>('.il-cli-pick')?.disabled).toBe(true);
+    expect((grokCard as HTMLButtonElement).disabled).toBe(false);
     expect(grokCard?.textContent).toContain('GROK_BIN');
     expect(grokCard?.textContent).toContain('Install this CLI');
+  });
+
+  it('switches CLI from the card description and resets its model', async () => {
+    post.mockResolvedValue({ ok: true, detail: 'Installed' });
+    const config = { driver: 'claude-cli', model: 'opus' };
+    const fixture = mount('extract', config);
+    const root = fixture.nativeElement as HTMLElement;
+    const card = root.querySelector<HTMLButtonElement>('.il-cli-option[aria-label="Codex"]')!;
+    card.querySelector<HTMLElement>('.il-cli-option-copy')!.click();
+    fixture.detectChanges();
+    expect(card.getAttribute('aria-checked')).toBe('true');
+    expect(config).toEqual({ driver: 'codex-cli', model: '-' });
+    await fixture.whenStable();
+  });
+
+  it('discards a delayed cloud probe after switching to a CLI', async () => {
+    let finish!: (value: unknown) => void;
+    post.mockImplementation((_url, body) => body.driver === 'openai'
+      ? new Promise((resolve) => finish = resolve)
+      : Promise.resolve({ ok: true, detail: 'Installed' }));
+    const config = { driver: 'openai', model: 'old-model' };
+    const fixture = mount('extract', config);
+    const component = fixture.componentInstance as unknown as { check(): Promise<void>; setPlace(place: string): void };
+    const checking = component.check();
+    component.setPlace('cli');
+    finish({ ok: true, detail: 'Obsolete cloud result', models: ['old-model'] });
+    await checking;
+    fixture.detectChanges();
+    expect(config).toEqual({ driver: 'claude-cli', model: '-' });
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Obsolete cloud result');
+    await fixture.whenStable();
   });
 });

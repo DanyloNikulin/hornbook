@@ -9,6 +9,7 @@ import { pipelineEnv } from './secrets.ts';
 import { ollamaCapabilities, ollamaHost } from '../scripts/providers/ollama.ts';
 import { CLI_BIN_ENV, missingCliMessage, type CodingCliKind } from '../scripts/providers/cli-extract.ts';
 import { resolveCli } from '../scripts/lib/cli-path.ts';
+import { whisperModelPath } from '../scripts/lib/whisper-model.ts';
 
 export interface ProbeInput {
   job: PipelineJob;
@@ -100,9 +101,9 @@ function probeWhisper(model: string, env: NodeJS.ProcessEnv, deps: ProbeDeps): P
   if ((isAbsolute(bin) || bin.includes('/') || bin.includes('\\')) && !deps.exists(bin)) {
     return { ok: false, detail: `No binary at ${bin}.` };
   }
-  const modelPath = env['WHISPER_MODEL']?.trim() || model;
+  const modelPath = whisperModelPath(model, env);
   if (!modelPath) return { ok: false, detail: 'Set the path to a whisper.cpp model file.' };
-  if ((isAbsolute(modelPath) || modelPath.includes('/') || modelPath.includes('\\')) && !deps.exists(modelPath)) {
+  if (!deps.exists(modelPath)) {
     return { ok: false, detail: `No model file at ${modelPath}.` };
   }
   return { ok: true, detail: `whisper.cpp · ${bin} · ${modelPath}` };

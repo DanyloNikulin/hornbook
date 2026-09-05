@@ -33,7 +33,11 @@ describe('AppSettingsComponent', () => {
               connections: emptyConnections,
             })),
             post: vi.fn(),
-            put: vi.fn().mockImplementation((_url, input) => Promise.resolve({ providers: input.providers, connections: emptyConnections })),
+            put: vi.fn().mockImplementation((_url, input) => {
+              const saved = { providers: structuredClone(input.providers), connections: emptyConnections };
+              vi.mocked(TestBed.inject(ApiService).get).mockResolvedValue(saved);
+              return Promise.resolve(saved);
+            }),
           },
         },
       ],

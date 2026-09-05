@@ -5,7 +5,7 @@
 // lesson content to the model; the payload is bounded by catalogue size,
 // not lesson count.
 //
-// Output: <section>/_topic-reviews/YYYY-MM-DD.md, a markdown report.
+// Output: <section>/_topic-reviews/<date>-<unique id>.md, a markdown report.
 // Additions are applied to _topics.json straight away; removals, splits and
 // merges stay suggestions. Started from the Settings page (a job) or the CLI.
 //
@@ -15,6 +15,7 @@
 
 import { retainFailedCleanup } from './lib/cli-failure.ts';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { TopicCatalogT } from '../src/lib/schema.ts';
 import { computeVocabStats, renderStatsForAI } from './lib/vocab-stats.ts';
@@ -134,7 +135,7 @@ async function main(): Promise<void> {
   // Apply ONLY additions. Removals, splits and merges stay markdown-only
   // suggestions: removing a topic needs human judgment, while an addition
   // is safe — a new topic never strips an existing lesson's tags.
-  const applyResult = applyProposal(proposal, catalog, (next) => writeTopicCatalog(section.id, next));
+  const applyResult = applyProposal(proposal, catalog, (next) => writeTopicCatalog(section.id, next, catalog));
   if (applyResult.additions > 0) {
     console.log(`✓ Applied ${applyResult.additions} addition(s) to ${topicsPath(section.id)}`);
   } else {
@@ -143,10 +144,12 @@ async function main(): Promise<void> {
   const date = new Date().toISOString().slice(0, 10);
   const reviewsDir = join(sectionDir(section.id), '_topic-reviews');
   mkdirSync(reviewsDir, { recursive: true });
-  const reportPath = join(reviewsDir, `${date}.md`);
-  writeFileSync(reportPath, renderProposal(proposal, stats, applyResult, date), 'utf8');
+  const reportPath = join(reviewsDir, `${date}-${randomUUID()}.md`);
+  writeFileSync(reportPath, renderProposal(proposal, stats, applyResult, date), { encoding: 'utf8', flag: 'wx' });
   console.log(`✓ Report written: ${reportPath}`);
-  if (applyResult.outcomes.some((outcome) => outcome.status === 'failed')) {
+  const failures = applyResult.outcomes.filter((outcome) => outcome.status === 'failed');
+  if (failures.length) {
+    for (const failure of failures) console.error(`Topic review error: ${failure.error}`);
     process.exitCode = 1;
   }
 }

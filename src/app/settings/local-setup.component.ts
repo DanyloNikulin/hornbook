@@ -236,7 +236,7 @@ export class LocalSetupComponent {
       const extractModel = models.includes(this.ollamaModel()) ? this.ollamaModel() : models[0];
       if (!model || !extractModel || !this.view()?.ollama.running) throw new Error(this.i18n.t('setup.guide.unavailable'));
       const providers: ProvidersT = { transcribe: { driver: 'whisper-cli', model }, extract: { driver: 'ollama', model: extractModel } };
-      const connections: Partial<Record<ConnectionKey, string>> = { OLLAMA_HOST: this.view()!.ollama.host, WHISPER_MODEL: model };
+      const connections: Partial<Record<ConnectionKey, string>> = { OLLAMA_HOST: this.view()!.ollama.host };
       const whisper = this.status('whisper')?.path;
       const ffmpeg = this.status('ffmpeg')?.path;
       if (whisper) connections.WHISPER_BIN = whisper;
@@ -246,10 +246,9 @@ export class LocalSetupComponent {
         if (!probe.ok || probe.pick) throw new Error(probe.detail);
         if (this.destroyRef.destroyed) return;
       }
-      const settings = await this.api.put<SettingsView>('/api/settings', { providers, connections });
-      this.journal.publishProviders(settings.providers);
-      if (!this.destroyRef.destroyed) {
-        this.verified.set(true);
+      const settings = await this.journal.saveSettings({ providers, connections });
+      if (settings && !this.destroyRef.destroyed) {
+        this.verified.set(JSON.stringify(settings.providers) === JSON.stringify(providers));
         this.activated.emit(settings);
       }
     } catch (err) {

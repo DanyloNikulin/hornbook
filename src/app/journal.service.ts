@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import type { ConfigView, SectionSummary } from '../lib/api-types';
+import type { ConfigView, SectionSummary, SettingsUpdate, SettingsView } from '../lib/api-types';
 import type { ProvidersT } from '../lib/journal-config';
 import { STOCK_TAGLINE } from '../lib/i18n';
 import { ApiService } from './api.service';
@@ -30,6 +30,18 @@ export class JournalService {
 
   private inflight: Promise<void> | null = null;
   private revision = 0;
+  private settingsRead = 0;
+
+  async saveSettings(input: SettingsUpdate): Promise<SettingsView | null> {
+    await this.api.put<SettingsView>('/api/settings', input);
+    // A successful response can arrive after a newer write has committed.
+    const read = ++this.settingsRead;
+    this.revision++;
+    const settings = await this.api.get<SettingsView>('/api/settings');
+    if (read !== this.settingsRead) return null;
+    this.publishProviders(settings.providers);
+    return settings;
+  }
 
   publishProviders(providers: ProvidersT): void {
     this.revision++;

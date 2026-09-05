@@ -54,7 +54,8 @@ export const IT = {
   'nav.currentPair': 'Attuale',
   'nav.cheatsheetAria': 'Promemoria',
   'nav.sos': 'SOS',
-  'footer.line': 'Sunti dalle tue lezioni · la cartella è il database',
+  'footer.line': 'Il diario delle tue lezioni',
+  'pipeline.cliSelectHelp': 'Seleziona una scheda CLI, poi premi Salva impostazioni in basso per usarla nei nuovi processi.',
   'brand.defaultTagline': 'sunti dalle tue lezioni',
   'footer.source': 'sorgente ↗',
   'app.serverError': 'Impossibile raggiungere il server Hornbook ({detail}). Avvialo con {cmd} e ricarica.',
@@ -500,7 +501,11 @@ export const IT = {
   'settings.conn.ANTHROPIC_API_KEY': 'Chiave Anthropic per il driver anthropic di estrazione.',
   'settings.conn.OLLAMA_HOST': 'Endpoint Ollama per il driver ollama di estrazione. Predefinito http://127.0.0.1:11434.',
   'settings.conn.WHISPER_BIN': 'Percorso del binario whisper.cpp (whisper-cli) per la trascrizione locale.',
-  'settings.conn.WHISPER_MODEL': 'Percorso di un file modello whisper.cpp, es. ggml-medium.bin.',
+  'settings.conn.WHISPER_MODEL': 'Percorso di riserva per whisper.cpp. Il file modello scelto per l’applicazione o la sezione ha la precedenza.',
+  'pipeline.whichApi': 'Provider API',
+  'pipeline.apiBilling': 'Usa una chiave API dall’account sviluppatore del provider. L’uso delle API viene fatturato separatamente dagli abbonamenti chat o coding. Cerca i modelli, scegline uno, verifica il passaggio e salva le impostazioni.',
+  'pipeline.apiStored': 'Questa sezione usa la chiave del provider salvata nelle impostazioni Applicazione. Salva prima le chiavi lì.',
+  'pipeline.defaultsScope': 'Questi valori si applicano alle sezioni senza una propria scelta. Se una sezione continua a usare un altro CLI o modello, apri le sue impostazioni e disattiva la personalizzazione di Scrittura.',
 
   'setup.tools.title': 'Strumenti locali',
   'setup.tools.sub':

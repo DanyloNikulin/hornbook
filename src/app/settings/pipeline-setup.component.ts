@@ -5,7 +5,6 @@ import {
   OPTIONAL_CONNECTIONS,
   PLACES_FOR,
   adoptPlace,
-  cloudDriverFromKey,
   pathFor,
   pathsFor,
   placeFor,
@@ -34,7 +33,7 @@ const MODEL_COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity
 
 /**
  * One of the two pipeline steps. The user picks a place (this computer /
- * home network / internet API). The cloud API is inferred from the key;
+ * home network / internet API). The user chooses the cloud API;
  * models come from that connection, never from a Hornbook catalog.
  */
 @Component({
@@ -46,6 +45,7 @@ export class PipelineSetupComponent {
   private readonly api = inject(ApiService);
   protected readonly desktop = inject(DesktopService);
   private listTimer: ReturnType<typeof setTimeout> | undefined;
+  private checkRevision = 0;
 
   readonly job = input.required<PipelineJob>();
   readonly config = input.required<{ driver: string; model: string }>();
@@ -58,7 +58,6 @@ export class PipelineSetupComponent {
   protected readonly listedModels = signal<string[]>([]);
   protected readonly modelPickerOpen = signal(false);
   protected readonly modelQuery = signal('');
-  protected readonly cloudKey = signal('');
   protected readonly cliStatuses = signal<Readonly<Record<string, CliStatus>>>({});
   protected readonly cliStatusBusy = signal(false);
   private readonly rev = signal(0);
@@ -73,9 +72,7 @@ export class PipelineSetupComponent {
     this.rev();
     return pathFor(this.job(), this.config().driver);
   });
-  protected readonly unifiedCloud = computed(
-    () => this.job() === 'extract' && this.place() === 'cloud' && this.showConnections(),
-  );
+  protected readonly cloudPaths = computed(() => pathsFor(this.job(), 'cloud'));
   protected readonly extractCli = computed(() => this.job() === 'extract' && this.place() === 'cli');
   protected readonly cliPaths = computed(() => pathsFor(this.job(), 'cli'));
   protected readonly placeNote = computed(() =>
@@ -107,13 +104,9 @@ export class PipelineSetupComponent {
     if (this.place() === 'cli') return 'pipeline.modelCliHelp';
     return this.place() === 'lan' ? 'pipeline.modelLanHelp' : 'pipeline.modelApiHelp';
   });
-  protected readonly cloudKeySet = computed(() => {
-    const c = this.connections();
-    return !!(c?.['ANTHROPIC_API_KEY']?.set || c?.['OPENAI_API_KEY']?.set);
-  });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => clearTimeout(this.listTimer));
+    inject(DestroyRef).onDestroy(() => this.invalidateCheck());
 
     // A single scan gives every coding-CLI choice useful status as soon as
     // this place is opened; no CLI is executed by these readiness probes.
@@ -126,6 +119,7 @@ export class PipelineSetupComponent {
   }
 
   protected setPlace(place: PlaceId): void {
+    this.invalidateCheck();
     adoptPlace(this.job(), place, this.config());
     this.probe.set(null);
     this.listedModels.set([]);
@@ -134,7 +128,10 @@ export class PipelineSetupComponent {
   }
 
   protected setCliDriver(driver: string): void {
+    if (this.config().driver === driver) return;
+    this.invalidateCheck();
     this.config().driver = driver;
+    this.config().model = '-';
     this.probe.set(null);
     this.listedModels.set([]);
     this.closeModelPicker();
@@ -142,12 +139,14 @@ export class PipelineSetupComponent {
   }
 
   protected pickModel(name: string): void {
+    this.invalidateCheck();
     this.config().model = name;
     this.closeModelPicker();
     this.rev.update((n) => n + 1);
   }
 
   protected onModelInput(value: string): void {
+    this.invalidateCheck();
     this.config().model = value;
     this.rev.update((n) => n + 1);
   }
@@ -209,22 +208,18 @@ export class PipelineSetupComponent {
     this.cliStatusBusy.set(false);
   }
 
-  protected onCloudKey(value: string): void {
-    this.cloudKey.set(value);
-    const inferred = cloudDriverFromKey(value);
-    const draft = this.draft();
-    if (inferred === 'anthropic') {
-      draft['ANTHROPIC_API_KEY'] = value;
-      this.config().driver = 'anthropic';
-    } else if (inferred === 'openai') {
-      draft['OPENAI_API_KEY'] = value;
-      this.config().driver = 'openai';
-    }
+  protected setCloudDriver(driver: string): void {
+    if (this.config().driver === driver) return;
+    this.invalidateCheck();
+    this.config().driver = driver;
+    this.config().model = '';
+    this.listedModels.set([]);
+    this.closeModelPicker();
     this.rev.update((n) => n + 1);
-    if (value.trim().length >= 16) this.scheduleList();
   }
 
   protected onDraft(key: ConnectionKey, value: string): void {
+    this.invalidateCheck();
     this.draft()[key] = value;
     if (key.endsWith('_KEY') && value.trim().length >= 16) this.scheduleList();
   }
@@ -244,10 +239,15 @@ export class PipelineSetupComponent {
   }
 
   protected async check(): Promise<void> {
+    clearTimeout(this.listTimer);
+    const revision = ++this.checkRevision;
+    const config = this.config();
+    const driver = config.driver;
+    const model = config.model;
+    const current = () => revision === this.checkRevision && this.config() === config && config.driver === driver && config.model === model;
     this.checking.set(true);
     this.probe.set(null);
     try {
-      this.applyCloudKey();
       const typed: Partial<Record<ConnectionKey, string>> = {};
       const draft = this.draft();
       const path = this.path();
@@ -259,19 +259,21 @@ export class PipelineSetupComponent {
       }
       const result = await this.api.post<ProbeResult>('/api/settings/probe', {
         job: this.job(),
-        driver: this.config().driver,
-        model: this.config().model,
+        driver,
+        model,
         connections: typed,
       });
+      if (!current()) return;
       this.probe.set(result);
       this.listedModels.set(result.models ?? []);
       this.modelPickerOpen.set((result.models?.length ?? 0) > 0 && !this.config().model);
     } catch (err) {
+      if (!current()) return;
       this.probe.set({ ok: false, detail: (err as Error).message });
       this.listedModels.set([]);
       this.closeModelPicker();
     } finally {
-      this.checking.set(false);
+      if (revision === this.checkRevision) this.checking.set(false);
     }
   }
 
@@ -282,13 +284,11 @@ export class PipelineSetupComponent {
     }, 500);
   }
 
-  private applyCloudKey(): void {
-    const value = this.cloudKey().trim();
-    if (!value) return;
-    const inferred = cloudDriverFromKey(value) ?? (this.config().driver === 'anthropic' ? 'anthropic' : 'openai');
-    this.config().driver = inferred;
-    this.draft()[inferred === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY'] = value;
-    this.rev.update((n) => n + 1);
+  private invalidateCheck(): void {
+    clearTimeout(this.listTimer);
+    this.checkRevision++;
+    this.checking.set(false);
+    this.probe.set(null);
   }
 
   @HostListener('document:keydown.escape')

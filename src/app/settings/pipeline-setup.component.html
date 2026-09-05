@@ -14,6 +14,20 @@
   </div>
   <p class="il-settings-help">{{ placeNote() | t }}</p>
 
+  @if (place() === 'cloud') {
+    <p class="il-pipe-step">{{ 'pipeline.whichApi' | t }}</p>
+    <div class="il-locale-picks" role="radiogroup" [attr.aria-label]="'pipeline.whichApi' | t">
+      @for (p of cloudPaths(); track p.driver) {
+        <button type="button" class="il-chip" role="radio" [class.active]="config().driver === p.driver"
+                [attr.aria-checked]="config().driver === p.driver" (click)="setCloudDriver(p.driver)">
+          {{ ('pipeline.service.' + p.driver) | t }}
+        </button>
+      }
+    </div>
+    <p class="il-settings-help">{{ 'pipeline.apiBilling' | t }}</p>
+    @if (!showConnections()) { <p class="il-settings-help">{{ 'pipeline.apiStored' | t }}</p> }
+  }
+
   @if (extractCli()) {
     <div class="il-cli-heading">
       <p class="il-pipe-step">{{ 'pipeline.whichCli' | t }}</p>
@@ -23,17 +37,16 @@
     </div>
     <div class="il-cli-list" role="radiogroup" [attr.aria-label]="'pipeline.whichCli' | t">
       @for (p of cliPaths(); track p.driver) {
-        <div class="il-cli-option" [class.il-cli-option--missing]="cliUnavailable(p.driver)"
-             [class.il-cli-option--selected]="config().driver === p.driver">
-          <div class="il-cli-option-head">
-            <button type="button" class="il-cli-pick"
-                    [class.active]="config().driver === p.driver"
-                    [disabled]="cliUnavailable(p.driver)"
-                    role="radio" [attr.aria-checked]="config().driver === p.driver"
-                    [attr.aria-describedby]="'cli-detail-' + p.driver"
-                    (click)="setCliDriver(p.driver)">
+        <button type="button" class="il-cli-option" [class.il-cli-option--missing]="cliUnavailable(p.driver)"
+                [class.il-cli-option--selected]="config().driver === p.driver"
+                role="radio" [attr.aria-checked]="config().driver === p.driver"
+                [attr.aria-label]="('pipeline.service.' + p.driver) | t"
+                [attr.aria-describedby]="'cli-detail-' + p.driver"
+                (click)="setCliDriver(p.driver)">
+          <span class="il-cli-option-head">
+            <span class="il-cli-pick" [class.active]="config().driver === p.driver">
               {{ ('pipeline.service.' + p.driver) | t }}
-            </button>
+            </span>
             @if (cliExperimental(p.driver)) {
               <span class="il-cli-experimental">{{ 'pipeline.cliExperimental' | t }}</span>
             }
@@ -49,43 +62,31 @@
                 }
               </span>
             }
-          </div>
-          <div class="il-cli-option-copy" [id]="'cli-detail-' + p.driver">
+          </span>
+          <span class="il-cli-option-copy" [id]="'cli-detail-' + p.driver">
             @if (cliStatus(p.driver); as status) {
               @if (status.state === 'checking') {
-                <p>{{ 'pipeline.cliCheckingOne' | t }}</p>
+                <span>{{ 'pipeline.cliCheckingOne' | t }}</span>
               } @else if (status.state === 'installed') {
-                <p>{{ status.detail }}</p>
+                <span>{{ status.detail }}</span>
               } @else {
-                <p>{{ status.detail }}</p>
-                <p class="il-cli-install">{{ 'pipeline.cliInstall' | t: { env: cliEnvironment(p.driver) } }}</p>
+                <span>{{ status.detail }}</span>
+                <span class="il-cli-install">{{ 'pipeline.cliInstall' | t: { env: cliEnvironment(p.driver) } }}</span>
               }
             } @else {
-              <p>{{ 'pipeline.cliWaiting' | t }}</p>
+              <span>{{ 'pipeline.cliWaiting' | t }}</span>
             }
-          </div>
-        </div>
+          </span>
+        </button>
       }
     </div>
+    <p class="il-settings-help">{{ 'pipeline.cliSelectHelp' | t }}</p>
   }
 
   @if (path(); as path) {
     @if (path.driver !== 'skip') {
     <p class="il-pipe-step">{{ 'pipeline.then' | t }}</p>
-    @if (unifiedCloud()) {
-      <label class="il-settings-row il-settings-row--stack">
-        <span>
-          {{ 'pipeline.field.API_KEY' | t }}
-          <span class="il-settings-help">
-            {{ 'pipeline.help.API_KEY' | t }}
-            @if (cloudKeySet()) { · {{ 'settings.replacePlaceholder' | t }} }
-          </span>
-        </span>
-        <input type="password" [ngModel]="cloudKey()" (ngModelChange)="onCloudKey($event)"
-               [placeholder]="cloudKeySet() ? ('settings.replacePlaceholder' | t) : ('pipeline.ph.API_KEY' | t)"
-               autocomplete="off" />
-      </label>
-    } @else if (showConnections()) {
+    @if (showConnections()) {
       @for (key of path.connections; track key) {
         <label class="il-settings-row il-settings-row--stack">
           <span>

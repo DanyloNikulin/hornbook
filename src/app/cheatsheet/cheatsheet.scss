@@ -81,7 +81,6 @@
   max-height: calc(100vh - 116px);
   overflow-y: auto;
   align-self: start;
-  scrollbar-width: thin;
 }
 .il-sheet-rail-search { display: flex; align-items: center; gap: 8px; height: 40px; margin-bottom: 12px; padding: 0 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper-2); color: var(--muted); }
 .il-sheet-rail-search:focus-within { border-color: var(--primary); }

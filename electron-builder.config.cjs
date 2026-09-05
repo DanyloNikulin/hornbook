@@ -35,6 +35,7 @@ module.exports = {
   asar: true,
   win: {
     icon: 'build/icon.ico',
+    extraResources: [{ from: 'build/icon.ico', to: 'icon.ico' }],
     target: [
       { target: 'nsis', arch: ['x64', 'arm64'] },
       { target: 'portable', arch: ['x64', 'arm64'] },

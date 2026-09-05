@@ -156,12 +156,19 @@
 .il-cli-refresh:disabled { color: var(--muted); cursor: wait; }
 .il-cli-list { display: grid; gap: 7px; margin-top: 7px; }
 .il-cli-option {
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
   padding: 9px 10px;
   border: 1px solid var(--line-soft);
   border-left: 3px solid transparent;
   border-radius: 9px;
   background: color-mix(in srgb, var(--paper) 55%, transparent);
 }
+.il-cli-option:hover { border-color: var(--primary); }
+.il-cli-option:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .il-cli-option--selected { border-left-color: var(--primary); background: var(--paper); }
 .il-cli-option--missing { background: transparent; }
 .il-cli-option-head { display: flex; align-items: center; gap: 6px; }
@@ -178,8 +185,9 @@
   white-space: nowrap;
   cursor: pointer;
 }
+.il-cli-pick::before { content: ''; display: inline-block; width: 13px; height: 13px; margin-right: 8px; border: 1px solid var(--muted); border-radius: 50%; vertical-align: -1px; }
 .il-cli-pick.active { color: var(--primary-ink); }
-.il-cli-pick:disabled { color: var(--muted); cursor: not-allowed; }
+.il-cli-pick.active::before { border-color: var(--primary-ink); background: var(--primary-ink); box-shadow: inset 0 0 0 3px var(--paper); }
 .il-cli-status,
 .il-cli-experimental {
   flex: 0 0 auto;
@@ -194,8 +202,8 @@
 .il-cli-status--ok { border-color: color-mix(in srgb, var(--success) 45%, transparent); color: var(--success); }
 .il-cli-status--bad { border-color: color-mix(in srgb, #a33 35%, transparent); color: #923838; }
 .il-cli-experimental { letter-spacing: .03em; }
-.il-cli-option-copy { margin-top: 5px; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
-.il-cli-option-copy p { margin: 0; overflow-wrap: anywhere; }
+.il-cli-option-copy { display: block; margin-top: 5px; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+.il-cli-option-copy > span { display: block; overflow-wrap: anywhere; }
 .il-cli-option-copy .il-cli-install { margin-top: 3px; color: var(--primary-ink); }
 .il-cli-default-note {
   display: grid;

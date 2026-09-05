@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Transcriber } from './types.ts';
+import { whisperModelPath } from '../lib/whisper-model.ts';
 
 /**
  * Arguments for whisper-cli. The language is auto-detected per chunk: a
@@ -28,7 +29,7 @@ export class WhisperCliTranscriber implements Transcriber {
 
   async transcribe(audioPath: string, _hint: string): Promise<string> {
     const bin = process.env['WHISPER_BIN'] ?? 'whisper-cli';
-    const modelPath = process.env['WHISPER_MODEL'] ?? this.model;
+    const modelPath = whisperModelPath(this.model, process.env);
     const outDir = mkdtempSync(join(tmpdir(), 'hornbook-whisper-'));
     const args = whisperArgs(modelPath, audioPath, join(outDir, 'out'));
 

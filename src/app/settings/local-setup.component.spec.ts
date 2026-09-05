@@ -24,7 +24,11 @@ beforeEach(async () => {
   vi.resetAllMocks();
   api.get.mockResolvedValue(structuredClone(setup));
   api.post.mockResolvedValue({ ok: true, detail: 'Synthetic probe' });
-  api.put.mockImplementation((_url, input) => Promise.resolve({ providers: input.providers, connections: {} }));
+  api.put.mockImplementation((_url, input) => {
+    const saved = { providers: structuredClone(input.providers), connections: {} };
+    api.get.mockImplementation((url) => Promise.resolve(url === '/api/settings' ? saved : structuredClone(setup)));
+    return Promise.resolve(saved);
+  });
   await TestBed.configureTestingModule({ imports: [LocalSetupComponent], providers: [
     { provide: ApiService, useValue: api },
     { provide: JobsService, useValue: { setupJob: signal(null) } },
@@ -41,6 +45,7 @@ it('verifies the actual installed models, persists them and publishes defaults i
   expect(api.post).toHaveBeenCalledWith('/api/settings/probe', expect.objectContaining({ job: 'transcribe', driver: 'whisper-cli', model: 'synthetic-small.bin' }));
   expect(TestBed.inject(JournalService).config().providers).toEqual(emitted?.providers);
   expect(emitted?.providers.extract.model).toBe('qwen2.5:7b');
+  expect(api.put.mock.calls[0][1].connections).not.toHaveProperty('WHISPER_MODEL');
   fixture.destroy();
 });
 

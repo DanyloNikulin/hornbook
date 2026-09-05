@@ -127,6 +127,9 @@ function showWindow(route = '/'): void {
 
 function createWindow(route = '/'): BrowserWindow {
   const size = preferences.window ?? { width: 1240, height: 820 };
+  const icon = process.platform === 'win32'
+    ? app.isPackaged ? join(process.resourcesPath, 'icon.ico') : join(appRoot, 'build', 'icon.ico')
+    : join(appRoot, 'build', 'icon.png');
   const window = new BrowserWindow({
     title: 'Hornbook',
     width: size.width,
@@ -136,8 +139,8 @@ function createWindow(route = '/'): BrowserWindow {
     show: false,
     backgroundColor: '#f4ecdf',
     titleBarStyle: 'hidden',
-    ...(process.platform !== 'darwin' ? { titleBarOverlay: { color: '#f4ecdf', symbolColor: '#302a22', height: 36 } } : {}),
-    icon: join(appRoot, 'build', 'icon.png'),
+    ...(process.platform !== 'darwin' ? { titleBarOverlay: { color: '#00000000', symbolColor: '#f4ecdf', height: 36 } } : {}),
+    icon,
     webPreferences: {
       preload: join(appRoot, 'dist', 'node', 'electron', 'preload.cjs'),
       contextIsolation: true,
@@ -147,6 +150,8 @@ function createWindow(route = '/'): BrowserWindow {
     },
   });
   mainWindow = window;
+  // Windows Shell needs a real icon file, outside the application archive.
+  if (process.platform === 'win32') window.setAppDetails({ appId: APP_ID, appIconPath: icon });
   if (process.platform !== 'darwin') window.setMenu(null);
 
   window.once('ready-to-show', () => window.show());

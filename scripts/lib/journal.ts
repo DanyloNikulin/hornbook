@@ -302,10 +302,13 @@ export class JournalRepository {
     return result.data;
   }
 
-  writeTopicCatalog(id: string, catalog: TopicCatalogT): void {
+  writeTopicCatalog(id: string, catalog: TopicCatalogT, expected?: TopicCatalogT): void {
     const data = TopicCatalog.parse(catalog);
     this.commit(() => {
       this.getSection(id);
+      if (expected && JSON.stringify(this.readTopicCatalog(id)) !== JSON.stringify(TopicCatalog.parse(expected))) {
+        throw new Error('Topic catalogue changed during review. Current topics were preserved; run a new review to use the latest catalogue.');
+      }
       return { changes: [{ path: `${id}/_topics.json`, data: JSON.stringify(data, null, 2) + '\n' }], result: undefined };
     });
   }

@@ -18,7 +18,10 @@ const SKIP_IN_SEED = new Set(['_derived', '_progress.json', '_uploads', 'secrets
 export function seedJournal(src: string | readonly FileChange[], dst: string, observe?: CommitObserver): boolean {
   recoverJournal(dst);
   if (existsSync(join(dst, 'journal.config.json'))) {
-    normalizeJournalConfig(JSON.parse(readFileSync(join(dst, 'journal.config.json'), 'utf8')));
+    const config = normalizeJournalConfig(JSON.parse(readFileSync(join(dst, 'journal.config.json'), 'utf8')));
+    if (config.sections.length && config.sections.every((section) => !existsSync(join(dst, section.id)))) {
+      console.warn('Journal configuration exists but all section folders are missing. This may be an incomplete older first run or an intentionally empty journal. Existing files were preserved. To recover your lessons, restore a backup. To start again with samples, choose a NEW empty journal folder (hornbook --journal <new-empty-folder>); do not delete this folder. See docs/JOURNAL-RECOVERY.md.');
+    }
     return false;
   }
   if (typeof src === 'string' && !existsSync(join(src, 'journal.config.json'))) return false;

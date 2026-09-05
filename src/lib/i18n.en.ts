@@ -55,7 +55,8 @@ export const EN = {
   'nav.currentPair': 'Current',
   'nav.cheatsheetAria': 'Cheatsheet',
   'nav.sos': 'SOS',
-  'footer.line': 'Conspects from your lessons · your folder is the database',
+  'footer.line': 'Your lesson journal',
+  'pipeline.cliSelectHelp': 'Select any CLI card, then Save settings below to use it for new jobs.',
   'brand.defaultTagline': 'conspects from your lessons',
   'footer.source': 'source ↗',
   'app.serverError': 'Cannot reach the Hornbook server ({detail}). Start it with {cmd} and reload.',
@@ -514,7 +515,11 @@ export const EN = {
   'settings.conn.ANTHROPIC_API_KEY': 'Anthropic key for the anthropic extract driver.',
   'settings.conn.OLLAMA_HOST': 'Ollama endpoint for the ollama extract driver. Default http://127.0.0.1:11434.',
   'settings.conn.WHISPER_BIN': 'Path to the whisper.cpp binary (whisper-cli) for local transcription.',
-  'settings.conn.WHISPER_MODEL': 'Path to a whisper.cpp model file, e.g. ggml-medium.bin.',
+  'settings.conn.WHISPER_MODEL': 'Fallback whisper.cpp model path. An explicit model file selected for the application or section takes priority.',
+  'pipeline.whichApi': 'API provider',
+  'pipeline.apiBilling': 'Use an API key from this provider’s developer account. API usage is billed separately from chat or coding subscriptions. Find models, choose one, check this step, then save settings.',
+  'pipeline.apiStored': 'This section uses the provider’s key saved in Application settings. Save keys there first.',
+  'pipeline.defaultsScope': 'These defaults apply to sections without their own override. If a section keeps using another CLI or model, open its Section settings and turn off the Writing override.',
 
   'setup.tools.title': 'Local tools',
   'setup.tools.sub':
