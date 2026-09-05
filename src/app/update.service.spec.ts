@@ -80,9 +80,13 @@ describe('UpdateService browser checks', () => {
   it('does not let a late mode response overwrite the release-check version', async () => {
     let finishMode!: (value: ModeView) => void;
     const checked = { ...current, currentVersion: '0.9.3' };
+    const modeSettled = vi.fn();
     const get = vi.fn().mockImplementation((url: string) =>
       url === '/api/mode'
-        ? new Promise<ModeView>((resolve) => (finishMode = resolve))
+        ? new Promise<ModeView>((resolve) => (finishMode = resolve)).then((value) => {
+            modeSettled();
+            return value;
+          })
         : Promise.resolve(checked),
     );
     const service = setup(get);
@@ -91,7 +95,7 @@ describe('UpdateService browser checks', () => {
     await vi.waitFor(() => expect(service.state().currentVersion).toBe('0.9.3'));
     finishMode(mode);
 
-    await Promise.resolve();
+    await vi.waitFor(() => expect(modeSettled).toHaveBeenCalledOnce());
     expect(service.state().currentVersion).toBe('0.9.3');
   });
 
