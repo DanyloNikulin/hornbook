@@ -8,6 +8,9 @@ All notable changes to Hornbook.
 
 ## 0.9.1 — 2026-09-05
 
+- Fixed update checks for preview releases: versions below 1.0 can discover and
+  install GitHub pre-releases without requesting the stable-only latest feed.
+  An empty release list is treated as no update; stable versions stay on stable releases.
 - Added complete interface translations for Spanish, French, German, European
   Portuguese, Dutch, Swedish and Ukrainian: nine interface languages in total.
   Learning languages remain independent of the interface language.
