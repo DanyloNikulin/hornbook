@@ -4,6 +4,15 @@ All notable changes to Hornbook.
 
 ## Unreleased
 
+## 0.9.4 — 2026-09-07
+
+- A pair's landing page now leads with the pair's name, the brand as a small
+  kicker above it, and lines up with the content panel below instead of
+  hugging the window's left edge.
+- The release notice is a strip under the navigation rather than a floating
+  card, so a download in progress no longer covers the activity widget and
+  the lesson cards.
+
 ## 0.9.3 — 2026-09-07
 
 - Coding assistants (Claude Code, Codex, Grok, Kimi Code) are listed in
