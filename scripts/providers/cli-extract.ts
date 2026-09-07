@@ -77,7 +77,7 @@ export class CliExtractor implements Extractor {
       if (!bin) throw new Error(missingCliMessage(this.kind, cmd.bin));
       const { code, out, err } = await runProcess(bin, cmd.args, cmd.stdin, req.timeoutMs ?? this.timeoutMs, dir, req.signal);
       if (code !== 0) {
-        throw new Error(`Extract ${this.driver} exited ${code}: ${(err || out).slice(0, 800)}`);
+        throw new Error(`Extract ${this.driver} exited ${code}: ${cliFailureSummary(err, out)}`);
       }
       const saved = cmd.answerFile && existsSync(cmd.answerFile) ? readFileSync(cmd.answerFile, 'utf8') : '';
       const answer = saved.trim() || out;
@@ -174,6 +174,63 @@ export function missingCliMessage(kind: CodingCliKind, bin: string): string {
   return hasPathSeparator(bin)
     ? `No ${kind} CLI at ${bin}.`
     : `The ${kind} CLI is not on PATH. Install it, or set ${CLI_BIN_ENV[kind]} to its full path.`;
+}
+
+/**
+ * The part of a failed CLI's output worth showing. Codex echoes its header
+ * and the whole prompt to stderr before anything goes wrong, so the first
+ * characters say nothing. Error lines are picked out (a JSON payload is
+ * reduced to its message, repeats dropped), then a JSON result wrapper is
+ * read, and otherwise the tail is kept.
+ */
+export function cliFailureSummary(err: string, out: string, max = 800): string {
+  const messages = new Set<string>();
+  for (const line of `${err}\n${out}`.split(/\r?\n/)) {
+    const message = errorLineMessage(line.trim());
+    if (message) messages.add(message);
+  }
+  if (messages.size) return [...messages].join('\n').slice(0, max);
+  // Both streams matter: an older Codex answered on stdout while stderr held
+  // only its "Reading prompt from stdin..." notice, which says nothing.
+  const streams = [err, out].map(withoutNoise).filter(Boolean);
+  const wrapped = streams.map((s) => jsonErrorMessage(tryParse(s))).find(Boolean);
+  if (wrapped) return wrapped.slice(0, max);
+  const text = streams.join('\n');
+  if (!text) return '(no output)';
+  return text.length > max ? `…${text.slice(-max)}` : text;
+}
+
+const ERROR_LINE = /^(?:ERROR|Error|error|FATAL|fatal|panic):\s*/;
+const NOISE_LINE = /^(?:Reading prompt from stdin\.\.\.|-{4,})$/;
+
+function withoutNoise(stream: string): string {
+  return stream
+    .split(/\r?\n/)
+    .filter((line) => !NOISE_LINE.test(line.trim()))
+    .join('\n')
+    .trim();
+}
+
+function errorLineMessage(line: string): string | undefined {
+  const match = ERROR_LINE.exec(line);
+  if (!match) return undefined;
+  const rest = line.slice(match[0].length).trim();
+  if (!rest) return undefined;
+  const start = rest.indexOf('{');
+  const message = start >= 0 ? jsonErrorMessage(tryParse(rest.slice(start))) : undefined;
+  return message ?? rest;
+}
+
+/** `{ error: { message } }`, `{ message }`, `{ result }`: the wrappers the CLIs and their APIs use. */
+function jsonErrorMessage(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const o = value as Record<string, unknown>;
+  if (o['error'] && typeof o['error'] === 'object') return jsonErrorMessage(o['error']);
+  for (const key of ['message', 'error', 'result']) {
+    const field = o[key];
+    if (typeof field === 'string' && field.trim()) return field.trim();
+  }
+  return undefined;
 }
 
 /** Pull the answer object out of what a CLI printed: plain JSON, a result wrapper, one JSON line per message, or a fenced block. */
