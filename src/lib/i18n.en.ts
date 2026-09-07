@@ -530,6 +530,8 @@ export const EN = {
   'setup.clis.versionUnknown': 'version unknown',
   'setup.clis.updating': 'Updating {name}…',
   'setup.clis.updated': '{name} is now {version}.',
+  'setup.clis.detail': 'Uses that CLI’s own sign-in; Hornbook stores no key.',
+  'setup.clis.missing': 'Not on PATH. Install it, or set {env} to its full path.',
   'job.cliOutdated': 'The writing assistant is older than its model allows. Update it in Application settings, then start again.',
   'setup.tools.sub':
     'Everything the zero-cost path needs, fetched into a folder of its own, never into the journal. Nothing is downloaded until you press Start, and every file is checked against the checksum its release page publishes.',

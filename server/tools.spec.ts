@@ -162,15 +162,14 @@ describe('codingCliStatuses', () => {
     expect(rows.map((r) => r.id)).toEqual(['claude', 'codex', 'grok', 'kimi']);
     expect(rows[0]).toMatchObject({ name: 'Claude Code', installed: true, path: 'D:\\claude\\claude.exe', version: '2.1.234', updateCommand: 'claude update' });
     expect(rows[1]).toMatchObject({ installed: true, path: 'C:\\bin\\codex.CMD', version: '0.153.4', updateCommand: 'codex update' });
-    expect(rows[2]).toMatchObject({ installed: false, updateCommand: 'grok update' });
-    expect(rows[2].detail).toContain('not on PATH');
+    expect(rows[2]).toMatchObject({ installed: false, updateCommand: 'grok update', envVar: 'GROK_BIN' });
+    expect(rows[2].path).toBeUndefined();
   });
 
   it('reports an installed CLI whose version cannot be read', async () => {
     const deps = win({ exists: (p) => p === 'C:\\bin\\kimi.EXE', run: async () => undefined });
     const [, , , kimi] = await codingCliStatuses(deps, {});
-    expect(kimi).toMatchObject({ installed: true, path: 'C:\\bin\\kimi.EXE', updateCommand: 'kimi upgrade' });
+    expect(kimi).toMatchObject({ installed: true, path: 'C:\\bin\\kimi.EXE', updateCommand: 'kimi upgrade', envVar: 'KIMI_BIN' });
     expect(kimi.version).toBeUndefined();
-    expect(kimi.detail).toContain('did not report a version');
   });
 });

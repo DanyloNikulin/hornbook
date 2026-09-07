@@ -172,7 +172,9 @@
             </button>
           }
         </div>
-        <p class="il-settings-help" style="margin: 4px 0 0;">{{ c.detail }}</p>
+        <p class="il-settings-help" style="margin: 4px 0 0;">
+          {{ c.installed ? ('setup.clis.detail' | t) : ('setup.clis.missing' | t: { env: c.envVar }) }}
+        </p>
         @if (c.installed) { <p class="il-setup-path">{{ c.path }} · {{ c.updateCommand }}</p> }
         @if (cliRow(c.id); as r) {
           @if (r.phase === 'running') {

@@ -578,6 +578,8 @@ export const NL = {
   'setup.clis.versionUnknown': 'versie onbekend',
   'setup.clis.updating': '{name} wordt bijgewerkt…',
   'setup.clis.updated': '{name} is nu versie {version}.',
+  'setup.clis.detail': 'Gebruikt de eigen aanmelding van de CLI; Hornbook bewaart geen sleutel.',
+  'setup.clis.missing': 'Niet in PATH. Installeer het, of zet {env} op het volledige pad.',
   'job.cliOutdated': 'De schrijfassistent is ouder dan het model toestaat. Werk hem bij in de toepassingsinstellingen en begin opnieuw.',
   'setup.tools.sub':
     'Alles voor de gratis optie wordt in een eigen map gedownload, nooit in het logboek. Niets wordt gedownload voordat je op Starten klikt; elk bestand wordt gecontroleerd met de controlesom op de releasepagina.',

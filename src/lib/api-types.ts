@@ -298,7 +298,8 @@ export interface CodingCliStatus {
   version?: string;
   /** The CLI's own updater, as the Update button runs it: `codex update`. */
   updateCommand: string;
-  detail: string;
+  /** Environment variable that points Hornbook at the CLI when it is not on PATH. */
+  envVar: string;
 }
 
 export interface SetupView {

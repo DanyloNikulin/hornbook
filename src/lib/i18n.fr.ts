@@ -580,6 +580,8 @@ export const FR = {
   'setup.clis.versionUnknown': 'version inconnue',
   'setup.clis.updating': 'Mise à jour de {name}…',
   'setup.clis.updated': '{name} est maintenant en version {version}.',
+  'setup.clis.detail': 'Utilise la connexion propre au CLI ; Hornbook ne conserve aucune clé.',
+  'setup.clis.missing': 'Absent du PATH. Installez-le, ou indiquez son chemin complet dans {env}.',
   'job.cliOutdated': 'L’assistant de rédaction est plus ancien que ce que son modèle accepte. Mettez-le à jour dans les réglages de l’application, puis recommencez.',
   'setup.tools.sub':
     'Tout le nécessaire pour l’option gratuite est téléchargé dans un dossier séparé, jamais dans le journal. Rien n’est téléchargé avant Démarrer et chaque fichier est vérifié avec la somme de contrôle publiée sur sa page de version.',

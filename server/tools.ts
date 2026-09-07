@@ -11,7 +11,7 @@ import type { CodingCliStatus, MachineInfo, ToolStatus } from '../src/lib/api-ty
 import { managedPaths, PINS, preferredWhisperModel, toolsDir } from '../scripts/lib/tools.ts';
 import { resolveCli } from '../scripts/lib/cli-path.ts';
 import { CODING_CLI_META, parseCliVersion, updateCommandLine } from '../scripts/lib/coding-clis.ts';
-import { CLI_BIN_ENV, CODING_CLIS, missingCliMessage } from '../scripts/providers/cli-extract.ts';
+import { CLI_BIN_ENV, CODING_CLIS } from '../scripts/providers/cli-extract.ts';
 import { ollamaHost } from '../scripts/providers/ollama.ts';
 import { canComplete } from './probe.ts';
 
@@ -279,19 +279,10 @@ export function codingCliStatuses(deps: ToolsDeps, env: NodeJS.ProcessEnv): Prom
       const meta = CODING_CLI_META[kind];
       const configured = env[CLI_BIN_ENV[kind]]?.trim() || kind;
       const found = resolveCli(configured, deps.env, { exists: deps.exists, platform: deps.platform });
-      if (!found) {
-        return { id: kind, name: meta.name, installed: false, updateCommand: updateCommandLine(kind, kind), detail: missingCliMessage(kind, configured) };
-      }
+      const envVar = CLI_BIN_ENV[kind];
+      if (!found) return { id: kind, name: meta.name, installed: false, updateCommand: updateCommandLine(kind, kind), envVar };
       const version = parseCliVersion(await deps.run(found, ['--version'], 8000));
-      return {
-        id: kind,
-        name: meta.name,
-        installed: true,
-        path: found,
-        version,
-        updateCommand: updateCommandLine(kind, found),
-        detail: version ? `${meta.name} ${version}. Uses that CLI's own sign-in; Hornbook stores no key.` : `${found} did not report a version.`,
-      };
+      return { id: kind, name: meta.name, installed: true, path: found, version, updateCommand: updateCommandLine(kind, found), envVar };
     }),
   );
 }

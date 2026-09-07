@@ -576,6 +576,8 @@ export const SV = {
   'setup.clis.versionUnknown': 'okänd version',
   'setup.clis.updating': 'Uppdaterar {name}…',
   'setup.clis.updated': '{name} är nu version {version}.',
+  'setup.clis.detail': 'Använder CLI-verktygets egen inloggning; Hornbook sparar ingen nyckel.',
+  'setup.clis.missing': 'Finns inte i PATH. Installera det, eller sätt {env} till den fullständiga sökvägen.',
   'job.cliOutdated': 'Skrivassistenten är äldre än vad modellen tillåter. Uppdatera den i programinställningarna och börja om.',
   'setup.tools.sub':
     'Allt som den kostnadsfria lösningen behöver hämtas till en egen mapp, aldrig till journalen. Inget hämtas innan du trycker på Starta, och varje fil kontrolleras mot kontrollsumman på dess versionssida.',

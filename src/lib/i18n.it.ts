@@ -516,6 +516,8 @@ export const IT = {
   'setup.clis.versionUnknown': 'versione sconosciuta',
   'setup.clis.updating': 'Aggiornamento di {name}…',
   'setup.clis.updated': '{name} è ora alla versione {version}.',
+  'setup.clis.detail': 'Usa l’accesso del CLI stesso; Hornbook non conserva alcuna chiave.',
+  'setup.clis.missing': 'Non è nel PATH. Installalo, oppure imposta {env} sul suo percorso completo.',
   'job.cliOutdated': 'L’assistente di scrittura è più vecchio di quanto il suo modello consenta. Aggiornalo nelle impostazioni dell’applicazione e riprova.',
   'setup.tools.sub':
     'Tutto ciò che serve al percorso a costo zero, scaricato in una cartella dedicata, mai nel diario. Nulla viene scaricato finché non premi Avvia, e ogni file è verificato con il checksum pubblicato dalla pagina della release.',
