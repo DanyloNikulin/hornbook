@@ -156,6 +156,33 @@
 
   </nav>
 
+  <!-- A release notice sits in the flow under the navigation, never over the
+       page: while a download runs nothing is hidden behind it. -->
+  @if (updateBanner(); as update) {
+    <aside class="il-update-banner" role="status">
+      <span class="il-update-mark" aria-hidden="true">↑</span>
+      <div class="il-update-copy">
+        <strong>{{ 'update.out' | t: { version: updates.displayVersion(update.release!.version) } }}</strong>
+        @if (update.phase === 'downloading') {
+          <span>{{ 'update.downloading' | t: { pct: update.progress ?? 0 } }}</span>
+        } @else if (update.phase === 'ready') {
+          <span>{{ 'update.ready' | t }}</span>
+        } @else if (update.phase === 'error') {
+          <span>{{ update.error }}</span>
+        } @else if (!updates.desktop.available()) {
+          <span>{{ 'update.cloneLead' | t }}</span>
+        }
+        <a [routerLink]="inSection() ? section.link('application') : ['/settings']" fragment="update-settings-title">{{ 'update.notes' | t }}</a>
+      </div>
+      @if (update.phase === 'ready') {
+        <button type="button" class="il-update-action" (click)="restartToUpdate()">{{ 'update.restart' | t }}</button>
+      } @else if (update.release!.url) {
+        <a class="il-update-action" [href]="update.release!.url" target="_blank" rel="noopener noreferrer">{{ 'update.openRelease' | t }}</a>
+      }
+      <button type="button" class="il-update-dismiss" (click)="dismissUpdate()" [attr.aria-label]="'update.dismiss' | t">×</button>
+    </aside>
+  }
+
   <!-- Everything below the navigation scrolls here, so the scrollbar starts
        under the nav and the desktop title strip. -->
   <div class="il-scroll">
@@ -228,30 +255,5 @@
       <span>{{ 'nav.sheet' | t }}</span>
     </span>
   </a>
-}
-
-@if (updateBanner(); as update) {
-  <aside class="il-update-toast" role="status">
-    <span class="il-update-mark" aria-hidden="true">↑</span>
-    <div class="il-update-copy">
-      <strong>{{ 'update.out' | t: { version: updates.displayVersion(update.release!.version) } }}</strong>
-      @if (update.phase === 'downloading') {
-        <span>{{ 'update.downloading' | t: { pct: update.progress ?? 0 } }}</span>
-      } @else if (update.phase === 'ready') {
-        <span>{{ 'update.ready' | t }}</span>
-      } @else if (update.phase === 'error') {
-        <span>{{ update.error }}</span>
-      } @else if (!updates.desktop.available()) {
-        <span>{{ 'update.cloneLead' | t }}</span>
-      }
-      <a [routerLink]="inSection() ? section.link('application') : ['/settings']" fragment="update-settings-title">{{ 'update.notes' | t }}</a>
-    </div>
-    @if (update.phase === 'ready') {
-      <button type="button" class="il-update-action" (click)="restartToUpdate()">{{ 'update.restart' | t }}</button>
-    } @else if (update.release!.url) {
-      <a class="il-update-action" [href]="update.release!.url" target="_blank" rel="noopener noreferrer">{{ 'update.openRelease' | t }}</a>
-    }
-    <button type="button" class="il-update-dismiss" (click)="dismissUpdate()" [attr.aria-label]="'update.dismiss' | t">×</button>
-  </aside>
 }
 </div>

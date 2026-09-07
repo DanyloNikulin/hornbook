@@ -94,8 +94,8 @@ async function main(): Promise<void> {
       (window as Window & { hornbookDesktop?: { state(): Promise<{ update: { phase: string; release?: { version: string } } }> } }).hornbookDesktop?.state(),
     );
     report.rec('desktop main process sees the fake release', update?.update.phase === 'available' && update.update.release?.version === '9.9.9', JSON.stringify(update?.update));
-    await page.locator('.il-update-toast').waitFor({ timeout: 15_000 });
-    report.rec('fake release feed produces a compact update toast', /9\.9/.test(await page.locator('.il-update-toast').innerText()));
+    await page.locator('.il-update-banner').waitFor({ timeout: 15_000 });
+    report.rec('fake release feed produces an update banner under the navigation', /9\.9/.test(await page.locator('.il-update-banner').innerText()));
     const chrome = await electronApp.evaluate(({ BrowserWindow }) => {
       const window = BrowserWindow.getAllWindows()[0];
       return {
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
     });
     report.rec('desktop uses a draggable title area with native window controls and no window menu strip', !chrome.menu && chrome.minimizable && chrome.maximizable && chrome.resizable && await page.locator('.il-titlebar').isVisible(), JSON.stringify(chrome));
     await page.getByRole('button', { name: 'Dismiss', exact: false }).click();
-    await page.locator('.il-update-toast').waitFor({ state: 'detached' });
+    await page.locator('.il-update-banner').waitFor({ state: 'detached' });
     report.rec('update toast dismisses without losing settings access', await page.locator('.il-nav-links a[href="/settings"]').isVisible());
     report.rec('automatic release check makes one feed request', releaseGets === 1, releaseGets);
 
