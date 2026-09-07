@@ -1,7 +1,6 @@
 // The coding CLIs Hornbook can write notes with, and how each one updates
 // itself. Shared by the setup view (installed versions) and the update job.
 
-import { basename } from 'node:path';
 import { CODING_CLIS, type CodingCliKind } from '../providers/cli-extract.ts';
 
 export interface CodingCliMeta {
@@ -27,7 +26,8 @@ export function parseCliVersion(output: string | undefined): string | undefined 
   return output?.match(/\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?/)?.[0];
 }
 
-/** The updater as a terminal line, e.g. `codex update`. */
+/** The updater as a terminal line, e.g. `codex update`. Windows paths are split on either separator, whatever the host. */
 export function updateCommandLine(kind: CodingCliKind, bin: string): string {
-  return [basename(bin).replace(/\.(?:exe|cmd|bat|com)$/i, ''), ...CODING_CLI_META[kind].update].join(' ');
+  const file = bin.split(/[\\/]/).pop() || bin;
+  return [file.replace(/\.(?:exe|cmd|bat|com)$/i, ''), ...CODING_CLI_META[kind].update].join(' ');
 }

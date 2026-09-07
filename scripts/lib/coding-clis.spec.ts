@@ -16,6 +16,7 @@ describe('coding CLIs', () => {
     expect(updateCommandLine('codex', 'C:\\Users\\me\\AppData\\Roaming\\npm\\codex.cmd')).toBe('codex update');
     expect(updateCommandLine('kimi', '/home/me/.kimi-code/bin/kimi')).toBe('kimi upgrade');
     expect(updateCommandLine('claude', 'claude')).toBe('claude update');
+    expect(updateCommandLine('grok', 'C:\\Users\\me\\.grok\\bin\\grok.EXE')).toBe('grok update');
     expect(CODING_CLI_META.grok.update).toEqual(['update']);
   });
 
