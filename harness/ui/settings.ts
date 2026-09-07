@@ -120,11 +120,11 @@ export async function settingsScenario({
   await seen(`Hornbook ${mode.version}`);
   r.rec('application settings show the installed version', true, mode.version);
   await shot('03-settings-en');
-  await page.getByRole('radio', { name: /Italiano/i }).click();
+  await page.locator('.il-locale-select select').selectOption('it');
   await page.waitForTimeout(400);
   r.rec('interface switches to Italian', /Interfaccia/.test(await body()));
   await shot('04-settings-it');
-  await page.getByRole('radio', { name: /English/i }).click();
+  await page.locator('.il-locale-select select').selectOption('en');
   await seen('Interface');
 
   r.rec('guided setup is shown before advanced providers', await page.getByRole('heading', { name: 'From a lesson to a study note' }).isVisible() && await page.locator('.il-pipe').count() === 0);
@@ -281,12 +281,21 @@ export async function settingsScenario({
 
   // Local tools: the five rows and the one button. A plan (source, size,
   // checksum) is shown before any download; this walk fetches nothing.
-  const toolRows = page.locator('.il-setup-row');
+  const toolRows = page.locator('.il-setup-row[data-tool]');
   await page.getByText('Tool details & other models', { exact: true }).click();
   r.rec(
     'local tools list the five rows',
     (await toolRows.count()) === 5,
     `n=${await toolRows.count()}`,
+  );
+  // Coding assistants: one row per CLI with its own updater; nothing is run here.
+  const cliRows = page.locator('.il-setup-row[data-cli]');
+  await cliRows.first().waitFor({ state: 'visible' });
+  const cliLines = await cliRows.allInnerTexts();
+  r.rec(
+    'coding assistants list the four CLIs with their updaters',
+    (await cliRows.count()) === 4 && cliLines.every((line) => /\b(?:update|upgrade)\b|Not installed/.test(line)),
+    cliLines.map((line) => line.split('\n')[0]).join(' | '),
   );
   const setupAll = page
     .locator('button')
