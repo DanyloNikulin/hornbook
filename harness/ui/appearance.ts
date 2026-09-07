@@ -17,7 +17,9 @@ export async function appearanceScenario({ page, goto, r, shot }: UiScenario): P
         await page.locator('main h1').first().waitFor();
         await page.evaluate(() => document.fonts.ready);
         const state = await page.evaluate(() => ({
-          fits: document.documentElement.scrollWidth <= window.innerWidth,
+          fits:
+            document.documentElement.scrollWidth <= window.innerWidth &&
+            Array.from(document.querySelectorAll('.il-scroll')).every((el) => el.scrollWidth <= el.clientWidth),
           ink: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim(),
         }));
         r.rec(`${route} fits ${width}px in ${theme} theme`, state.fits && !!state.ink);

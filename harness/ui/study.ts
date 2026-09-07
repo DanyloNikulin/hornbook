@@ -262,7 +262,8 @@ export async function studyScenario({
     .evaluate(
       (el) =>
         el.scrollWidth <= el.clientWidth &&
-        document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        document.documentElement.scrollWidth <= document.documentElement.clientWidth &&
+        Array.from(document.querySelectorAll('.il-scroll')).every((s) => s.scrollWidth <= s.clientWidth),
     );
   r.rec('Cards deck controls fit a phone viewport', cardsPageFits);
   const levelRowSizes = await page

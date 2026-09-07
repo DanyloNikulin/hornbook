@@ -77,8 +77,8 @@
 .il-sheet-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: start; gap: 36px; }
 .il-sheet-rail {
   position: sticky;
-  top: 96px;
-  max-height: calc(100vh - 116px);
+  top: 24px;
+  max-height: calc(100dvh - 160px);
   overflow-y: auto;
   align-self: start;
 }
@@ -96,7 +96,7 @@
 .il-sheet-category-head { display: flex; align-items: center; gap: 13px; margin-bottom: 9px; }
 .il-sheet-category-head h2 { margin: 0; color: var(--muted); font: 500 9.5px var(--font-mono); letter-spacing: .18em; text-transform: uppercase; }
 .il-sheet-category-head span { height: 1px; flex: 1; background: var(--line); }
-.il-sheet-section { scroll-margin-top: 96px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--paper-2); }
+.il-sheet-section { scroll-margin-top: 24px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--paper-2); }
 .il-sheet-section + .il-sheet-section { margin-top: 14px; }
 .il-sheet-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 18px 21px 12px; }
 .il-sheet-section-head h3 { margin: 0; font-family: var(--font-display); font-size: 25px; font-weight: 500; }

@@ -80,7 +80,8 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
+/* The window itself never scrolls: .il-scroll does, below the navigation. */
+html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
 * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb, var(--muted)) transparent; }
 @supports selector(::-webkit-scrollbar) {
   * { scrollbar-width: auto; scrollbar-color: auto; }
@@ -96,8 +97,6 @@ html, body { margin: 0; padding: 0; }
   ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
   ::-webkit-scrollbar-corner { background: transparent; }
 }
-html { scrollbar-gutter: stable; }
-
 body {
   font-family: var(--font-body);
   color: var(--ink);
@@ -177,11 +176,21 @@ h1, h2, h3, h4 {
 .il-page {
   position: relative;
   z-index: 1;
-  min-height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
 }
-.il-page > main { flex: 1; }
+/* The scrolling part of the page: main content and footer, under the nav. */
+.il-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.il-scroll > main { flex: 1; }
 
 @include shell.navigation;
 @include shell.hero;

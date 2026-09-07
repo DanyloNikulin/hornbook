@@ -1,8 +1,8 @@
 @mixin navigation {
 /* ---------- Navigation ---------- */
 .il-nav {
-  position: sticky;
-  top: 0;
+  position: relative;
+  flex: none;
   z-index: 50;
   display: flex;
   flex-direction: column;
@@ -20,9 +20,11 @@
   gap: 28px;
 }
 
+/* Desktop: the strip under the native window controls. It reads as the top
+   of the navigation: same translucent glass over the backdrop, and the page
+   scrolls below both, so the scrollbar never runs under the controls. */
 .il-titlebar {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 60;
   height: 36px;
   padding-inline: 90px 150px;
@@ -30,15 +32,16 @@
   align-items: center;
   justify-content: center;
   gap: 9px;
-  background: var(--backdrop-top);
+  background: rgba(20, 18, 16, 0.42);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
   color: #f4ecdf;
   font: 600 12px var(--font-body);
   -webkit-app-region: drag;
   user-select: none;
 }
 .il-titlebar span { font: italic 20px var(--font-display); }
-body:has(.il-titlebar) .il-nav { top: 36px; }
-body:has(.il-titlebar) .il-page { min-height: calc(100vh - 36px); }
+body:has(.il-titlebar) .il-page { height: calc(100dvh - 36px); }
 .il-floating-tools {
   position: fixed;
   left: max(16px, env(safe-area-inset-left));
