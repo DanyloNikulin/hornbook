@@ -97,7 +97,7 @@ export interface DesktopState {
 
 // ── Jobs ────────────────────────────────────────────────────────────────────
 
-export type JobKind = 'process' | 'cheatsheet' | 'review-topics' | 'setup';
+export type JobKind = 'process' | 'cheatsheet' | 'review-topics' | 'setup' | 'cli-update';
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
 export type ProcessStageId = 'hearing' | 'slides' | 'writing' | 'checking';
 export type JobStageStatus = 'waiting' | 'running' | 'done' | 'skipped' | 'failed';
@@ -165,7 +165,12 @@ export interface StartSetupJob {
   sha256?: string;
 }
 
-export type StartJob = StartProcessJob | StartCheatsheetJob | StartReviewJob | StartSetupJob;
+export interface StartCliUpdateJob {
+  kind: 'cli-update';
+  cli: CodingCliId;
+}
+
+export type StartJob = StartProcessJob | StartCheatsheetJob | StartReviewJob | StartSetupJob | StartCliUpdateJob;
 
 // ── Settings ────────────────────────────────────────────────────────────────
 
@@ -277,6 +282,24 @@ export interface SetupPlanRequest {
   tool: ToolId;
   model?: string;
   variant?: WhisperVariant;
+}
+
+// ── Setup inside the app: coding CLIs ───────────────────────────────────────
+
+export type CodingCliId = 'claude' | 'codex' | 'grok' | 'kimi';
+
+export interface CodingCliStatus {
+  id: CodingCliId;
+  /** Product name, e.g. Claude Code. */
+  name: string;
+  installed: boolean;
+  path?: string;
+  /** What `--version` reported, when it did. */
+  version?: string;
+  /** The CLI's own updater, as the Update button runs it: `codex update`. */
+  updateCommand: string;
+  /** Environment variable that points Hornbook at the CLI when it is not on PATH. */
+  envVar: string;
 }
 
 export interface SetupView {

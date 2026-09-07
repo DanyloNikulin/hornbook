@@ -578,6 +578,14 @@ export const DE = {
   'pipeline.defaultsScope':
     'Diese Standards gelten für Abschnitte ohne eigene Vorgaben. Nutzt ein Abschnitt weiterhin eine andere CLI oder ein anderes Modell, öffne seine Einstellungen und deaktiviere die Überschreibung für Schreiben.',
   'setup.tools.title': 'Lokale Werkzeuge',
+  'setup.clis.title': 'Kommandozeilen-Assistenten',
+  'setup.clis.sub': 'Kommandozeilen-Assistenten, die auf diesem Rechner die Notizen schreiben können. Jeder aktualisiert sich selbst, und ein Modell kann eine zu alte Version ablehnen: Aktualisieren Sie hier, wenn eine Lektion mit „requires a newer version“ scheitert.',
+  'setup.clis.versionUnknown': 'Version unbekannt',
+  'setup.clis.updating': '{name} wird aktualisiert…',
+  'setup.clis.updated': '{name} ist jetzt Version {version}.',
+  'setup.clis.detail': 'Nutzt die eigene Anmeldung des CLI; Hornbook speichert keinen Schlüssel.',
+  'setup.clis.missing': 'Nicht im PATH. Installieren Sie es oder setzen Sie {env} auf den vollständigen Pfad.',
+  'job.cliOutdated': 'Der Schreibassistent ist älter, als sein Modell erlaubt. Aktualisieren Sie ihn in den Anwendungseinstellungen und starten Sie erneut.',
   'setup.tools.sub':
     'Alles für die kostenlose Nutzung wird in einen eigenen Ordner geladen, nie ins Journal. Vor dem Klick auf Starten wird nichts heruntergeladen; jede Datei wird anhand der auf ihrer Versionsseite veröffentlichten Prüfsumme geprüft.',
   'setup.tools.dir': 'Werkzeugordner: {dir}',

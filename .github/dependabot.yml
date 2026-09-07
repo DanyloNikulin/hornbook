@@ -5,13 +5,28 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    # Angular runtime and tooling move together; a group that bumps one
+    # half of an Angular major cannot even install (peer ranges are exact).
+    # Majors of the framework are done by hand with `ng update`, so only
+    # minors and patches are proposed. Other majors arrive one per pull
+    # request, where a breaking change can be judged on its own.
+    ignore:
+      - dependency-name: '@angular/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@angular-eslint/*'
+        update-types: ['version-update:semver-major']
     groups:
       angular:
         patterns:
           - '@angular/*'
           - '@angular-eslint/*'
+        update-types: ['minor', 'patch']
       development:
         dependency-type: development
+        exclude-patterns:
+          - '@angular/*'
+          - '@angular-eslint/*'
+        update-types: ['minor', 'patch']
 
   - package-ecosystem: github-actions
     directory: /

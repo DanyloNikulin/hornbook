@@ -152,7 +152,11 @@ function createWindow(route = '/'): BrowserWindow {
   });
   mainWindow = window;
   // Windows Shell needs a real icon file, outside the application archive.
-  if (process.platform === 'win32') window.setAppDetails({ appId: APP_ID, appIconPath: icon });
+  // The packaged executable carries the icon itself; pointing the taskbar at
+  // a file that an unpacked build may lack left it showing a blank window.
+  if (process.platform === 'win32') {
+    window.setAppDetails({ appId: APP_ID, appIconPath: app.isPackaged ? process.execPath : icon, appIconIndex: 0 });
+  }
   if (process.platform !== 'darwin') window.setMenu(null);
 
   window.once('ready-to-show', () => window.show());

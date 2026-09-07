@@ -154,6 +154,45 @@
   }
   </details>
 }
+
+<div class="il-setup-clis">
+  <h3 id="coding-clis" class="il-compose-h il-anchor-target">{{ 'setup.clis.title' | t }}</h3>
+  <p class="il-settings-help">{{ 'setup.clis.sub' | t }}</p>
+  @if (clis(); as list) {
+    @for (c of list; track c.id) {
+      <div class="il-setup-row" [attr.data-cli]="c.id">
+        <div class="il-setup-head">
+          <strong>{{ c.name }}</strong>
+          <span class="il-setup-pill" [class.il-setup-pill--ok]="c.installed">
+            {{ c.installed ? (c.version ?? ('setup.clis.versionUnknown' | t)) : ('setup.status.missing' | t) }}
+          </span>
+          @if (c.installed) {
+            <button type="button" class="il-btn ghost sm" [disabled]="cliRow(c.id)?.phase === 'running' || allRunning()" (click)="updateCli(c.id)">
+              {{ 'setup.action.update' | t }}
+            </button>
+          }
+        </div>
+        <p class="il-settings-help" style="margin: 4px 0 0;">
+          {{ c.installed ? ('setup.clis.detail' | t) : ('setup.clis.missing' | t: { env: c.envVar }) }}
+        </p>
+        @if (c.installed) { <p class="il-setup-path">{{ c.path }} · {{ c.updateCommand }}</p> }
+        @if (cliRow(c.id); as r) {
+          @if (r.phase === 'running') {
+            <p class="il-settings-help" role="status">{{ 'setup.clis.updating' | t: { name: c.name } }}@if (cliLogTail(c.id); as line) { · {{ line }} }</p>
+          }
+          @if (r.phase === 'done') {
+            <p class="il-pipe-result il-pipe-result--ok" role="status">{{ 'setup.clis.updated' | t: { name: c.name, version: r.version ?? c.version ?? '' } }}</p>
+          }
+          @if (r.phase === 'failed') {
+            <p class="il-pipe-result il-pipe-result--bad" role="alert">{{ 'setup.failed' | t: { error: r.error ?? '' } }}</p>
+          }
+        }
+      </div>
+    }
+  } @else {
+    <p class="il-stat-sub">{{ 'common.loading' | t }}</p>
+  }
+</div>
 </section>
 
 @if (error()) {

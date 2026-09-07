@@ -525,6 +525,14 @@ export const EN = {
   'pipeline.defaultsScope': 'These defaults apply to sections without their own override. If a section keeps using another CLI or model, open its Section settings and turn off the Writing override.',
 
   'setup.tools.title': 'Local tools',
+  'setup.clis.title': 'Coding assistants',
+  'setup.clis.sub': 'Command-line assistants that can write the notes on this computer. Each one updates itself, and a model can refuse a version that is too old: update here when a lesson fails with “requires a newer version”.',
+  'setup.clis.versionUnknown': 'version unknown',
+  'setup.clis.updating': 'Updating {name}…',
+  'setup.clis.updated': '{name} is now {version}.',
+  'setup.clis.detail': 'Uses that CLI’s own sign-in; Hornbook stores no key.',
+  'setup.clis.missing': 'Not on PATH. Install it, or set {env} to its full path.',
+  'job.cliOutdated': 'The writing assistant is older than its model allows. Update it in Application settings, then start again.',
   'setup.tools.sub':
     'Everything the zero-cost path needs, fetched into a folder of its own, never into the journal. Nothing is downloaded until you press Start, and every file is checked against the checksum its release page publishes.',
   'setup.tools.dir': 'Tools folder: {dir}',

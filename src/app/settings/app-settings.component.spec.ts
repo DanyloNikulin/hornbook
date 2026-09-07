@@ -25,7 +25,9 @@ describe('AppSettingsComponent', () => {
           useValue: {
             get: vi.fn().mockImplementation((url: string) =>
               Promise.resolve(
-                url === '/api/setup'
+                url === '/api/setup/clis'
+                  ? []
+                  : url === '/api/setup'
                   ? {
                       tools: [],
                       recommend: {
@@ -71,11 +73,11 @@ describe('AppSettingsComponent', () => {
     const root = fixture.nativeElement as HTMLElement;
     expect(root.textContent).toContain('Application');
     expect(root.textContent).toContain('Interface');
-    const italian = [...root.querySelectorAll('button')].find((b) =>
-      b.textContent?.includes('Italiano'),
-    );
-    expect(italian).toBeTruthy();
-    italian?.click();
+    const select = root.querySelector<HTMLSelectElement>('.il-locale-select select');
+    expect(select).toBeTruthy();
+    expect([...select!.options].some((o) => o.textContent?.includes('Italiano'))).toBe(true);
+    select!.value = 'it';
+    select!.dispatchEvent(new Event('change'));
     fixture.detectChanges();
     await fixture.whenStable();
     expect(root.textContent).toContain('Applicazione');
@@ -134,15 +136,16 @@ describe('AppSettingsComponent', () => {
       ['uk', 'Українська', 'Застосунок'],
     ];
     for (const [locale, label, title] of choices) {
-      const choice = [...root.querySelectorAll<HTMLButtonElement>('[role="radio"]')].find(
-        (button) => button.textContent?.includes(label),
-      );
-      expect(choice, label).toBeTruthy();
-      choice!.click();
+      const select = root.querySelector<HTMLSelectElement>('.il-locale-select select');
+      expect(select, label).toBeTruthy();
+      const option = [...select!.options].find((o) => o.value === locale);
+      expect(option?.textContent, label).toContain(label);
+      select!.value = locale;
+      select!.dispatchEvent(new Event('change'));
       await fixture.whenStable();
       expect(root.querySelector('h1')?.textContent).toBe(title);
-      expect(choice!.getAttribute('aria-checked')).toBe('true');
-      expect(root.querySelectorAll('[role="radio"][aria-checked="true"]').length).toBe(1);
+      expect(select!.value).toBe(locale);
+      expect([...select!.options].filter((o) => o.selected).length).toBe(1);
       expect(TestBed.inject(I18nService).locale()).toBe(locale);
       expect(localStorage.getItem('hornbook-locale')).toBe(locale);
       expect(document.documentElement.lang).toBe(locale);

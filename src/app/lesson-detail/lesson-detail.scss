@@ -39,7 +39,7 @@
 }
 .il-lesson-rail {
   position: sticky;
-  top: 96px;
+  top: 24px;
   align-self: flex-start;
   flex: 0 0 200px;
 }
@@ -106,7 +106,7 @@
   text-decoration: none;
 }
 .il-lesson-rail-quiz:hover { color: var(--primary); }
-.il-lesson-section[id] { scroll-margin-top: 96px; }
+.il-lesson-section[id] { scroll-margin-top: 24px; }
 
 /* Hero card */
 .il-lesson-hero {

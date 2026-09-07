@@ -311,6 +311,11 @@ export class ComposeComponent {
     return formatStageElapsed(stage, this.now());
   }
 
+  /** A coding CLI refused by its model for being too old: the fix is an update, not a retry. */
+  protected cliOutdated(error: string): boolean {
+    return /\b\w+-cli\b/.test(error) && /\b(?:newer|latest|newest) version\b|\bupgrade\b|\bout of date\b/i.test(error);
+  }
+
   protected stageProgress(job: JobView): number {
     return processStageProgress(job.stages ?? []);
   }

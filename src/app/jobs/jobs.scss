@@ -45,11 +45,13 @@
   border: 1px solid rgba(255, 248, 238, .08);
   border-radius: 14px;
   outline: none;
-  background: var(--ink);
+  /* A console stays dark in both themes: the night --ink is the light text
+     colour, which made the log invisible on its own background. */
+  background: #2a2520;
   color: #d9c9a8;
   font-size: 12px;
   line-height: 1.7;
-  --scrollbar-thumb: color-mix(in srgb, var(--paper) 32%, transparent);
+  --scrollbar-thumb: color-mix(in srgb, #d9c9a8 32%, transparent);
 }
 .il-job--process .il-log:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 38%, transparent); }
 .il-job-process-head {
@@ -143,6 +145,8 @@
 .il-job-running,
 .il-job-finished { margin: 12px 0 0; font-size: 12.5px; }
 .il-job-error { color: #a33; }
+.il-job-hint { margin: 6px 0 0; font-size: 12.5px; }
+.il-job-hint a { color: var(--primary-ink); font-weight: 600; text-decoration: underline; }
 .il-job-running { color: var(--muted); }
 .il-job-finished { color: var(--success); }
 @media (max-width: 720px) {

@@ -156,6 +156,10 @@
 
   </nav>
 
+  <!-- Everything below the navigation scrolls here, so the scrollbar starts
+       under the nav and the desktop title strip. -->
+  <div class="il-scroll">
+
   <!-- Page content -->
   <main id="main-content" tabindex="-1">
     @if (serverError()) {
@@ -203,6 +207,8 @@
       <a [href]="repoUrl" target="_blank" rel="noopener noreferrer">{{ 'footer.source' | t }}</a>
     }
   </footer>
+
+  </div>
 
 </div>
 

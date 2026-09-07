@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { applyManagedUpdateEntries, machineInfo, managedWhisperModels, toolStatuses, toolsEnv, type ToolsDeps } from './tools.ts';
+import { applyManagedUpdateEntries, codingCliStatuses, machineInfo, managedWhisperModels, toolStatuses, toolsEnv, type ToolsDeps } from './tools.ts';
 import type { ToolStatus } from '../src/lib/api-types.ts';
 
 const DIR = 'C:\\t';
@@ -148,5 +148,28 @@ describe('machineInfo', () => {
     expect(withGpu).toEqual({ platform: 'win32', arch: 'x64', ramMb: 64000, gpu: { name: 'NVIDIA GeForce RTX 5060 Laptop GPU', vramMb: 8151 } });
     const without = await machineInfo(win());
     expect(without.gpu).toBeUndefined();
+  });
+});
+
+describe('codingCliStatuses', () => {
+  it('finds each CLI on PATH or from Settings and reads its version', async () => {
+    const deps = win({
+      env: { HORNBOOK_TOOLS: DIR, PATH: 'C:\\bin', PATHEXT: '.EXE;.CMD' },
+      exists: (p) => p === 'C:\\bin\\codex.CMD' || p === 'D:\\claude\\claude.exe',
+      run: async (bin) => (bin.includes('codex') ? 'codex-cli 0.153.4\n' : '2.1.234 (Claude Code)\n'),
+    });
+    const rows = await codingCliStatuses(deps, { CLAUDE_BIN: 'D:\\claude\\claude.exe' });
+    expect(rows.map((r) => r.id)).toEqual(['claude', 'codex', 'grok', 'kimi']);
+    expect(rows[0]).toMatchObject({ name: 'Claude Code', installed: true, path: 'D:\\claude\\claude.exe', version: '2.1.234', updateCommand: 'claude update' });
+    expect(rows[1]).toMatchObject({ installed: true, path: 'C:\\bin\\codex.CMD', version: '0.153.4', updateCommand: 'codex update' });
+    expect(rows[2]).toMatchObject({ installed: false, updateCommand: 'grok update', envVar: 'GROK_BIN' });
+    expect(rows[2].path).toBeUndefined();
+  });
+
+  it('reports an installed CLI whose version cannot be read', async () => {
+    const deps = win({ exists: (p) => p === 'C:\\bin\\kimi.EXE', run: async () => undefined });
+    const [, , , kimi] = await codingCliStatuses(deps, {});
+    expect(kimi).toMatchObject({ installed: true, path: 'C:\\bin\\kimi.EXE', updateCommand: 'kimi upgrade', envVar: 'KIMI_BIN' });
+    expect(kimi.version).toBeUndefined();
   });
 });

@@ -4,59 +4,169 @@
 [![GitHub release](https://img.shields.io/github/v/release/DanyloNikulin/hornbook)](https://github.com/DanyloNikulin/hornbook/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-1f4e5f.svg)](LICENSE)
 
-A **conspect journal** for 1:1 language lessons. Your journal is a folder of JSON files on your
-machine; Hornbook is the app that reads and writes it. Several language pairs live side by side.
-Recordings and cloud models are optional: with whisper.cpp and Ollama it runs at zero cost.
+**Your one-to-one language lessons, turned into study notes you will actually open again.**
+
+Give Hornbook a lesson recording or a transcript and it writes the conspect: what
+was covered, the vocabulary with levels, the grammar, the quotes worth keeping, a
+quiz, flashcards, and the slides it spotted in the video. Then it helps you study
+what you paid for: spaced-repetition cards, quizzes, a glossary, search, and a
+grammar cheat sheet that grows with every lesson.
+
+Everything is local-first. Your journal is a folder of JSON files on your machine;
+Hornbook is the app that reads and writes it. Several language pairs live side by
+side. With whisper.cpp and Ollama it runs at zero cost; cloud models and the coding
+assistants already installed on your computer work too. Nothing you do goes
+through GitHub or any server you do not run yourself.
 
 This is a clean engine. It is **not** a fork of anyone's private lesson archive.
 
-Hornbook 0.9 is the product preview. It is feature-complete enough for daily
-use; the next milestone is a refactor and hardening pass before 1.0.
+> Hornbook 0.9 is the product preview: feature-complete enough for daily use,
+> with a hardening pass before 1.0. See [Status](#status).
 
-## Download and start
+## Quick start
 
-Download the installer for Windows, macOS or Linux from
-[GitHub Releases](https://github.com/DanyloNikulin/hornbook/releases). Hornbook
-opens as a desktop app and stays in the tray while lesson and setup jobs run.
-Until the first `v0.9.0` tag is published, use the source instructions below;
-the release workflow creates the installers and container from that tag.
+1. **Install.** Download the installer for Windows, macOS or Linux from
+   [GitHub Releases](https://github.com/DanyloNikulin/hornbook/releases). Preview
+   builds are not code-signed yet: Windows shows a SmartScreen warning (More info →
+   Run anyway) and macOS asks you to allow the app in System Settings → Privacy &
+   Security.
+2. **Open Hornbook.** It creates your journal at `~/Hornbook` from the demo journal
+   (a Spanish and an Italian pair you can delete later) and stays in the tray while
+   jobs run.
+3. **Pick where the models run.** In **Application settings**, press
+   **Set up everything for local use**: ffmpeg, whisper.cpp, Ollama and a writing
+   model are downloaded one by one, each with its source, size and checksum shown
+   first. Prefer a cloud API or a coding assistant such as Claude Code or Codex?
+   Open *Advanced: model providers & connections* instead.
+4. **Add a lesson.** Open a language pair (or create one with **New pair**),
+   choose **Add**, and drop a recording, paste a transcript, write the note by hand,
+   or import a lesson file. Hornbook hears the recording, keeps the useful slides,
+   writes the conspect, checks it against the lesson schema, and opens the lesson
+   when it is saved.
 
-1. Install and open Hornbook.
-2. In **Application settings**, click **Set up everything for local use**.
-3. Open a language pair and choose **Add**.
-4. Paste a transcript, choose a recording, write a lesson by hand, or import one.
+Back up by copying the journal folder. That is the whole backup story.
 
-Your journal lives in `~/Hornbook` and does not go through GitHub.
+## What a lesson becomes
 
-## Run from source
+Each lesson is one JSON file in the pair's folder, with a rendered Markdown copy
+next to it. It holds:
 
-To run from a source clone, use Node 22.12 or newer and git:
+- **Article** — what was covered, written for you in your own language.
+- **Vocabulary** — words and phrases with glosses and CEFR levels, feeding the
+  glossary and the cards.
+- **Grammar** — the rules that came up, feeding the pair's cheat sheet.
+- **Quotes** — lines from the lesson worth remembering.
+- **Quiz and flashcards** — generated from the lesson; your answers and SM-2
+  progress are stored per pair, never inside the lesson.
+- **Slides** — frames from a video that changed meaningfully, kept as images.
+- **Topics** — tags from the pair's topic catalogue, so lessons can be found by
+  theme.
+
+Every lesson page can export that lesson as canonical JSON, and the cheat sheet
+page updates itself with **Update from new lessons**. Pair settings offer
+**Review topics** to propose new tags. Both use the pair's writing model, so they
+run on Ollama as well as on a cloud API.
+
+## Four ways to add a lesson
+
+Everything happens on the **Add** page of a pair:
+
+- **By hand** — title, summary, article; saved as JSON into the pair's folder.
+- **From a transcript** — paste it; the writing model produces the article,
+  vocabulary, grammar, quotes, quiz and flashcards.
+- **From a recording** — drop audio or video; it is transcribed, then written up.
+  Slides in a video are read when the writing model has vision: any Anthropic or
+  OpenAI model, or an Ollama model that lists the vision capability (gemma3,
+  qwen2.5vl). A live log shows progress, and a failed step says why.
+- **Import a lesson** — choose a Hornbook lesson JSON file. If its id already
+  exists, keep both under a new slug or explicitly replace the existing lesson.
+
+The same things work from the command line:
 
 ```bash
-git clone https://github.com/DanyloNikulin/hornbook.git
-cd hornbook
-npm install
-npm run build
-npm run hornbook              # browser
-npm run hornbook:app          # Electron desktop shell
+npm run lesson:new -- --date 2026-09-02 --title "Greetings" --section es-en
+npm run process -- lesson.mp4 --date 2026-09-02 --section es-en     # video: transcribe + slides + extract
+npm run process -- notes.txt --from transcript --date 2026-09-02 --section es-en
+npm run cheatsheet -- --section es-en
+npm run vocab-review -- --section es-en
 ```
 
-Both run one local server serving the UI and an API over your journal folder.
-The browser command listens on 127.0.0.1:8787; the Electron shell chooses a
-random loopback port protected by a new launch token each time. Closing its
-window leaves it in the tray; Quit stops its jobs, managed Ollama and server.
+`--section` is optional while the journal has one pair.
 
-On first run your journal is created at `~/Hornbook` from the demo journal (a Spanish and an
-Italian pair); delete the demo pairs whenever you like. Options:
+## Models
 
-```
-hornbook [serve] [--journal <dir>] [--port 8787] [--host 127.0.0.1] [--password …] [--app] [--no-open]
-```
+Every lesson goes through two model steps: **hear** the recording, then **write**
+the conspect. Each step runs on this computer, on the home network (Ollama), or
+through an internet API. Set them on **Application settings** for the whole
+journal; a pair can override them on its own ⚙ page.
 
-Nothing you do in the app goes through git. Back up by copying the folder.
+| Step | Drivers |
+|---|---|
+| hear (transcribe) | `whisper-cli` (whisper.cpp binary + model file) or `openai` |
+| write (extract) | `claude-cli` / `codex-cli` / `grok-cli` / `kimi-cli` (this computer), `ollama` (LAN), `anthropic`, or `openai` |
 
-For development, `npm start` runs the server next to the Angular dev server on
-http://localhost:4200 with `/api` proxied, using the repo's `./journal`.
+**Free setup that we ran end to end** (no API keys) on a 10 minute German A1 video
+and a 15 minute Norwegian A2 video, `whisper-cli` + Ollama on an 8 GB GPU:
+
+| Step | What to install | What we actually ran |
+|---|---|---|
+| Hear | [whisper.cpp](https://github.com/ggml-org/whisper.cpp) `whisper-cli` + [`ggml-small.bin`](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin) (~466 MB) | Full video jobs with `small`. `tiny` is only for the 24 s harness fixture: on the Norwegian clip it heard Swedish-ish noise; `small` detected `no` and wrote `leilighet` / `husleie`. We did not run `medium`. |
+| Write | `ollama pull qwen2.5:7b` | Same two videos, after hearing. It writes a valid lesson JSON. The note still needs a human pass (learner-language glosses, empty vocab arrays, junk quotes). |
+| Context | `OLLAMA_NUM_CTX=32768` | Required for these lengths. 16k cut the German extract mid-JSON. Ollama's own 4k is far too small. |
+
+`ollama pull gemma3:4b` reads slides on the **24 s** harness fixture. We did **not**
+use it on the 10–15 minute videos (qwen2.5:7b has no vision, so those frames were
+skipped).
+
+In Application settings: hearing = this computer (`WHISPER_BIN` / `WHISPER_MODEL`
+→ `whisper-cli` and `ggml-small.bin`); writing = home network, pick `qwen2.5:7b`.
+
+**Writing through a coding assistant.** If Claude Code, Codex, Grok or Kimi Code
+is installed and signed in on this computer, set writing = this computer and pick
+it. Hornbook runs the CLI headless with the prompt and stores no key; the model
+`-` means whatever that CLI is set to. Slides are skipped on this path. Application
+settings lists the assistants with their versions and updates each one with its
+own updater, which matters when a model starts refusing an older CLI.
+`npm run harness:cli` runs the fixture through every CLI it finds.
+
+**Keys and endpoints** entered in Settings are stored in `journal/secrets.json`,
+which git ignores. Values from the environment or a local `.env` are used when the
+journal has none. Never commit keys. If the writing model has no vision, slides
+are skipped.
+
+Ollama is called through its native API. Set `OLLAMA_NUM_CTX=32768` for real
+lessons; 16k is the code default and cuts off a 10-minute extract.
+
+Lesson-processing jobs allow up to 24 hours by default, to accommodate slow CPU
+transcription. Other background jobs allow one hour. Set
+`HORNBOOK_JOB_TIMEOUT_MINUTES` before starting Hornbook to override both limits
+(a positive number, at most 10080). For example, in PowerShell,
+`$env:HORNBOOK_JOB_TIMEOUT_MINUTES = '2880'` allows two days. A timeout error
+names this setting; the separate extraction-provider deadline still applies to
+individual model requests.
+
+### Local tools
+
+Application settings has a **Local tools** section for the zero-cost path. For
+ffmpeg, whisper.cpp, a whisper model, Ollama and a writing model it shows whether
+each is installed (managed by Hornbook, found on PATH, set in Settings, or an
+Ollama running elsewhere) and offers a download or the package-manager line.
+Nothing is fetched until you press Start: a download first shows its source, size
+and SHA-256 from the release page, and the file is verified after the transfer.
+**Set up everything for local use** does the missing ones in order.
+
+Managed tools live outside the journal: `%LOCALAPPDATA%\Hornbook\tools` on
+Windows, `~/Library/Application Support/Hornbook/tools` on macOS,
+`~/.local/share/hornbook/tools` on Linux (`HORNBOOK_TOOLS` overrides). A managed
+Ollama runs as a child of the server on port 11435 with its own models folder and
+stays off when an Ollama already answers on 11434. `hornbook doctor` prints the
+same table in a terminal.
+
+Downloads come from the releases pinned in `scripts/lib/tools.ts`: whisper.cpp
+(CPU build 8 MB, CUDA build 671 MB), the standalone Ollama archive (1.47 GB on
+Windows), the BtbN ffmpeg build (169 MB), and the ggml models from Hugging Face.
+On macOS ffmpeg and whisper.cpp come from Homebrew; on Linux whisper.cpp is built
+from source.
 
 ## The journal folder
 
@@ -75,128 +185,77 @@ journal/
     ...
 ```
 
-Create a pair on `/setup` in the app (pick target and learner from the catalogue), or add it to
-`journal.config.json` → `sections`. A journal in the old single-pair layout (`lessons/` + root
-`journal.config.json`) migrates with `npm run migrate`.
+Create a pair on `/setup` in the app (pick target and learner from the catalogue),
+or add it to `journal.config.json` → `sections`. A journal in the old single-pair
+layout (`lessons/` + root `journal.config.json`) migrates with `npm run migrate`.
 
-## Add a lesson
-
-Everything happens on the **Add** page of a pair:
-
-- **By hand** — title, summary, article; saved as JSON into the pair's folder.
-- **From a transcript** — paste it; the extract model writes the article, vocabulary, grammar,
-  quotes, quiz and flashcards.
-- **From a recording** — drop audio or video; it is transcribed, then extracted. Slides in a
-  video are read when the extract model has vision: any Anthropic or OpenAI model, or an Ollama
-  model that lists the vision capability (gemma3, qwen2.5vl). A live log shows progress.
-- **Import a lesson** — choose a Hornbook lesson JSON file. If its id already exists, keep both
-  under a new slug or explicitly replace the existing lesson.
-
-The cheat sheet page updates itself with "Update from new lessons", and Settings has
-"Review topics" for proposing new topic tags. Both use the pair's extract model, so
-they run on Ollama as well as on a cloud API.
-
-The same things work from the command line:
-
-```bash
-npm run lesson:new -- --date 2026-09-02 --title "Greetings" --section es-en
-npm run process -- lesson.mp4 --date 2026-09-02 --section es-en     # video: transcribe + slides + extract
-npm run process -- notes.txt --from transcript --date 2026-09-02 --section es-en
-npm run cheatsheet -- --section es-en
-npm run vocab-review -- --section es-en
-```
-
-`--section` is optional while the journal has one pair.
+Every write to the journal is a transaction with a rollback, so a crash mid-save
+leaves the previous files in place. See
+[docs/JOURNAL-RECOVERY.md](docs/JOURNAL-RECOVERY.md) for the recovery cases.
 
 ## Move or share lessons and pairs
 
-Every lesson page can export that lesson as canonical JSON. Pair settings can export the whole
-pair as a Hornbook ZIP containing its section settings, lesson JSON, cheat sheet, topic catalogue,
-theme and backdrop. Study progress is optional; derived indexes are never included and are rebuilt
-after import. Import lesson JSON on the pair's **Add** page, or import a pair ZIP on `/setup`.
+Every lesson page can export that lesson as canonical JSON. Pair settings can
+export the whole pair as a Hornbook ZIP containing its section settings, lesson
+JSON, cheat sheet, topic catalogue, theme and backdrop. Study progress is optional;
+derived indexes are never included and are rebuilt after import. Import lesson
+JSON on the pair's **Add** page, or import a pair ZIP on `/setup`.
 
-These exports are for moving and sharing. A full backup is still just a copy of the journal folder.
+These exports are for moving and sharing. A full backup is still just a copy of
+the journal folder.
 
-## Models
+## Look, languages and pairs
 
-Set them on the Settings page of any pair (⚙ in the header). Journal defaults apply to every
-pair; a pair can override them.
+Each pair can have its own atmosphere, chosen in Settings: one of six bundled
+presets (each defined for day and night), a display font from the bundled three,
+and optionally a backdrop photo. The photo is stored in the pair's folder and
+served by your own server; it never leaves the machine. Switching pairs repaints
+the app immediately.
 
-| Step | Drivers |
-|---|---|
-| transcribe | `whisper-cli` (whisper.cpp binary + model file) or `openai` |
-| extract | `claude-cli` / `codex-cli` / `grok-cli` / `kimi-cli` (this computer), `ollama` (LAN), `anthropic`, or `openai` |
+The interface speaks English, Italian, Spanish, French, German, Portuguese
+(Portugal), Dutch, Swedish and Ukrainian, chosen on **Application** settings,
+independently of the languages you study. Learner-side text in a lesson is written
+by the model in the pair's learner language.
 
-**Free setup that we ran end to end** (no API keys) on a 10 minute German A1 video and a 15 minute Norwegian A2 video, `whisper-cli` + Ollama on an 8 GB GPU:
+A pair's `target` drives three things: the extraction prompt, browser
+text-to-speech, and the typed-answer checker on the flashcards page. The checker
+forgives a dropped or extra article and flags a wrong one (gender or number) for
+targets with an article table: it, es, pt, fr, de, nl, en, el, ar, he (see
+`src/lib/articles.ts`). Other targets compare the full typed string. Gender/number
+slash variants (`bello/a`, `гарний/а`) work for any target.
 
-| Step | What to install | What we actually ran |
-|---|---|---|
-| Hear | [whisper.cpp](https://github.com/ggml-org/whisper.cpp) `whisper-cli` + [`ggml-small.bin`](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin) (~466 MB) | Full video jobs with `small`. `tiny` is only for the 24 s harness fixture: on the Norwegian clip it heard Swedish-ish noise; `small` detected `no` and wrote `leilighet` / `husleie`. We did not run `medium`. |
-| Write | `ollama pull qwen2.5:7b` | Same two videos, after hearing. It writes a valid lesson JSON. The note still needs a human pass (learner-language glosses, empty vocab arrays, junk quotes). |
-| Context | `OLLAMA_NUM_CTX=32768` | Required for these lengths. 16k cut the German extract mid-JSON. Ollama’s own 4k is far too small. |
+Country flags in the catalogue are drawn with a bundled Twemoji subset (CC-BY 4.0),
+because Windows has no flag glyphs of its own.
 
-`ollama pull gemma3:4b` reads slides on the **24 s** harness fixture. We did **not** use it on the 10–15 minute videos (qwen2.5:7b has no vision, so those frames were skipped).
+## Run from source
 
-In Application settings: hearing = this computer (`WHISPER_BIN` / `WHISPER_MODEL` → `whisper-cli` and `ggml-small.bin`); writing = home network, pick `qwen2.5:7b`.
+Use Node 22.12 or newer and git:
 
-**Writing through a coding CLI.** If Claude Code, Codex, Grok or Kimi is installed and signed in on this computer, set writing = this computer and pick it. Hornbook runs the CLI headless with the prompt and stores no key; the model `-` means whatever that CLI is set to. Slides are skipped on this path. `npm run harness:cli` runs the fixture through every CLI it finds.
+```bash
+git clone https://github.com/DanyloNikulin/hornbook.git
+cd hornbook
+npm install
+npm run build
+npm run hornbook              # browser
+npm run hornbook:app          # Electron desktop shell
+```
 
-Keys and endpoints entered in Settings are stored in `journal/secrets.json`, which git ignores.
-Values from the environment or a local `.env` are used when the journal has none. Never commit
-keys. If the extract model has no vision, slides are skipped.
+Both run one local server serving the UI and an API over your journal folder.
+The browser command listens on 127.0.0.1:8787; the Electron shell chooses a random
+loopback port protected by a new launch token each time. Closing its window leaves
+it in the tray; Quit stops its jobs, managed Ollama and server.
 
-Ollama is called through its native API. Set `OLLAMA_NUM_CTX=32768` for real lessons; 16k is the code default and cuts off a 10-minute extract.
+```
+hornbook [serve] [--journal <dir>] [--port 8787] [--host 127.0.0.1] [--password …] [--app] [--no-open]
+```
 
-Lesson-processing jobs allow up to 24 hours by default, to accommodate slow CPU transcription. Other background jobs allow one hour. Set `HORNBOOK_JOB_TIMEOUT_MINUTES` before starting Hornbook to override both limits (a positive number, at most 10080). For example, in PowerShell, `$env:HORNBOOK_JOB_TIMEOUT_MINUTES = '2880'` allows two days. A timeout error names this setting; the separate extraction-provider deadline still applies to individual model requests.
-
-## Local tools
-
-Application settings has a **Local tools** section for the zero-cost path. For ffmpeg,
-whisper.cpp, a whisper model, Ollama and a writing model it shows whether each is installed
-(managed by Hornbook, found on PATH, set in Settings, or an Ollama running elsewhere) and offers
-a download or the package-manager line. Nothing is fetched until you press Start: a download
-first shows its source, size and SHA-256 from the release page, and the file is verified after
-the transfer. "Set up everything for local use" does the missing ones in order.
-
-Managed tools live outside the journal: `%LOCALAPPDATA%\Hornbook\tools` on Windows,
-`~/Library/Application Support/Hornbook/tools` on macOS, `~/.local/share/hornbook/tools` on
-Linux (`HORNBOOK_TOOLS` overrides). A managed Ollama runs as a child of the server on port
-11435 with its own models folder and stays off when an Ollama already answers on 11434.
-`hornbook doctor` prints the same table in a terminal.
-
-Downloads come from the releases pinned in `scripts/lib/tools.ts`: whisper.cpp (CPU build
-8 MB, CUDA build 671 MB), the standalone Ollama archive (1.47 GB on Windows), the BtbN ffmpeg
-build (169 MB), and the ggml models from Hugging Face. On macOS ffmpeg and whisper.cpp come
-from Homebrew; on Linux whisper.cpp is built from source.
-## Look
-
-Each pair can have its own atmosphere, chosen in Settings: one of six bundled presets (each
-defined for day and night), a display font from the bundled three, and optionally a backdrop
-photo. The photo is stored in the pair's folder and served by your own server — it never leaves
-the machine. Switching pairs repaints the app immediately.
-
-## Language pair
-
-`target` drives three things: the extraction prompt, browser text-to-speech, and the
-typed-answer checker on the flashcards page. The checker forgives a dropped or extra article and
-flags a wrong one (gender or number) for targets with an article table: it, es, pt, fr, de, nl,
-en, el, ar, he (see `src/lib/articles.ts`). Other targets compare the full typed string.
-Gender/number slash variants (`bello/a`, `гарний/а`) work for any target.
-
-Learner-side text is written by the model in `learner`. UI chrome goes through
-locale catalogs (`src/lib/i18n.*.ts`). The interface supports English, Italian,
-Spanish, French, German, Portuguese (Portugal), Dutch, Swedish, and Ukrainian. English is the
-default; the interface language is chosen on **Application** settings, not
-from the open pair. Pair settings (look, model overrides, topic review) stay
-on that pair's ⚙ page. Models are set as two steps — hear the recording, then
-write the conspect — each on this computer, the home network (Ollama), or an
-internet API. Native file inputs are wrapped so their labels follow the catalog
-rather than the browser language.
+For development, `npm start` runs the server next to the Angular dev server on
+http://localhost:4200 with `/api` proxied, using the repo's `./journal`.
 
 ## Hosting
 
-Hosting is running the same server on a machine you control. It is one owner's journal, not a
-multi-user service, so put a password on it:
+Hosting is running the same server on a machine you control. It is one owner's
+journal, not a multi-user service, so put a password on it:
 
 ```bash
 npm run hornbook -- --host 0.0.0.0 --password change-me --no-open
@@ -206,20 +265,21 @@ or with Docker, journal on a volume:
 
 ```bash
 docker run --init -p 8787:8787 -v hornbook-journal:/journal \
-  -e HORNBOOK_PASSWORD=change-me ghcr.io/danylonikulin/hornbook:0.9.0
+  -e HORNBOOK_PASSWORD=change-me ghcr.io/danylonikulin/hornbook:0.9.3
 ```
 
-The container runs as uid 1000. A named volume works without extra setup; if
-you bind-mount a host folder instead, make that folder writable by uid 1000.
+The container runs as uid 1000. A named volume works without extra setup; if you
+bind-mount a host folder instead, make that folder writable by uid 1000.
 
-The password is HTTP Basic auth on every request. For anything beyond one owner, put an access
-proxy (Cloudflare Access, Tailscale, a VPN) in front instead.
+The password is HTTP Basic auth on every request. For anything beyond one owner,
+put an access proxy (Cloudflare Access, Tailscale, a VPN) in front instead.
 
 For an HTTPS reverse proxy, set `HORNBOOK_ORIGIN` (or `--origin`) to the exact
 public origin, for example `https://lessons.example.com`. Browser mutations must
 come from that origin; forwarded headers are not trusted. JSON endpoints require
-`Content-Type: application/json`. Media processing uses `POST /api/sections/:id/uploads`;
-ordinary jobs use `POST /api/sections/:id/jobs` with a 1 MiB body limit.
+`Content-Type: application/json`. Media processing uses
+`POST /api/sections/:id/uploads`; ordinary jobs use `POST /api/sections/:id/jobs`
+with a 1 MiB body limit.
 
 ## Tests
 
@@ -229,20 +289,34 @@ npm run test:scripts   # pipeline scripts + server
 npm run release:check  # package, lockfile and changelog version agree
 ```
 
-Slower checks live in `harness/` and run against throwaway journals, never against yours
-or a paid API: `npm run harness:api` (every endpoint, no model needed), `npm run harness:pipeline`
-(ffmpeg + whisper.cpp + Ollama on a bundled video with real slides) and `npm run harness:ui`
-(Playwright through the installed Chrome or Edge). `npm run harness:electron`
-walks a packaged app with a local fake release feed and a compiled background
-job. See [harness/README.md](harness/README.md).
+Slower checks live in `harness/` and run against throwaway journals, never against
+yours or a paid API: `npm run harness:api` (every endpoint, no model needed),
+`npm run harness:pipeline` (ffmpeg + whisper.cpp + Ollama on a bundled video with
+real slides) and `npm run harness:ui` (Playwright through the installed Chrome or
+Edge). `npm run harness:electron` walks a packaged app with a local fake release
+feed and a compiled background job. See [harness/README.md](harness/README.md).
 
-Country flags in the catalogue are drawn with a bundled Twemoji subset (CC-BY 4.0), because
-Windows has no flag glyphs of its own.
+## Status
+
+Hornbook 0.9 is the product preview. The whole workflow is there and used daily;
+what stands between it and 1.0 is polish rather than features:
+
+- **Signed installers.** Builds are unsigned until a Windows and an Apple
+  certificate are wired into the release workflow, hence the warnings above.
+- **Hardening.** A backup behind destructive actions, quarantine for a damaged
+  lesson file, and a documented way out of every stuck state.
+
+Releases are automatic: a version bump merged into `main` publishes installers
+and Docker images. The app checks GitHub once a day and installs updates after
+**Restart to update**; releases below 1.0 are marked as pre-releases. See
+[CHANGELOG.md](CHANGELOG.md) for what changed and
+[docs/RELEASING.md](docs/RELEASING.md) for how a release is made.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). The bundled display fonts are under the SIL Open Font License and the
-Twemoji flag subset is CC-BY 4.0; both are compatible with the MIT terms.
+MIT, see [LICENSE](LICENSE). The bundled display fonts are under the SIL Open Font
+License and the Twemoji flag subset is CC-BY 4.0; both are compatible with the MIT
+terms.
 
 Bug reports and contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md),
 [SECURITY.md](SECURITY.md) and [SUPPORT.md](SUPPORT.md) before opening an issue.

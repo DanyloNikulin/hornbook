@@ -1,6 +1,8 @@
 import { Component, DestroyRef, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type {
+  CodingCliId,
+  CodingCliStatus,
   DownloadPlan,
   JobView,
   SetupPlanRequest,
@@ -26,6 +28,14 @@ interface RowState {
   error?: string;
   jobId?: string;
   path?: string;
+}
+
+/** What a coding CLI's row is doing: its own updater runs as a setup job. */
+interface CliRowState {
+  phase: 'running' | 'done' | 'failed';
+  jobId?: string;
+  version?: string;
+  error?: string;
 }
 
 export const TOOL_ORDER: readonly ToolId[] = ['ffmpeg', 'whisper', 'whisper-model', 'ollama', 'ollama-model'];
@@ -75,6 +85,10 @@ export class LocalSetupComponent {
 
   protected readonly setupJob = this.jobs.setupJob;
 
+  /** The coding CLIs on this machine; null until asked, fetched apart from the tools because each is run for its version. */
+  protected readonly clis = signal<CodingCliStatus[] | null>(null);
+  protected readonly cliRows = signal<Partial<Record<CodingCliId, CliRowState>>>({});
+
   protected readonly missing = computed<ToolId[]>(() => {
     const v = this.view();
     if (!v) return [];
@@ -93,6 +107,47 @@ export class LocalSetupComponent {
 
   constructor() {
     void this.load();
+    void this.loadClis();
+  }
+
+  protected cliRow(id: CodingCliId): CliRowState | undefined {
+    return this.cliRows()[id];
+  }
+
+  /** The last line the updater printed, while this row's job runs. */
+  protected cliLogTail(id: CodingCliId): string | null {
+    const job = this.setupJob();
+    const row = this.cliRow(id);
+    if (!job || row?.phase !== 'running' || job.id !== row.jobId) return null;
+    const lines = job.log.split('\n').map((l) => l.trim()).filter(Boolean);
+    return lines.length ? lines[lines.length - 1] : null;
+  }
+
+  protected async loadClis(): Promise<void> {
+    try {
+      const list = await this.api.get<CodingCliStatus[]>('/api/setup/clis');
+      this.clis.set(Array.isArray(list) ? list : []);
+    } catch {
+      this.clis.set([]);
+    }
+  }
+
+  private setCliRow(id: CodingCliId, state: CliRowState): void {
+    this.cliRows.update((rows) => ({ ...rows, [id]: state }));
+  }
+
+  /** Run the CLI's own updater as a job, then ask for its version again. */
+  protected async updateCli(id: CodingCliId): Promise<void> {
+    if (this.cliRow(id)?.phase === 'running') return;
+    this.setCliRow(id, { phase: 'running' });
+    try {
+      const job = await this.jobs.runCliUpdate(id, (started) => this.setCliRow(id, { phase: 'running', jobId: started.id }));
+      if (job.status === 'done') this.setCliRow(id, { phase: 'done', version: job.result?.version });
+      else this.setCliRow(id, { phase: 'failed', error: job.error ?? 'failed' });
+    } catch (err) {
+      this.setCliRow(id, { phase: 'failed', error: (err as Error).message });
+    }
+    await this.loadClis();
   }
 
   protected status(id: ToolId): ToolStatus | undefined {

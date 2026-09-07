@@ -7,6 +7,7 @@ import { JournalService } from './journal.service';
 import { SectionRouteReuse } from './route-reuse';
 import { UpdateService } from './update.service';
 import { I18nService } from './i18n.service';
+import { ContainerViewportScroller } from './viewport-scroller';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -17,7 +18,10 @@ export const appConfig: ApplicationConfig = {
       withInMemoryScrolling({ anchorScrolling: 'enabled', scrollPositionRestoration: 'enabled' }),
     ),
     { provide: RouteReuseStrategy, useClass: SectionRouteReuse },
-    provideAppInitializer(() => inject(ViewportScroller).setOffset([0, 96])),
+    // The page scrolls inside .il-scroll, below the navigation, so the
+    // router restores positions and reaches anchors there.
+    { provide: ViewportScroller, useClass: ContainerViewportScroller },
+    provideAppInitializer(() => inject(ViewportScroller).setOffset([0, 24])),
     provideAppInitializer(() => inject(I18nService).initialize()),
     // Brand and the section list are needed before the first paint.
     provideAppInitializer(() => inject(JournalService).load()),

@@ -2,7 +2,7 @@ import { mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildCliPrompt, cliCommand, parseCliLesson, removeExtractDir } from './cli-extract.ts';
+import { buildCliPrompt, cliCommand, cliFailureSummary, parseCliLesson, removeExtractDir } from './cli-extract.ts';
 
 const LESSON = {
   id: '2026-09-03-saludos',
@@ -104,6 +104,51 @@ describe('buildCliPrompt', () => {
     expect(prompt).toContain('Save the lesson.');
     expect(prompt).toContain('"properties":{"slug"');
     expect(prompt).not.toContain('jpeg-bytes');
+  });
+});
+
+describe('cliFailureSummary', () => {
+  it('pulls the API error out of Codex stderr, past the header and the echoed prompt, once', () => {
+    const apiError =
+      `ERROR: {"type":"error","status":400,"error":{"type":"invalid_request_error","message":"The 'gpt-6-astra' model requires a newer version of Codex."}}`;
+    const err = [
+      'Reading prompt from stdin...',
+      'OpenAI Codex v0.149.0',
+      '--------',
+      'model: gpt-6-astra',
+      '--------',
+      'user',
+      'You are an expert assistant who builds structured study materials.',
+      'x'.repeat(2000),
+      '',
+      'warning: Model metadata for `gpt-6-astra` not found.',
+      apiError,
+      apiError,
+    ].join('\n');
+    expect(cliFailureSummary(err, '')).toBe("The 'gpt-6-astra' model requires a newer version of Codex.");
+  });
+
+  it('keeps plain error lines and reads a JSON result wrapper', () => {
+    expect(cliFailureSummary('Error: not logged in\n', '')).toBe('not logged in');
+    expect(cliFailureSummary('', '{"type":"result","is_error":true,"result":"Rate limit reached"}')).toBe('Rate limit reached');
+  });
+
+  it('otherwise keeps the tail of the output, not its head', () => {
+    const err = `${'header line\n'.repeat(300)}the actual reason`;
+    const summary = cliFailureSummary(err, '', 100);
+    expect(summary.endsWith('the actual reason')).toBe(true);
+    expect(summary.length).toBeLessThanOrEqual(101);
+    expect(cliFailureSummary('  ', 'short stdout')).toBe('short stdout');
+    expect(cliFailureSummary('', '')).toBe('(no output)');
+  });
+
+  it('drops the stdin notice and keeps what stdout said', () => {
+    expect(cliFailureSummary('Reading prompt from stdin...\n', 'The model requires a newer version of Codex.\n')).toBe(
+      'The model requires a newer version of Codex.',
+    );
+    expect(cliFailureSummary('Reading prompt from stdin...\n--------\n', '')).toBe('(no output)');
+    expect(cliFailureSummary('Reading prompt from stdin...\nsomething broke\n', 'and stdout too')).toBe('something broke\nand stdout too');
+    expect(cliFailureSummary('Reading prompt from stdin...', '{"error":{"message":"quota exhausted"}}')).toBe('quota exhausted');
   });
 });
 

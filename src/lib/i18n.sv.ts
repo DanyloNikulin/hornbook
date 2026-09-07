@@ -571,6 +571,14 @@ export const SV = {
   'pipeline.defaultsScope':
     'Standardvalen gäller avsnitt utan egna inställningar. Om ett avsnitt fortsätter använda ett annat CLI eller en annan modell, öppna avsnittets inställningar och stäng av åsidosättningen för Skrivning.',
   'setup.tools.title': 'Lokala verktyg',
+  'setup.clis.title': 'Kommandoradsassistenter',
+  'setup.clis.sub': 'Kommandoradsassistenter som kan skriva anteckningarna på den här datorn. Var och en uppdaterar sig själv, och en modell kan neka en för gammal version: uppdatera här när en lektion misslyckas med ”requires a newer version”.',
+  'setup.clis.versionUnknown': 'okänd version',
+  'setup.clis.updating': 'Uppdaterar {name}…',
+  'setup.clis.updated': '{name} är nu version {version}.',
+  'setup.clis.detail': 'Använder CLI-verktygets egen inloggning; Hornbook sparar ingen nyckel.',
+  'setup.clis.missing': 'Finns inte i PATH. Installera det, eller sätt {env} till den fullständiga sökvägen.',
+  'job.cliOutdated': 'Skrivassistenten är äldre än vad modellen tillåter. Uppdatera den i programinställningarna och börja om.',
   'setup.tools.sub':
     'Allt som den kostnadsfria lösningen behöver hämtas till en egen mapp, aldrig till journalen. Inget hämtas innan du trycker på Starta, och varje fil kontrolleras mot kontrollsumman på dess versionssida.',
   'setup.tools.dir': 'Verktygsmapp: {dir}',

@@ -123,7 +123,7 @@
 .il-compose-setup-state > span:nth-child(2) { display: grid; gap: 2px; }
 .il-compose-setup-state strong { color: var(--ink); font-size: 13.5px; }
 .il-compose-setup-state small { color: var(--muted); font-size: 11.5px; line-height: 1.45; }
-.il-anchor-target { scroll-margin-top: 96px; }
+.il-anchor-target { scroll-margin-top: 24px; }
 .il-compose-preflight { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .il-compose-file-head {
   display: grid;
@@ -150,16 +150,27 @@
 .il-compose-change { position: relative; color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer; }
 .il-compose-change:focus-within { outline: 2px solid var(--primary); outline-offset: 3px; }
 .il-compose-ready { margin: 0; padding: 14px 17px 10px; color: var(--muted); font-size: 13px; }
-.il-compose-steps { margin: 0; padding: 0 17px; list-style: none; }
+/* One grid for the whole list so the label column is as wide as the longest
+   translated label (Ukrainian "Створити конспект" is far wider than "Write")
+   and every description still starts on the same line. */
+.il-compose-steps {
+  margin: 0;
+  padding: 0 17px;
+  list-style: none;
+  display: grid;
+  grid-template-columns: 28px fit-content(220px) minmax(0, 1fr);
+}
 .il-compose-steps li {
   display: grid;
-  grid-template-columns: 28px 64px 1fr;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: start;
   gap: 10px;
   padding: 12px 0;
   border-top: 1px solid var(--line-soft);
 }
-.il-compose-steps li > span:last-child { color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
+.il-compose-steps li > strong { min-width: 0; overflow-wrap: anywhere; }
+.il-compose-steps li > span:last-child { min-width: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
 .il-compose-step-num {
   display: grid;
   place-items: center;
@@ -266,7 +277,7 @@
   .il-compose-dropzone { min-height: 180px; padding: 22px 16px; }
   .il-compose-file-head { grid-template-columns: 38px minmax(0, 1fr); }
   .il-compose-change { grid-column: 2; justify-self: start; }
-  .il-compose-steps li { grid-template-columns: 28px 1fr; }
+  .il-compose-steps { grid-template-columns: 28px minmax(0, 1fr); }
   .il-compose-steps li > span:last-child { grid-column: 2; }
   .il-compose-settings-link { width: 100%; margin: 4px 0 0; }
   .il-compose-setup-state { grid-template-columns: 38px 1fr; }

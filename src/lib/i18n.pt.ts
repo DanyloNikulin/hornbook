@@ -570,6 +570,14 @@ export const PT = {
   'pipeline.defaultsScope':
     'Estas predefinições aplicam-se às secções sem personalização. Se uma secção continuar a usar outra CLI ou modelo, abre as suas definições e desativa a personalização de Escrita.',
   'setup.tools.title': 'Ferramentas locais',
+  'setup.clis.title': 'Assistentes de linha de comandos',
+  'setup.clis.sub': 'Assistentes de linha de comandos que podem escrever os apontamentos neste computador. Cada um atualiza-se sozinho, e um modelo pode recusar uma versão demasiado antiga: atualize aqui quando uma lição falhar com «requer uma versão mais recente».',
+  'setup.clis.versionUnknown': 'versão desconhecida',
+  'setup.clis.updating': 'A atualizar {name}…',
+  'setup.clis.updated': '{name} está agora na versão {version}.',
+  'setup.clis.detail': 'Usa o início de sessão do próprio CLI; o Hornbook não guarda nenhuma chave.',
+  'setup.clis.missing': 'Não está no PATH. Instale-o ou defina {env} com o caminho completo.',
+  'job.cliOutdated': 'O assistente de escrita é mais antigo do que o seu modelo permite. Atualize-o nas definições da aplicação e recomece.',
   'setup.tools.sub':
     'Tudo o que a opção gratuita precisa é transferido para uma pasta própria, nunca para o diário. Nada é transferido antes de clicares em Iniciar, e cada ficheiro é verificado com a soma de verificação publicada na página da versão.',
   'setup.tools.dir': 'Pasta das ferramentas: {dir}',

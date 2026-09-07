@@ -14,17 +14,14 @@ export async function localesScenario({ r, page, goto, shot }: UiScenario): Prom
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await goto('/settings');
-    await page.getByRole('radio', { name: /English/ }).waitFor();
+    const picker = page.locator('.il-locale-select select');
+    await picker.waitFor();
     r.rec(
       `${width}px: all nine interface languages are available`,
-      (await page.getByRole('radiogroup').first().getByRole('radio').count()) === 9,
+      (await picker.locator('option').count()) === 9,
     );
     for (const choice of choices) {
-      const radio = page.getByRole('radio', {
-        name: `${choice.name} ${choice.id.toUpperCase()}`,
-        exact: true,
-      });
-      await radio.click();
+      await picker.selectOption(choice.id);
       await page.waitForFunction((id) => document.documentElement.lang === id, choice.id);
       await page.locator('.il-setup-guide > .il-setup-actions').waitFor();
       await page.evaluate(() => document.fonts.ready.then(() => undefined));
@@ -34,12 +31,9 @@ export async function localesScenario({ r, page, goto, shot }: UiScenario): Prom
       );
       r.rec(
         `${width}px: ${choice.name} is selected`,
-        (await radio.getAttribute('aria-checked')) === 'true',
+        (await picker.inputValue()) === choice.id,
       );
-      const bounds = await page
-        .locator('.il-locale-picks')
-        .first()
-        .evaluate((element) => ({
+      const bounds = await picker.evaluate((element) => ({
           width: element.clientWidth,
           content: element.scrollWidth,
           right: element.getBoundingClientRect().right,
@@ -51,7 +45,11 @@ export async function localesScenario({ r, page, goto, shot }: UiScenario): Prom
         JSON.stringify(bounds),
       );
       const pageBounds = await page.evaluate(() => ({
-        content: document.documentElement.scrollWidth,
+        // Wide content overflows the scroll container now, not the document.
+        content: Math.max(
+          document.documentElement.scrollWidth,
+          ...Array.from(document.querySelectorAll('.il-scroll')).map((el) => el.scrollWidth + (document.documentElement.clientWidth - el.clientWidth)),
+        ),
         viewport: document.documentElement.clientWidth,
         overflowing: Array.from(document.body.querySelectorAll('*'))
           .filter(
@@ -119,7 +117,7 @@ export async function localesScenario({ r, page, goto, shot }: UiScenario): Prom
     await page.evaluate(() => document.documentElement.lang === 'uk'),
   );
   await goto('/settings');
-  await page.getByRole('radio', { name: 'English EN', exact: true }).click();
+  await page.locator('.il-locale-select select').selectOption('en');
   await page.waitForFunction(() => document.documentElement.lang === 'en');
   r.rec('can return to English', (await page.locator('h1').innerText()) === 'Application');
 }

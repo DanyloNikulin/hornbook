@@ -11,6 +11,7 @@ import { ProcessSupervisor, type terminateProcessTree } from '../scripts/lib/pro
 import { jobTimeout } from './job-timeout.ts';
 import { JobEventStream } from './job-events.ts';
 import { JobEvent, type JobEventT } from '../scripts/lib/job-protocol.ts';
+import { CODING_CLI_META } from '../scripts/lib/coding-clis.ts';
 import { randomBytes } from 'node:crypto';
 import type {
   JobKind,
@@ -106,6 +107,11 @@ export class JobRunner {
         label = setupLabel(input);
         script = 'setup-tool.ts';
         extra = setupArgs(input);
+        break;
+      case 'cli-update':
+        label = `Update ${CODING_CLI_META[input.cli].name}`;
+        script = 'update-cli.ts';
+        extra = ['--cli', input.cli];
         break;
       case 'cheatsheet':
         label = input.force ? 'Rebuild cheat sheet from scratch' : 'Update cheat sheet';
