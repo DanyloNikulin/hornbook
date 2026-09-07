@@ -511,6 +511,12 @@ export const IT = {
   'pipeline.defaultsScope': 'Questi valori si applicano alle sezioni senza una propria scelta. Se una sezione continua a usare un altro CLI o modello, apri le sue impostazioni e disattiva la personalizzazione di Scrittura.',
 
   'setup.tools.title': 'Strumenti locali',
+  'setup.clis.title': 'Assistenti da riga di comando',
+  'setup.clis.sub': 'Assistenti a riga di comando che possono scrivere gli appunti su questo computer. Ognuno si aggiorna da solo, e un modello può rifiutare una versione troppo vecchia: aggiorna qui quando una lezione fallisce con «richiede una versione più recente».',
+  'setup.clis.versionUnknown': 'versione sconosciuta',
+  'setup.clis.updating': 'Aggiornamento di {name}…',
+  'setup.clis.updated': '{name} è ora alla versione {version}.',
+  'job.cliOutdated': 'L’assistente di scrittura è più vecchio di quanto il suo modello consenta. Aggiornalo nelle impostazioni dell’applicazione e riprova.',
   'setup.tools.sub':
     'Tutto ciò che serve al percorso a costo zero, scaricato in una cartella dedicata, mai nel diario. Nulla viene scaricato finché non premi Avvia, e ogni file è verificato con il checksum pubblicato dalla pagina della release.',
   'setup.tools.dir': 'Cartella degli strumenti: {dir}',

@@ -575,6 +575,12 @@ export const FR = {
   'pipeline.defaultsScope':
     'Ces valeurs s’appliquent aux sections sans personnalisation. Si une section utilise encore un autre CLI ou modèle, ouvrez ses paramètres et désactivez la personnalisation de Rédaction.',
   'setup.tools.title': 'Outils locaux',
+  'setup.clis.title': 'Assistants en ligne de commande',
+  'setup.clis.sub': 'Assistants en ligne de commande capables de rédiger les notes sur cet ordinateur. Chacun se met à jour lui-même, et un modèle peut refuser une version trop ancienne : mettez à jour ici quand une leçon échoue avec « requiert une version plus récente ».',
+  'setup.clis.versionUnknown': 'version inconnue',
+  'setup.clis.updating': 'Mise à jour de {name}…',
+  'setup.clis.updated': '{name} est maintenant en version {version}.',
+  'job.cliOutdated': 'L’assistant de rédaction est plus ancien que ce que son modèle accepte. Mettez-le à jour dans les réglages de l’application, puis recommencez.',
   'setup.tools.sub':
     'Tout le nécessaire pour l’option gratuite est téléchargé dans un dossier séparé, jamais dans le journal. Rien n’est téléchargé avant Démarrer et chaque fichier est vérifié avec la somme de contrôle publiée sur sa page de version.',
   'setup.tools.dir': 'Dossier des outils : {dir}',

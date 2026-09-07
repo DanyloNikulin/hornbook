@@ -145,6 +145,8 @@
 .il-job-running,
 .il-job-finished { margin: 12px 0 0; font-size: 12.5px; }
 .il-job-error { color: #a33; }
+.il-job-hint { margin: 6px 0 0; font-size: 12.5px; }
+.il-job-hint a { color: var(--primary-ink); font-weight: 600; text-decoration: underline; }
 .il-job-running { color: var(--muted); }
 .il-job-finished { color: var(--success); }
 @media (max-width: 720px) {

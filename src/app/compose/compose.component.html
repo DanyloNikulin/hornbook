@@ -266,6 +266,9 @@
         <pre class="il-log" tabindex="0">{{ j.log || ('job.waiting' | t) }}</pre>
         @if (j.status === 'failed' && j.error) {
           <p class="il-job-error" role="alert">{{ j.error }}</p>
+          @if (cliOutdated(j.error)) {
+            <p class="il-job-hint"><a [routerLink]="sec.link('application')" fragment="coding-clis">{{ 'job.cliOutdated' | t }}</a></p>
+          }
         }
         @if (jobRunning()) {
           <p class="il-job-running" role="status">{{ 'job.working' | t }}</p>

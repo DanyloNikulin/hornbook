@@ -3,7 +3,9 @@
 // and the download itself as a job of the runner. The tools live in the
 // tools folder, never in the journal.
 
-import type { JobView, SetupPlanRequest, SetupView, DownloadPlan, StartSetupJob } from '../src/lib/api-types.ts';
+import type { CodingCliStatus, JobView, SetupPlanRequest, SetupView, DownloadPlan, StartCliUpdateJob, StartSetupJob } from '../src/lib/api-types.ts';
+import { isCodingCli } from '../scripts/lib/coding-clis.ts';
+import { CODING_CLIS } from '../scripts/providers/cli-extract.ts';
 import {
   OLLAMA_MODELS,
   TOOL_IDS,
@@ -19,7 +21,7 @@ import { ollamaHost } from '../scripts/providers/ollama.ts';
 import type { JobRunner } from './jobs.ts';
 import type { ManagedOllama } from './managed-ollama.ts';
 import { HttpError } from './store.ts';
-import { defaultToolsDeps, machineInfo, toolStatuses, type ToolsDeps } from './tools.ts';
+import { codingCliStatuses, defaultToolsDeps, machineInfo, toolStatuses, type ToolsDeps } from './tools.ts';
 
 /** Jobs that belong to the journal, not to a pair, are filed under this section id. */
 export const SETUP_SECTION = '_setup';
@@ -40,6 +42,10 @@ export interface SetupApi {
   view(): Promise<SetupView>;
   plan(raw: unknown): Promise<DownloadPlan>;
   start(raw: unknown): JobView;
+  /** The coding CLIs on this machine with their versions. */
+  clis(): Promise<CodingCliStatus[]>;
+  /** Run one CLI's own updater as a job. */
+  updateCli(raw: unknown): JobView;
   startOllama(): Promise<{ running: boolean; host: string; detail: string }>;
   /** At boot: run the managed Ollama when it is installed and nothing answers on the configured host. */
   bootManagedOllama(): Promise<void>;
@@ -124,6 +130,17 @@ export function createSetup(deps: SetupDeps): SetupApi {
         if (!/^[0-9a-f]{64}$/i.test(sha)) throw new HttpError(400, 'sha256 must be 64 hex characters');
         input.sha256 = sha.toLowerCase();
       }
+      return deps.jobs.enqueue(SETUP_SECTION, input);
+    },
+
+    clis(): Promise<CodingCliStatus[]> {
+      return codingCliStatuses(tools, deps.pipelineEnv());
+    },
+
+    updateCli(raw: unknown): JobView {
+      const cli = raw && typeof raw === 'object' ? (raw as { cli?: unknown }).cli : undefined;
+      if (!isCodingCli(cli)) throw new HttpError(400, `cli must be one of ${CODING_CLIS.join(', ')}`);
+      const input: StartCliUpdateJob = { kind: 'cli-update', cli };
       return deps.jobs.enqueue(SETUP_SECTION, input);
     },
 

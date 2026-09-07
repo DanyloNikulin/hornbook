@@ -7,9 +7,11 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { spawnProcess as spawn } from '../scripts/lib/process.ts';
 import { join } from 'node:path';
 import { totalmem } from 'node:os';
-import type { MachineInfo, ToolStatus } from '../src/lib/api-types.ts';
+import type { CodingCliStatus, MachineInfo, ToolStatus } from '../src/lib/api-types.ts';
 import { managedPaths, PINS, preferredWhisperModel, toolsDir } from '../scripts/lib/tools.ts';
 import { resolveCli } from '../scripts/lib/cli-path.ts';
+import { CODING_CLI_META, parseCliVersion, updateCommandLine } from '../scripts/lib/coding-clis.ts';
+import { CLI_BIN_ENV, CODING_CLIS, missingCliMessage } from '../scripts/providers/cli-extract.ts';
 import { ollamaHost } from '../scripts/providers/ollama.ts';
 import { canComplete } from './probe.ts';
 
@@ -262,6 +264,36 @@ async function ollamaModelStatus(deps: ToolsDeps, ollama: ToolStatus): Promise<T
   } catch (err) {
     return { id: 'ollama-model', installed: false, source: 'none', detail: `Cannot list models: ${(err as Error).message.slice(0, 120)}` };
   }
+}
+
+// ── Coding CLIs ──────────────────────────────────────────────────────────────
+
+/**
+ * The coding CLIs on this machine and the version each reports. `env` is the
+ * pipeline's view of the environment (a path set in Settings wins over PATH).
+ * Asking four CLIs for their version takes a moment, so this is its own call.
+ */
+export function codingCliStatuses(deps: ToolsDeps, env: NodeJS.ProcessEnv): Promise<CodingCliStatus[]> {
+  return Promise.all(
+    CODING_CLIS.map(async (kind): Promise<CodingCliStatus> => {
+      const meta = CODING_CLI_META[kind];
+      const configured = env[CLI_BIN_ENV[kind]]?.trim() || kind;
+      const found = resolveCli(configured, deps.env, { exists: deps.exists, platform: deps.platform });
+      if (!found) {
+        return { id: kind, name: meta.name, installed: false, updateCommand: updateCommandLine(kind, kind), detail: missingCliMessage(kind, configured) };
+      }
+      const version = parseCliVersion(await deps.run(found, ['--version'], 8000));
+      return {
+        id: kind,
+        name: meta.name,
+        installed: true,
+        path: found,
+        version,
+        updateCommand: updateCommandLine(kind, found),
+        detail: version ? `${meta.name} ${version}. Uses that CLI's own sign-in; Hornbook stores no key.` : `${found} did not report a version.`,
+      };
+    }),
+  );
 }
 
 // ── The machine ──────────────────────────────────────────────────────────────

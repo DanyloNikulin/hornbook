@@ -177,6 +177,8 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
   on('POST', '/api/setup/plan', async (_r, _s, _p, body) => ctx.setup.plan(await body()));
   on('POST', '/api/setup/jobs', async (_r, _s, _p, body) => ctx.setup.start(await body()));
   on('GET', '/api/setup/jobs', () => ctx.jobs.list(SETUP_SECTION));
+  on('GET', '/api/setup/clis', () => ctx.setup.clis());
+  on('POST', '/api/setup/clis/update', async (_r, _s, _p, body) => ctx.setup.updateCli(await body()));
   on('POST', '/api/setup/ollama/start', () => ctx.setup.startOllama());
 
   return async (req, res): Promise<boolean> => {

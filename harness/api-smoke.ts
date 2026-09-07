@@ -238,6 +238,14 @@ async function main(): Promise<void> {
     const setup = await api('GET', '/api/setup');
     const rows = (obj(setup)['tools'] as { id: string; installed: boolean; source: string }[]) ?? [];
     r.rec('GET /api/setup lists the five tools', setup.status === 200 && rows.map((t) => t.id).join(',') === 'ffmpeg,whisper,whisper-model,ollama,ollama-model', rows.map((t) => `${t.id}:${t.installed ? t.source : 'missing'}`).join(' '));
+    const clis = await api('GET', '/api/setup/clis');
+    const cliRows = (Array.isArray(clis.json) ? clis.json : []) as { id: string; installed: boolean; version?: string; updateCommand: string }[];
+    r.rec(
+      'GET /api/setup/clis lists the four coding CLIs with their own updaters',
+      clis.status === 200 && cliRows.map((c) => c.id).join(',') === 'claude,codex,grok,kimi' && cliRows.every((c) => /\b(?:update|upgrade)$/.test(c.updateCommand)),
+      cliRows.map((c) => `${c.id}:${c.installed ? (c.version ?? '?') : 'missing'}`).join(' '),
+    );
+    r.rec('bad CLI update request → 400', (await api('POST', '/api/setup/clis/update', { cli: 'nope' })).status === 400);
     const rec = obj(setup)['recommend'] as { ollamaModel?: unknown } | undefined;
     r.rec('setup view names the tools folder and a recommendation', samePath(String(obj(setup)['toolsDir']), tools) && typeof rec?.ollamaModel === 'string', `${String(obj(setup)['toolsDir'])} → ${String(rec?.ollamaModel)}`);
     const ffm = rows.find((t) => t.id === 'ffmpeg');

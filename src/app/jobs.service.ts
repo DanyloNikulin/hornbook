@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, DestroyRef } from '@angular/core';
-import type { JobView, SetupPlanRequest, StartJob } from '../lib/api-types';
+import type { CodingCliId, JobView, SetupPlanRequest, StartJob } from '../lib/api-types';
 import { ApiService } from './api.service';
 import { SectionService } from './section.service';
 import { I18nService } from './i18n.service';
@@ -50,6 +50,13 @@ export class JobsService {
   async runSetup(input: SetupPlanRequest & { sha256?: string }, onStarted?: (job: JobView) => void): Promise<JobView> {
     const generation = ++this.setupGeneration;
     return this.start('/api/setup/jobs', input,
+      (job) => { if (generation === this.setupGeneration) this.setupJob.set(job); }, onStarted);
+  }
+
+  /** Run a coding CLI's own updater; followed like a tool download. */
+  async runCliUpdate(cli: CodingCliId, onStarted?: (job: JobView) => void): Promise<JobView> {
+    const generation = ++this.setupGeneration;
+    return this.start('/api/setup/clis/update', { cli },
       (job) => { if (generation === this.setupGeneration) this.setupJob.set(job); }, onStarted);
   }
 

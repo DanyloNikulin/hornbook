@@ -4,6 +4,20 @@ All notable changes to Hornbook.
 
 ## Unreleased
 
+- Coding assistants (Claude Code, Codex, Grok, Kimi Code) are listed in
+  Application settings with their installed versions, and each can be
+  updated from there with its own updater. A lesson that fails because the
+  assistant is older than its model allows now links straight to that card.
+- A failed coding CLI reports what it actually said: error lines from both
+  streams, the stdin notice dropped, stdout kept when stderr says nothing.
+- The page scrolls below the navigation and the desktop title strip, so the
+  scrollbar no longer runs under the window controls; the strip shares the
+  navigation's glass. Anchors and back-navigation positions follow.
+- The interface language is one dropdown instead of nine chips.
+- Fixed the job console being unreadable in the night theme, translated
+  step labels overlapping their descriptions on the Add page, and the
+  packaged app registering a blank taskbar icon on Windows.
+
 ## 0.9.2 — 2026-09-06
 
 - Show the exact installed Hornbook version in Application settings and in the

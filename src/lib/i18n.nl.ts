@@ -573,6 +573,12 @@ export const NL = {
   'pipeline.defaultsScope':
     'Deze standaarden gelden voor secties zonder eigen instellingen. Als een sectie een andere CLI of model blijft gebruiken, open dan de sectie-instellingen en schakel het overschrijven voor Schrijven uit.',
   'setup.tools.title': 'Lokale hulpmiddelen',
+  'setup.clis.title': 'Opdrachtregel-assistenten',
+  'setup.clis.sub': 'Opdrachtregel-assistenten die op deze computer de aantekeningen kunnen schrijven. Elke assistent werkt zichzelf bij, en een model kan een te oude versie weigeren: werk hier bij wanneer een les mislukt met “requires a newer version”.',
+  'setup.clis.versionUnknown': 'versie onbekend',
+  'setup.clis.updating': '{name} wordt bijgewerkt…',
+  'setup.clis.updated': '{name} is nu versie {version}.',
+  'job.cliOutdated': 'De schrijfassistent is ouder dan het model toestaat. Werk hem bij in de toepassingsinstellingen en begin opnieuw.',
   'setup.tools.sub':
     'Alles voor de gratis optie wordt in een eigen map gedownload, nooit in het logboek. Niets wordt gedownload voordat je op Starten klikt; elk bestand wordt gecontroleerd met de controlesom op de releasepagina.',
   'setup.tools.dir': 'Hulpmiddelenmap: {dir}',
