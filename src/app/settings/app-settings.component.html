@@ -44,21 +44,13 @@
 
     <h2 class="il-compose-h">{{ 'settings.interface' | t }}</h2>
     <p class="il-section-sub">{{ 'settings.interfaceSub' | t }}</p>
-    <div class="il-locale-picks" role="radiogroup" [attr.aria-label]="'settings.interface' | t">
-      @for (id of locales; track id) {
-        <button
-          type="button"
-          class="il-chip"
-          [class.active]="locale() === id"
-          role="radio"
-          [attr.aria-checked]="locale() === id"
-          (click)="setLocale(id)"
-        >
-          {{ localeMeta[id].autonym }}
-          <span class="il-stat-sub">{{ localeMeta[id].code }}</span>
-        </button>
-      }
-    </div>
+    <label class="il-locale-select">
+      <select [attr.aria-label]="'settings.interface' | t" (change)="setLocale($any($event.target).value)">
+        @for (id of locales; track id) {
+          <option [value]="id" [selected]="locale() === id">{{ localeMeta[id].autonym }} · {{ localeMeta[id].code }}</option>
+        }
+      </select>
+    </label>
 
     @if (localeLoadFailed()) {
       <p role="alert">{{ 'settings.localeFailed' | t }}</p>

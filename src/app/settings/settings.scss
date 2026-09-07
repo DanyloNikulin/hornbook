@@ -21,6 +21,21 @@
   font-size: 14px;
 }
 .il-settings-row input, .il-settings-row select { width: 100%; font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(42, 37, 32, 0.18); background: var(--paper); color: var(--ink); }
+/* Interface language: one dropdown instead of nine chips wrapping over two lines. */
+.il-locale-select { display: block; max-width: 340px; margin: 4px 0 18px; }
+.il-locale-select select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 15px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+.il-locale-select select:focus-visible { outline: 3px solid rgba(192, 101, 63, 0.35); border-color: var(--primary); }
 .il-settings-row--conn { grid-template-columns: 1.2fr 1fr; align-items: start; padding: 8px 0; border-bottom: 1px solid rgba(42, 37, 32, 0.08); }
 .il-settings-row--conn > span:first-child { display: flex; flex-direction: column; gap: 2px; }
 .il-settings-help { font-size: 12px; color: var(--muted); }
