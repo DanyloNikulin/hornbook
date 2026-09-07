@@ -4,6 +4,8 @@ All notable changes to Hornbook.
 
 ## Unreleased
 
+## 0.9.3 — 2026-09-07
+
 - Coding assistants (Claude Code, Codex, Grok, Kimi Code) are listed in
   Application settings with their installed versions, and each can be
   updated from there with its own updater. A lesson that fails because the
