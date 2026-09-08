@@ -33,6 +33,7 @@ import { loadPreferences, savePreferences, type DesktopPreferences } from './pre
 import { trayVersionCopy } from './tray-version.ts';
 
 const APP_ID = 'io.github.danylonikulin.hornbook';
+// Longer than UPDATE_INTERVAL_MS, or a tick would only ever meet the previous tick's cache.
 const UPDATE_POLL_MS = 60 * 60 * 1000;
 const appRoot = packageRoot(import.meta.url);
 const { autoUpdater } = electronUpdater;

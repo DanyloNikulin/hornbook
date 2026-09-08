@@ -4,6 +4,14 @@ All notable changes to Hornbook.
 
 ## Unreleased
 
+## 0.9.5 — 2026-09-08
+
+- Hornbook finds a new release on its own again. An automatic check
+  reused its last answer for a whole day and remembered that answer
+  across restarts, so a release published in the evening stayed invisible
+  until someone pressed Check for updates. Starting the app and its
+  hourly poll both reach the release feed again.
+
 ## 0.9.4 — 2026-09-07
 
 - A pair's landing page now leads with the pair's name, the brand as a small
