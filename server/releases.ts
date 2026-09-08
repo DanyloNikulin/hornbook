@@ -1,7 +1,8 @@
 import type { ReleaseCheckView, ReleaseInfo } from '../src/lib/api-types.ts';
 
 export const DEFAULT_RELEASES_URL = 'https://api.github.com/repos/DanyloNikulin/hornbook/releases?per_page=100';
-export const UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
+/** Automatic checks reuse a younger result; stays under the desktop poll cadence so every poll reaches the feed. */
+export const UPDATE_INTERVAL_MS = 15 * 60 * 1000;
 export const FORCED_UPDATE_INTERVAL_MS = 60 * 1000;
 
 export interface ReleaseCheckerOptions {

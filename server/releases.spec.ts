@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { allowsPrereleases, compareVersions, DEFAULT_RELEASES_URL, parseRelease, ReleaseChecker } from './releases.ts';
+import { allowsPrereleases, compareVersions, DEFAULT_RELEASES_URL, parseRelease, ReleaseChecker, UPDATE_INTERVAL_MS } from './releases.ts';
 
 describe('release checks', () => {
   it('discovers a GitHub preview from the release list for a 0.x installation', async () => {
@@ -80,7 +80,7 @@ describe('release checks', () => {
     });
   });
 
-  it('uses one automatic GET per day and rate-limits forced checks', async () => {
+  it('reuses one automatic GET inside the check window and rate-limits forced checks', async () => {
     let now = Date.parse('2026-09-04T10:00:00Z');
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ tag_name: 'v0.2.0', name: 'Hornbook 0.2', body: '', html_url: 'https://github.com/x' }), { status: 200 }));
     const checker = new ReleaseChecker({ currentVersion: '0.1.0', fetch: fetchImpl as typeof fetch, now: () => now });
@@ -95,5 +95,19 @@ describe('release checks', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     await checker.check(true);
     expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it('refetches automatically once the check window elapses, so an hourly poll is never answered from cache', async () => {
+    let now = Date.parse('2026-09-04T10:00:00Z');
+    const fetchImpl = vi.fn(async () => Response.json([{ tag_name: 'v0.2.0', prerelease: true }]));
+    const checker = new ReleaseChecker({ currentVersion: '0.1.0', fetch: fetchImpl as typeof fetch, now: () => now });
+    await checker.check();
+    now += UPDATE_INTERVAL_MS - 1;
+    await checker.check();
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    now += 1;
+    await checker.check();
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(UPDATE_INTERVAL_MS).toBeLessThan(60 * 60 * 1000);
   });
 });
