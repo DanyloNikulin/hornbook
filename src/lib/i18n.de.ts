@@ -2,6 +2,12 @@ import type { Catalog } from './i18n.js';
 import type { EN } from './i18n.en.js';
 
 export const DE = {
+  'appearance.title': 'Lesbarkeit',
+  'appearance.help': 'Die Barrierefreiheitseinstellungen des Systems gelten immer. Diese Optionen ergänzen sie.',
+  'appearance.reduceTransparency': 'Transparenz reduzieren',
+  'appearance.increaseContrast': 'Kontrast erhöhen',
+  'appearance.textSize': 'Textgröße',
+  'appearance.saveFailed': 'Die Einstellung wurde angewendet, aber nicht gespeichert. Bitte ändere sie erneut.',
   'settings.localeFailed':
     'Diese Oberflächensprache konnte nicht geladen werden. Prüfe deine Verbindung und wähle sie erneut.',
   'setup.guide.kicker': 'Empfohlen · ohne Abonnement',

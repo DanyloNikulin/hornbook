@@ -2,6 +2,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import type { ReleaseInfo } from '../src/lib/api-types.ts';
+import { validAppearance, type AppearancePreferences } from '../src/lib/appearance.ts';
 
 export interface DesktopPreferences {
   automaticUpdates: boolean;
@@ -10,6 +11,7 @@ export interface DesktopPreferences {
   window?: { width: number; height: number };
   lastUpdateCheck?: string;
   lastRelease?: ReleaseInfo;
+  appearance?: AppearancePreferences;
 }
 
 const DEFAULTS: DesktopPreferences = { automaticUpdates: true, startWithSystem: false };
@@ -25,6 +27,7 @@ export function loadPreferences(path: string): DesktopPreferences {
       ...(validWindow(raw.window) ? { window: raw.window } : {}),
       ...(typeof raw.lastUpdateCheck === 'string' ? { lastUpdateCheck: raw.lastUpdateCheck } : {}),
       ...(validRelease(raw.lastRelease) ? { lastRelease: raw.lastRelease } : {}),
+      ...(validAppearance(raw.appearance) ? { appearance: raw.appearance } : {}),
     };
   } catch {
     return { ...DEFAULTS };

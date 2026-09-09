@@ -2,6 +2,12 @@ import type { Catalog } from './i18n.js';
 import type { EN } from './i18n.en.js';
 
 export const ES = {
+  'appearance.title': 'Legibilidad',
+  'appearance.help': 'Las preferencias de accesibilidad del sistema siempre se aplican. Estas opciones las complementan.',
+  'appearance.reduceTransparency': 'Reducir transparencia',
+  'appearance.increaseContrast': 'Aumentar contraste',
+  'appearance.textSize': 'Tamaño del texto',
+  'appearance.saveFailed': 'Se ha aplicado, pero no se ha podido guardar. Prueba a cambiar el ajuste de nuevo.',
   'settings.localeFailed':
     'No se pudo cargar ese idioma de la interfaz. Comprueba la conexión y vuelve a seleccionarlo.',
   'setup.guide.kicker': 'Recomendado · sin suscripción',

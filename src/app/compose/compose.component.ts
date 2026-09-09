@@ -19,6 +19,7 @@ interface MutationTarget { id: string; date: string; title: string; current(): b
 
 type From = 'video' | 'audio' | 'transcript' | 'json';
 type ComposeMode = 'hand' | 'transcript' | 'recording' | 'import';
+const COMPOSE_MODES: readonly ComposeMode[] = ['hand', 'transcript', 'recording', 'import'];
 
 const ACCEPTED_EXTENSIONS = new Set([
   '.mp4',
@@ -119,6 +120,23 @@ export class ComposeComponent {
     this.activeMode.set(mode);
     this.error.set(null);
     this.ok.set(null);
+  }
+
+  protected onModeKeydown(event: KeyboardEvent, mode: ComposeMode): void {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const index = COMPOSE_MODES.indexOf(mode);
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight': next = (index + 1) % COMPOSE_MODES.length; break;
+      case 'ArrowLeft': next = (index + COMPOSE_MODES.length - 1) % COMPOSE_MODES.length; break;
+      case 'Home': next = 0; break;
+      case 'End': next = COMPOSE_MODES.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    this.setMode(COMPOSE_MODES[next]);
+    const tab = event.currentTarget as HTMLButtonElement;
+    tab.parentElement?.querySelector<HTMLButtonElement>(`#compose-tab-${COMPOSE_MODES[next]}`)?.focus();
   }
 
   private draft(): LessonT | null {

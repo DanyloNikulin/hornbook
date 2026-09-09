@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ViewChild,
   computed,
   effect,
@@ -53,6 +54,8 @@ export class FlashcardsComponent {
   protected readonly lessons = inject(LessonsService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private mismatchTimer: ReturnType<typeof setTimeout> | undefined;
 
   protected readonly DAILY_LIMIT = DAILY_LIMIT;
   protected readonly PAIRS_LIMIT = PAIRS_LIMIT;
@@ -157,6 +160,7 @@ export class FlashcardsComponent {
   );
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.clearMismatch());
     // Reset typing UI on card change.
     effect(() => {
       this.current(); // subscribe
@@ -253,6 +257,7 @@ export class FlashcardsComponent {
   // ---- pairs handlers ----
 
   protected startPairsRound(): void {
+    this.clearMismatch();
     const picked = this.cards.pickPairsRound(this.cardsValue(), PAIRS_PER_ROUND);
     if (picked.length === 0) {
       this.resetPairsBoard();
@@ -268,6 +273,7 @@ export class FlashcardsComponent {
 
   protected selectPairLeft(card: Card): void {
     if (this.pairsMatched().has(card.id)) return;
+    this.clearMismatch();
     this.pairsSelectedLeft.set(card.id);
   }
 
@@ -275,6 +281,7 @@ export class FlashcardsComponent {
     if (this.pairsMatched().has(card.id)) return;
     const left = this.pairsSelectedLeft();
     if (!left) return;
+    this.clearMismatch();
     if (left === card.id) {
       const m = new Set(this.pairsMatched());
       m.add(card.id);
@@ -283,19 +290,26 @@ export class FlashcardsComponent {
     } else {
       this.pairsWrongLeft.set(left);
       this.pairsWrongRight.set(card.id);
-      setTimeout(() => {
-        this.pairsWrongLeft.set(null);
-        this.pairsWrongRight.set(null);
+      this.mismatchTimer = setTimeout(() => {
+        this.clearMismatch();
         this.pairsSelectedLeft.set(null);
       }, MISMATCH_FLASH_MS);
     }
   }
 
   protected resetPairsBoard(): void {
+    this.clearMismatch();
     this.pairsLeft.set([]);
     this.pairsRight.set([]);
     this.pairsSelectedLeft.set(null);
     this.pairsMatched.set(new Set());
+    this.pairsWrongLeft.set(null);
+    this.pairsWrongRight.set(null);
+  }
+
+  private clearMismatch(): void {
+    clearTimeout(this.mismatchTimer);
+    this.mismatchTimer = undefined;
     this.pairsWrongLeft.set(null);
     this.pairsWrongRight.set(null);
   }

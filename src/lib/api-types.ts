@@ -86,6 +86,7 @@ export interface DesktopUpdateState {
 export interface DesktopPreferencesView {
   automaticUpdates: boolean;
   startWithSystem: boolean;
+  appearance?: import('./appearance.js').AppearancePreferences;
 }
 
 export interface DesktopState {

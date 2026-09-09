@@ -8,6 +8,16 @@ const dirs: string[] = [];
 afterEach(() => dirs.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })));
 
 describe('desktop preferences', () => {
+  it('keeps readability preferences across launches and rejects malformed overrides', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hornbook-desktop-'));
+    dirs.push(dir);
+    const path = join(dir, 'preferences.json');
+    const appearance = { reduceTransparency: true, increaseContrast: true, textScale: 150 as const };
+    savePreferences(path, { automaticUpdates: true, startWithSystem: false, appearance });
+    expect(loadPreferences(path).appearance).toEqual(appearance);
+    writeFileSync(path, JSON.stringify({ appearance: { ...appearance, textScale: 1000 } }));
+    expect(loadPreferences(path).appearance).toBeUndefined();
+  });
   it('defaults updates on and startup off, then round-trips valid values', () => {
     const dir = mkdtempSync(join(tmpdir(), 'hornbook-desktop-'));
     dirs.push(dir);

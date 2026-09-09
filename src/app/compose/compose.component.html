@@ -11,6 +11,8 @@
         id="compose-tab-hand"
         [class.active]="activeMode() === 'hand'"
         [attr.aria-selected]="activeMode() === 'hand'"
+        [attr.tabindex]="activeMode() === 'hand' ? 0 : -1"
+        (keydown)="onModeKeydown($event, 'hand')"
         aria-controls="compose-panel-hand"
         (click)="setMode('hand')"
       >{{ 'compose.byHand' | t }}</button>
@@ -20,6 +22,8 @@
         id="compose-tab-transcript"
         [class.active]="activeMode() === 'transcript'"
         [attr.aria-selected]="activeMode() === 'transcript'"
+        [attr.tabindex]="activeMode() === 'transcript' ? 0 : -1"
+        (keydown)="onModeKeydown($event, 'transcript')"
         aria-controls="compose-panel-transcript"
         (click)="setMode('transcript')"
       >{{ 'compose.fromTranscript' | t }}</button>
@@ -29,6 +33,8 @@
         id="compose-tab-recording"
         [class.active]="activeMode() === 'recording'"
         [attr.aria-selected]="activeMode() === 'recording'"
+        [attr.tabindex]="activeMode() === 'recording' ? 0 : -1"
+        (keydown)="onModeKeydown($event, 'recording')"
         aria-controls="compose-panel-recording"
         (click)="setMode('recording')"
       >{{ 'compose.fromRecording' | t }}</button>
@@ -38,6 +44,8 @@
         id="compose-tab-import"
         [class.active]="activeMode() === 'import'"
         [attr.aria-selected]="activeMode() === 'import'"
+        [attr.tabindex]="activeMode() === 'import' ? 0 : -1"
+        (keydown)="onModeKeydown($event, 'import')"
         aria-controls="compose-panel-import"
         (click)="setMode('import')"
       >{{ 'transfer.lessonImport' | t }}</button>

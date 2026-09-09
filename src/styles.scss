@@ -1,4 +1,5 @@
 @use 'app/shell';
+@use 'app/accessibility';
 @use 'app/search/search';
 @use 'app/lesson-list/lesson-list';
 @use 'app/cheatsheet/cheatsheet';
@@ -101,7 +102,7 @@ body {
   font-family: var(--font-body);
   color: var(--ink);
   background: var(--paper);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -117,7 +118,7 @@ body {
   border-radius: 9px;
   background: var(--ink);
   color: var(--paper);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   text-decoration: none;
   transform: translateY(calc(-100% - 18px));
@@ -221,7 +222,7 @@ h1, h2, h3, h4 {
   min-height: 44px;
   padding: 0 22px;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 600;
   letter-spacing: 0.005em;
   color: #fff8ee;
@@ -242,7 +243,7 @@ h1, h2, h3, h4 {
 .il-btn:active { transform: translateY(0); filter: brightness(0.96); }
 .il-btn:focus-visible { outline: 3px solid rgba(192, 101, 63, 0.5); outline-offset: 2px; }
 
-.il-btn.sm { min-height: 36px; padding: 0 16px; font-size: 13.5px; }
+.il-btn.sm { min-height: 36px; padding: 0 16px; font-size: 0.84375rem; }
 
 .il-btn.ghost {
   background: transparent;
@@ -267,7 +268,7 @@ h1, h2, h3, h4 {
 }
 .il-section-title {
   font-family: var(--font-display);
-  font-size: clamp(28px, 3vw, 38px);
+  font-size: clamp(1.75rem, 3vw, 2.375rem);
   font-weight: 500;
   line-height: 1.1;
   letter-spacing: -0.005em;
@@ -275,7 +276,7 @@ h1, h2, h3, h4 {
 }
 .il-section-sub {
   color: var(--muted);
-  font-size: 14.5px;
+  font-size: 0.90625rem;
   margin: 0;
 }
 
@@ -291,7 +292,7 @@ h1, h2, h3, h4 {
   background: var(--paper);
   color: var(--ink-2);
   border: 1px solid var(--line);
-  font-size: 13.5px;
+  font-size: 0.84375rem;
   font-weight: 500;
   cursor: pointer;
   font-family: inherit;
@@ -317,7 +318,7 @@ h1, h2, h3, h4 {
   border-radius: 999px;
   background: var(--paper-2);
   color: var(--ink-2);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
   border: 1px solid var(--line-soft);
 }
@@ -510,8 +511,8 @@ h1, h2, h3, h4 {
 @media (max-width: 360px) {
   .il-nav { padding: 12px; }
   .il-brand { gap: 8px; }
-  .il-brand-mark { width: 34px; height: 34px; font-size: 19px; }
-  .il-brand-name { max-width: 100px; overflow: hidden; font-size: 19px; text-overflow: ellipsis; white-space: nowrap; }
+  .il-brand-mark { width: 34px; height: 34px; font-size: 1.1875rem; }
+  .il-brand-name { max-width: 100px; overflow: hidden; font-size: 1.1875rem; text-overflow: ellipsis; white-space: nowrap; }
   .il-brand-sub { display: none; }
   .il-nav-mobile-controls { gap: 6px; }
   .il-mobile-sheet,
@@ -528,7 +529,7 @@ h1, h2, h3, h4 {
   border-radius: 10px;
   background: rgba(163, 51, 51, 0.12);
   color: var(--ink);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .il-log {
   background: var(--paper-2);
@@ -577,3 +578,5 @@ h1, h2, h3, h4 {
     transition-duration: .01ms !important;
   }
 }
+
+@include accessibility.styles;

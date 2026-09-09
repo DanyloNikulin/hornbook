@@ -20,10 +20,10 @@
   flex-wrap: wrap;
   padding: 8px 12px;
   background: var(--paper-2);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .il-job-status {
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: .08em;
   padding: 2px 8px;
@@ -49,7 +49,7 @@
      colour, which made the log invisible on its own background. */
   background: #2a2520;
   color: #d9c9a8;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.7;
   --scrollbar-thumb: color-mix(in srgb, #d9c9a8 32%, transparent);
 }
@@ -66,7 +66,7 @@
   margin: 0;
   overflow-wrap: anywhere;
   font-family: var(--font-display);
-  font-size: clamp(25px, 4vw, 32px);
+  font-size: clamp(1.5625rem, 4vw, 2rem);
   font-weight: 500;
   line-height: 1.15;
 }
@@ -75,11 +75,11 @@
   flex: 0 0 auto;
   margin: 5px 0 0;
   color: var(--muted);
-  font: 11.5px var(--font-mono);
+  font: 0.71875rem var(--font-mono);
   white-space: nowrap;
 }
 .il-job-time strong { color: var(--ink-2); font-weight: 500; }
-.il-job-lead { margin: 9px 0 18px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.il-job-lead { margin: 9px 0 18px; color: var(--muted); font-size: 0.8125rem; line-height: 1.55; }
 .il-job-stages {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -99,7 +99,7 @@
 .il-job-stage--done { border-color: color-mix(in srgb, var(--success) 50%, transparent); }
 .il-job-stage--running { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent); }
 .il-job-stage--failed { border-color: rgba(163, 51, 51, .6); }
-.il-job-stage-name { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; }
+.il-job-stage-name { display: flex; align-items: center; gap: 7px; font-size: 0.8125rem; font-weight: 700; }
 .il-job-stage-dot {
   display: grid;
   place-items: center;
@@ -109,14 +109,14 @@
   border: 1.5px solid var(--muted);
   border-radius: 50%;
   color: #fff8ee;
-  font-size: 10px;
+  font-size: 0.625rem;
   line-height: 1;
 }
 .il-job-stage--done .il-job-stage-dot { border-color: var(--success); background: var(--success); }
 .il-job-stage--running .il-job-stage-dot { border-color: var(--primary); background: var(--primary); }
 .il-job-stage--failed .il-job-stage-dot { border-color: #a33; background: #a33; }
-.il-job-stage-meta { margin: 7px 0 3px; color: var(--muted); font: 10.5px var(--font-mono); }
-.il-job-stage > p:last-child { margin: 0; color: var(--ink-2); font-size: 11px; line-height: 1.42; }
+.il-job-stage-meta { margin: 7px 0 3px; color: var(--muted); font: 0.65625rem var(--font-mono); }
+.il-job-stage > p:last-child { margin: 0; color: var(--ink-2); font-size: 0.6875rem; line-height: 1.42; }
 .il-job-progress { height: 7px; margin: 13px 0 20px; overflow: hidden; border-radius: 999px; background: var(--line); }
 .il-job-progress span { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width .35s ease; }
 .il-job--done .il-job-progress span { background: var(--success); }
@@ -127,7 +127,7 @@
   gap: 12px;
   margin-bottom: 7px;
   color: var(--muted);
-  font: 10px var(--font-mono);
+  font: 0.625rem var(--font-mono);
   letter-spacing: .16em;
   text-transform: uppercase;
 }
@@ -136,16 +136,16 @@
   border: 0;
   background: transparent;
   color: var(--primary-ink);
-  font: 12px var(--font-body);
+  font: 0.75rem var(--font-body);
   letter-spacing: 0;
   text-transform: none;
   cursor: pointer;
 }
 .il-job-error,
 .il-job-running,
-.il-job-finished { margin: 12px 0 0; font-size: 12.5px; }
+.il-job-finished { margin: 12px 0 0; font-size: 0.78125rem; }
 .il-job-error { color: #a33; }
-.il-job-hint { margin: 6px 0 0; font-size: 12.5px; }
+.il-job-hint { margin: 6px 0 0; font-size: 0.78125rem; }
 .il-job-hint a { color: var(--primary-ink); font-weight: 600; text-decoration: underline; }
 .il-job-running { color: var(--muted); }
 .il-job-finished { color: var(--success); }

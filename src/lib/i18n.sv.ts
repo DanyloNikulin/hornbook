@@ -2,6 +2,12 @@ import type { Catalog } from './i18n.js';
 import type { EN } from './i18n.en.js';
 
 export const SV = {
+  'appearance.title': 'Läsbarhet',
+  'appearance.help': 'Systemets tillgänglighetsinställningar gäller alltid. Dessa alternativ kompletterar dem.',
+  'appearance.reduceTransparency': 'Minska genomskinlighet',
+  'appearance.increaseContrast': 'Öka kontrasten',
+  'appearance.textSize': 'Textstorlek',
+  'appearance.saveFailed': 'Inställningen används men kunde inte sparas. Försök ändra den igen.',
   'settings.localeFailed':
     'Kunde inte läsa in det gränssnittsspråket. Kontrollera anslutningen och välj det igen.',
   'setup.guide.kicker': 'Rekommenderas · utan abonnemang',

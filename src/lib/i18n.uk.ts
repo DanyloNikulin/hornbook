@@ -2,6 +2,12 @@ import type { Catalog } from './i18n.js';
 import type { EN } from './i18n.en.js';
 
 export const UK = {
+  'appearance.title': 'Зручність читання',
+  'appearance.help': 'Системні налаштування доступності діють завжди. Ці параметри доповнюють їх.',
+  'appearance.reduceTransparency': 'Зменшити прозорість',
+  'appearance.increaseContrast': 'Збільшити контраст',
+  'appearance.textSize': 'Розмір тексту',
+  'appearance.saveFailed': 'Налаштування застосовано, але не збережено. Спробуйте змінити його ще раз.',
   'settings.localeFailed':
     'Не вдалося завантажити цю мову інтерфейсу. Перевірте з’єднання та виберіть її ще раз.',
   'setup.guide.kicker': 'Рекомендовано · без передплати',

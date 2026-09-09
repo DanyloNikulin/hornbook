@@ -30,6 +30,7 @@ import { packageRoot } from '../scripts/lib/runtime.ts';
 import { countLessons, seedJournal } from '../server/launch.ts';
 import { DEMO_JOURNAL } from '../scripts/lib/demo-journal.ts';
 import { loadPreferences, savePreferences, type DesktopPreferences } from './preferences.ts';
+import { validAppearance } from '../src/lib/appearance.ts';
 import { trayVersionCopy } from './tray-version.ts';
 
 const APP_ID = 'io.github.danylonikulin.hornbook';
@@ -94,6 +95,7 @@ function publicState(): DesktopState {
     preferences: {
       automaticUpdates: preferences.automaticUpdates,
       startWithSystem: preferences.startWithSystem,
+      ...(preferences.appearance ? { appearance: preferences.appearance } : {}),
     },
     update: updateState,
   };
@@ -372,7 +374,9 @@ function registerIpc(): void {
     assertRenderer(event);
     if (!patch || typeof patch !== 'object') throw new Error('Invalid preferences');
     const input = patch as Record<string, unknown>;
-    if (typeof input['automaticUpdates'] === 'boolean') preferences.automaticUpdates = input['automaticUpdates'];
+    const automatic = input['automaticUpdates'];
+    if (typeof automatic === 'boolean') preferences.automaticUpdates = automatic;
+    if (validAppearance(input['appearance'])) preferences.appearance = input['appearance'];
     if (typeof input['startWithSystem'] === 'boolean') {
       preferences.startWithSystem = input['startWithSystem'];
       if (process.platform === 'win32' || process.platform === 'darwin') {
@@ -380,7 +384,7 @@ function registerIpc(): void {
       }
     }
     persist();
-    if (preferences.automaticUpdates && updateState.phase === 'idle') void checkForUpdates(false);
+    if (automatic === true && updateState.phase === 'idle') void checkForUpdates(false);
     return publicState();
   });
   ipcMain.handle('hornbook:check-updates', (event, force: boolean) => {

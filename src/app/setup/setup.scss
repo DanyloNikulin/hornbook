@@ -7,7 +7,7 @@
 }
 @media (max-width: 640px) { .il-pair-pick { grid-template-columns: 1fr; } }
 .il-pair-col { display: block; }
-.il-pair-head { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }
+.il-pair-head { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }
 .il-lang-list {
   max-height: 320px;
   overflow: auto;
@@ -33,9 +33,9 @@
 .il-lang-option:hover { background: rgba(42, 37, 32, 0.06); }
 .il-lang-option.selected { background: var(--primary); color: #fff; }
 .il-lang-option.selected .il-lang-name { color: rgba(255, 255, 255, 0.8); }
-.il-lang-flag { font-size: 20px; }
+.il-lang-flag { font-size: 1.25rem; }
 .il-lang-native { font-weight: 600; }
-.il-lang-name { font-size: 12px; color: var(--muted); }
+.il-lang-name { font-size: 0.75rem; color: var(--muted); }
 .il-pair-preview {
   display: flex;
   align-items: center;
@@ -44,7 +44,7 @@
   padding: 12px 14px;
   border-radius: 10px;
   background: var(--paper-2);
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 .il-pair-preview strong { font-family: var(--font-display); }
 
