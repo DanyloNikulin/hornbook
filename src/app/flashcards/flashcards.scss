@@ -12,7 +12,7 @@
   display: inline-block;
   margin-bottom: 6px;
   color: var(--ink-2);
-  font-size: 13.5px;
+  font-size: 0.84375rem;
 }
 .il-cards-title-row {
   display: flex;
@@ -23,7 +23,7 @@
 .il-cards-title-row h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(36px, 6vw, 42px);
+  font-size: clamp(2.25rem, 6vw, 2.625rem);
   font-weight: 500;
   line-height: 1.08;
   letter-spacing: -.005em;
@@ -32,7 +32,7 @@
 .il-cards-deck-stats {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 0.78125rem;
   white-space: nowrap;
 }
 .il-cards-deck-row {
@@ -55,7 +55,7 @@
   border-radius: 12px;
   background: var(--paper);
   color: var(--muted);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .il-cards-deck-select select {
   width: 100%;
@@ -71,10 +71,14 @@
   text-overflow: ellipsis;
   cursor: pointer;
 }
+.il-cards-deck-select:focus-within {
+  outline: 3px solid var(--primary-ink);
+  outline-offset: 3px;
+}
 .il-cards-deck-help {
   margin: 0 0 18px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.55;
 }
 .il-cards-filters {
@@ -122,7 +126,7 @@
   margin-bottom: 18px;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 0.71875rem;
 }
 .il-study-listen {
   display: inline-grid;
@@ -140,7 +144,7 @@
   margin: 0 0 6px;
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: clamp(34px, 7vw, 42px);
+  font-size: clamp(2.125rem, 7vw, 2.625rem);
   line-height: 1.15;
   text-align: center;
   white-space: pre-wrap;
@@ -148,7 +152,7 @@
 .il-study-example {
   margin: 0 0 22px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-style: italic;
   text-align: center;
   white-space: pre-wrap;
@@ -163,7 +167,7 @@
   outline: none;
   background: var(--paper);
   color: var(--ink);
-  font: 15px var(--font-body);
+  font: 0.9375rem var(--font-body);
 }
 .il-study-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent); }
 .il-study-primary { width: 100%; margin-top: 12px; border-radius: 999px; }
@@ -175,7 +179,7 @@
   border-radius: 6px;
   background: rgba(255, 255, 255, .22);
   color: inherit;
-  font: 11px var(--font-mono);
+  font: 0.6875rem var(--font-mono);
 }
 .il-study-primary.ghost kbd { background: rgba(42, 37, 32, .08); }
 .il-study-result {
@@ -185,12 +189,12 @@
   padding-top: 16px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   text-align: center;
 }
 .il-study-result strong { color: var(--ink-2); font-family: var(--font-mono); font-weight: 500; }
 .il-study-result .il-study-correct { color: var(--primary-ink); }
-.il-study-verdict { margin: 0 0 2px; font-size: 14px; }
+.il-study-verdict { margin: 0 0 2px; font-size: 0.875rem; }
 .il-study-verdict--exact { color: var(--success); }
 .il-study-verdict--close { color: var(--accent); }
 .il-study-verdict--wrong { color: var(--primary); }
@@ -201,7 +205,7 @@
   min-height: 20px;
   margin: 12px 0 0;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 0.78125rem;
   text-align: center;
 }
 .il-study-source a,

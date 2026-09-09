@@ -4,6 +4,20 @@ All notable changes to Hornbook.
 
 ## Unreleased
 
+## 0.9.6 — 2026-09-09
+
+- Matching cards keep a new selection when earlier mismatch feedback ends.
+- Active and hovered navigation stays readable in night mode.
+- Study filters announce their selection, the deck selector shows keyboard
+  focus, and Add tabs support arrow keys, Home and End.
+- The mobile Add page uses compact source choices to bring recording controls
+  closer to the top of the screen.
+- Readability settings offer larger text, solid surfaces and increased contrast,
+  saved across browser reloads and desktop restarts. System accessibility
+  preferences are respected, and interface typography scales with text size.
+- Buttons, tabs and matching cards give consistent feedback while pressed,
+  with a reduced-motion alternative.
+
 ## 0.9.5 — 2026-09-08
 
 - Hornbook finds a new release on its own again. An automatic check

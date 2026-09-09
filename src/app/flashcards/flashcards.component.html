@@ -36,27 +36,27 @@
 
   <div class="il-cards-filters" [attr.aria-label]="'cards.filters' | t">
     <div class="il-cards-filter-group il-cards-filter-group--mode">
-      <button type="button" (click)="mode.set('type')" class="il-chip" [class.active]="mode() === 'type'">
+      <button type="button" (click)="mode.set('type')" class="il-chip" [class.active]="mode() === 'type'" [attr.aria-pressed]="mode() === 'type'">
         {{ 'cards.type' | t }}
       </button>
-      <button type="button" (click)="mode.set('pairs')" class="il-chip" [class.active]="mode() === 'pairs'">
+      <button type="button" (click)="mode.set('pairs')" class="il-chip" [class.active]="mode() === 'pairs'" [attr.aria-pressed]="mode() === 'pairs'">
         {{ 'cards.pairs' | t }}
       </button>
     </div>
 
     @if (mode() === 'type') {
       <div class="il-cards-filter-group il-cards-filter-group--divided il-cards-filter-group--direction">
-        <button type="button" (click)="direction.set('target-learner')" class="il-chip" [class.active]="direction() === 'target-learner'">
+        <button type="button" (click)="direction.set('target-learner')" class="il-chip" [class.active]="direction() === 'target-learner'" [attr.aria-pressed]="direction() === 'target-learner'">
           {{ pairFwd }}
         </button>
-        <button type="button" (click)="direction.set('learner-target')" class="il-chip" [class.active]="direction() === 'learner-target'">
+        <button type="button" (click)="direction.set('learner-target')" class="il-chip" [class.active]="direction() === 'learner-target'" [attr.aria-pressed]="direction() === 'learner-target'">
           {{ pairRev }}
         </button>
       </div>
 
       <div class="il-cards-filter-group il-cards-filter-group--divided il-cards-filter-group--levels">
         @for (lvl of levels; track lvl) {
-          <button type="button" (click)="level.set(lvl)" class="il-chip" [class.active]="level() === lvl"
+          <button type="button" (click)="level.set(lvl)" class="il-chip" [class.active]="level() === lvl" [attr.aria-pressed]="level() === lvl"
                   [title]="lvl === 'all' ? ('cards.allLevelsTitle' | t) : ('cards.levelTitle' | t: { level: lvl })">
             {{ lvl === 'all' ? ('cards.all' | t) : lvl }}
           </button>
@@ -112,6 +112,7 @@
                  [ngModel]="typed()"
                  (ngModelChange)="typed.set($event)"
                  [placeholder]="'cards.answerPlaceholder' | t"
+                 [attr.aria-label]="'cards.answerPlaceholder' | t"
                  autocomplete="off"
                  autocapitalize="off"
                  autocorrect="off"
@@ -229,8 +230,9 @@
           @for (c of pairsLeft(); track c.id) {
             <button type="button"
                     (click)="selectPairLeft(c)"
+                    [attr.aria-pressed]="pairsSelectedLeft() === c.id"
                     [disabled]="pairsMatched().has(c.id)"
-                    class="w-full px-3 py-3 rounded-xl text-sm sm:text-base text-left transition-colors min-h-[3.5rem]"
+                    class="il-pair-tile w-full px-3 py-3 rounded-xl text-sm sm:text-base text-left transition-colors min-h-[3.5rem]"
                     [style]="pairsMatched().has(c.id)
                       ? 'background: rgba(107,142,78,0.12); border: 2px solid var(--success); color: var(--muted); text-decoration: line-through; cursor: default;'
                       : pairsWrongLeft() === c.id
@@ -248,7 +250,7 @@
             <button type="button"
                     (click)="selectPairRight(c)"
                     [disabled]="pairsMatched().has(c.id) || !pairsSelectedLeft()"
-                    class="w-full px-3 py-3 rounded-xl text-sm sm:text-base text-left transition-colors min-h-[3.5rem]"
+                    class="il-pair-tile w-full px-3 py-3 rounded-xl text-sm sm:text-base text-left transition-colors min-h-[3.5rem]"
                     [style]="pairsMatched().has(c.id)
                       ? 'background: rgba(107,142,78,0.12); border: 2px solid var(--success); color: var(--muted); text-decoration: line-through; cursor: default;'
                       : pairsWrongRight() === c.id

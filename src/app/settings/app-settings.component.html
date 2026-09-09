@@ -56,6 +56,32 @@
       <p role="alert">{{ 'settings.localeFailed' | t }}</p>
     }
 
+    <fieldset class="il-accessibility-settings">
+      <legend>{{ 'appearance.title' | t }}</legend>
+      <p class="il-section-sub">{{ 'appearance.help' | t }}</p>
+      <label>
+        <input type="checkbox" [checked]="appearance.preferences().reduceTransparency"
+               (change)="appearance.set({ reduceTransparency: $any($event.target).checked })" />
+        <span>{{ 'appearance.reduceTransparency' | t }}</span>
+      </label>
+      <label>
+        <input type="checkbox" [checked]="appearance.preferences().increaseContrast"
+               (change)="appearance.set({ increaseContrast: $any($event.target).checked })" />
+        <span>{{ 'appearance.increaseContrast' | t }}</span>
+      </label>
+      <label class="il-accessibility-scale">
+        <span>{{ 'appearance.textSize' | t }}</span>
+        <select [ngModel]="appearance.preferences().textScale" (ngModelChange)="appearance.set({ textScale: $event })">
+          <option [ngValue]="100">100%</option>
+          <option [ngValue]="125">125%</option>
+          <option [ngValue]="150">150%</option>
+        </select>
+      </label>
+      @if (appearance.saveFailed()) {
+        <p role="alert">{{ 'appearance.saveFailed' | t }}</p>
+      }
+    </fieldset>
+
     @if (loading()) {
       <p class="il-stat-sub">{{ 'common.loading' | t }}</p>
     } @else {

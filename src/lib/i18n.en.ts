@@ -2,6 +2,12 @@ import type { Catalog } from './i18n.js';
 
 /** Default chrome copy. Keys are stable; values are what the UI used to hardcode. */
 export const EN = {
+  'appearance.title': 'Readability',
+  'appearance.help': 'System accessibility preferences always apply. These options add to them.',
+  'appearance.reduceTransparency': 'Reduce transparency',
+  'appearance.increaseContrast': 'Increase contrast',
+  'appearance.textSize': 'Text size',
+  'appearance.saveFailed': 'Applied for now, but could not save. Try changing the setting again.',
   'settings.localeFailed':
     'Could not load that interface language. Check your connection and select it again.',
   'setup.guide.kicker': 'Recommended · no subscription',

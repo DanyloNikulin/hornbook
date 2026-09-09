@@ -14,6 +14,7 @@ import { PipelineSetupComponent } from './pipeline-setup.component';
 import { LocalSetupComponent } from './local-setup.component';
 import { DesktopService } from '../desktop.service';
 import { UpdateService } from '../update.service';
+import { AppearanceService } from '../appearance.service';
 
 /**
  * Journal-wide settings: interface language, default models, connection keys.
@@ -34,6 +35,7 @@ export class AppSettingsComponent {
   private readonly route = inject(ActivatedRoute);
   protected readonly desktop = inject(DesktopService);
   protected readonly updates = inject(UpdateService);
+  protected readonly appearance = inject(AppearanceService);
 
   protected readonly locales = SUPPORTED_LOCALES;
   protected readonly localeMeta = LOCALE_META;

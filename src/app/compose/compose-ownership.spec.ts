@@ -16,6 +16,8 @@ function deferred<T>() {
   return { promise, resolve };
 }
 interface Editor {
+  activeMode(): string;
+  onModeKeydown(event: KeyboardEvent, mode: 'hand' | 'transcript' | 'recording' | 'import'): void;
   title: string;
   date: string;
   transcript: string;
@@ -51,6 +53,36 @@ beforeEach(() => {
 afterEach(() => {
   TestBed.resetTestingModule();
   vi.unstubAllGlobals();
+});
+it('moves tab focus and selection with arrow keys, Home and End', () => {
+  const component = editor();
+  const group = document.createElement('div');
+  const modes = ['hand', 'transcript', 'recording', 'import'] as const;
+  for (const mode of modes) {
+    const button = document.createElement('button');
+    button.id = `compose-tab-${mode}`;
+    button.addEventListener('keydown', (event) => component.onModeKeydown(event, mode));
+    group.append(button);
+  }
+  document.body.append(group);
+  const press = (mode: typeof modes[number], key: string) => {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    group.querySelector(`#compose-tab-${mode}`)!.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement?.id).toBe(`compose-tab-${component.activeMode()}`);
+  };
+  try {
+    press('recording', 'ArrowLeft');
+    expect(component.activeMode()).toBe('transcript');
+    press('transcript', 'Home');
+    expect(component.activeMode()).toBe('hand');
+    press('hand', 'ArrowLeft');
+    expect(component.activeMode()).toBe('import');
+    press('import', 'ArrowRight');
+    expect(component.activeMode()).toBe('hand');
+    press('hand', 'End');
+    expect(component.activeMode()).toBe('import');
+  } finally { group.remove(); }
 });
 it('a save finishing after a section switch cannot navigate the new section', async () => {
   const response = deferred<{ slug: string }>();

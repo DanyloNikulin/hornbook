@@ -2,6 +2,12 @@ import type { Catalog } from './i18n.js';
 import type { EN } from './i18n.en.js';
 
 export const NL = {
+  'appearance.title': 'Leesbaarheid',
+  'appearance.help': 'De toegankelijkheidsvoorkeuren van het systeem blijven altijd gelden. Deze opties vullen ze aan.',
+  'appearance.reduceTransparency': 'Transparantie verminderen',
+  'appearance.increaseContrast': 'Contrast verhogen',
+  'appearance.textSize': 'Tekstgrootte',
+  'appearance.saveFailed': 'De instelling is toegepast, maar niet opgeslagen. Probeer deze opnieuw te wijzigen.',
   'settings.localeFailed':
     'Die interfacetaal kon niet worden geladen. Controleer je verbinding en selecteer de taal opnieuw.',
   'setup.guide.kicker': 'Aanbevolen · zonder abonnement',

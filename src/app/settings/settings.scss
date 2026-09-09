@@ -11,14 +11,14 @@
   padding: 14px;
   background: var(--paper-2);
 }
-.il-settings-card h3 { font-family: var(--font-display); font-size: 18px; margin-bottom: 8px; }
+.il-settings-card h3 { font-family: var(--font-display); font-size: 1.125rem; margin-bottom: 8px; }
 .il-settings-row {
   display: grid;
   grid-template-columns: 1fr 1.4fr;
   gap: 10px;
   align-items: center;
   margin: 8px 0;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .il-settings-row input, .il-settings-row select { width: 100%; font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(42, 37, 32, 0.18); background: var(--paper); color: var(--ink); }
 /* Interface language: one dropdown instead of nine chips wrapping over two lines. */
@@ -28,7 +28,7 @@
   min-height: 42px;
   padding: 8px 12px;
   font: inherit;
-  font-size: 15px;
+  font-size: 0.9375rem;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--paper);
@@ -38,9 +38,9 @@
 .il-locale-select select:focus-visible { outline: 3px solid rgba(192, 101, 63, 0.35); border-color: var(--primary); }
 .il-settings-row--conn { grid-template-columns: 1.2fr 1fr; align-items: start; padding: 8px 0; border-bottom: 1px solid rgba(42, 37, 32, 0.08); }
 .il-settings-row--conn > span:first-child { display: flex; flex-direction: column; gap: 2px; }
-.il-settings-help { font-size: 12px; color: var(--muted); }
+.il-settings-help { font-size: 0.75rem; color: var(--muted); }
 .il-settings-conn-input { display: flex; flex-direction: column; gap: 6px; }
-.il-settings-check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); margin: 6px 0; }
+.il-settings-check { display: inline-flex; gap: 6px; align-items: center; font-size: 0.8125rem; color: var(--ink-2); margin: 6px 0; }
 .il-settings-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 20px; }
 .il-locale-picks { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 8px; }
 .il-locale-picks .il-chip { gap: 8px; }
@@ -57,9 +57,9 @@
   padding: 16px;
   background: var(--paper-2);
 }
-.il-pipe-title { font-family: var(--font-display); font-size: 20px; margin: 0 0 4px; }
+.il-pipe-title { font-family: var(--font-display); font-size: 1.25rem; margin: 0 0 4px; }
 .il-pipe-step {
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
@@ -94,7 +94,7 @@
 .il-model-picker-trigger > span { display: flex; min-width: 0; flex-direction: column; gap: 1px; }
 .il-model-picker-trigger small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -102,7 +102,7 @@
 .il-model-picker-trigger strong {
   overflow: hidden;
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 0.78125rem;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -128,7 +128,7 @@
   outline: none;
   background: var(--paper-2);
   color: var(--ink);
-  font: 12.5px var(--font-body);
+  font: 0.78125rem var(--font-body);
 }
 .il-model-search:focus { border-color: var(--primary); }
 .il-model-options {
@@ -145,13 +145,13 @@
   border-radius: 7px;
   background: transparent;
   color: var(--ink-2);
-  font: 12px var(--font-mono);
+  font: 0.75rem var(--font-mono);
   text-align: left;
   cursor: pointer;
 }
 .il-model-option:hover,
 .il-model-option.active { background: var(--paper-2); color: var(--primary-ink); }
-.il-model-empty { margin: 8px 6px; color: var(--muted); font-size: 12px; }
+.il-model-empty { margin: 8px 6px; color: var(--muted); font-size: 0.75rem; }
 .il-cli-heading {
   display: flex;
   align-items: baseline;
@@ -165,7 +165,7 @@
   border: 0;
   background: transparent;
   color: var(--primary-ink);
-  font: 11.5px var(--font-body);
+  font: 0.71875rem var(--font-body);
   cursor: pointer;
 }
 .il-cli-refresh:disabled { color: var(--muted); cursor: wait; }
@@ -194,7 +194,7 @@
   border: 0;
   background: transparent;
   color: var(--ink-2);
-  font: 600 13px var(--font-body);
+  font: 600 0.8125rem var(--font-body);
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -210,14 +210,14 @@
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--muted);
-  font-size: 9.5px;
+  font-size: 0.59375rem;
   line-height: 1.35;
 }
 .il-cli-status { margin-left: auto; }
 .il-cli-status--ok { border-color: color-mix(in srgb, var(--success) 45%, transparent); color: var(--success); }
 .il-cli-status--bad { border-color: color-mix(in srgb, #a33 35%, transparent); color: #923838; }
 .il-cli-experimental { letter-spacing: .03em; }
-.il-cli-option-copy { display: block; margin-top: 5px; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+.il-cli-option-copy { display: block; margin-top: 5px; color: var(--muted); font-size: 0.65625rem; line-height: 1.45; }
 .il-cli-option-copy > span { display: block; overflow-wrap: anywhere; }
 .il-cli-option-copy .il-cli-install { margin-top: 3px; color: var(--primary-ink); }
 .il-cli-default-note {
@@ -237,13 +237,13 @@
   border-radius: 7px;
   background: var(--ink);
   color: var(--paper);
-  font: 600 16px var(--font-mono);
+  font: 600 1rem var(--font-mono);
 }
 .il-cli-default-note > span { display: flex; flex-direction: column; gap: 2px; }
-.il-cli-default-note strong { color: var(--ink); font-size: 12px; }
-.il-cli-default-note small { color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+.il-cli-default-note strong { color: var(--ink); font-size: 0.75rem; }
+.il-cli-default-note small { color: var(--muted); font-size: 0.65625rem; line-height: 1.45; }
 .il-pipe-check { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-.il-pipe-result { font-size: 13px; margin: 0; }
+.il-pipe-result { font-size: 0.8125rem; margin: 0; }
 .il-pipe-result--ok { color: var(--success); }
 /* The connection answered and listed models; nothing is wrong, nothing is chosen. */
 .il-pipe-result--pick { color: var(--ink-2); }
@@ -274,7 +274,7 @@
 .il-preset.selected { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
 .il-preset-swatches { display: flex; height: 26px; border-radius: 7px; overflow: hidden; }
 .il-preset-swatches > span { flex: 1; }
-.il-preset-name { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
+.il-preset-name { font-family: var(--font-display); font-size: 1.0625rem; font-weight: 600; }
 .il-backdrop-thumb {
   width: 100%;
   max-width: 220px;
@@ -288,15 +288,15 @@
 .il-setup-row { border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 12px; padding: 14px 16px; margin: 10px 0; }
 [data-theme="night"] .il-setup-row { border-color: rgba(255, 255, 255, 0.14); }
 .il-setup-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.il-setup-pill { font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; opacity: 0.75; }
+.il-setup-pill { font-size: 0.75rem; padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; opacity: 0.75; }
 .il-setup-pill--ok { color: var(--success); opacity: 1; }
 .il-setup-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
 .il-setup-actions .il-btn { max-width: 100%; white-space: normal; padding-block: 8px; text-align: center; }
 .il-setup-actions .il-btn[disabled] { opacity: 0.55; cursor: default; transform: none; }
-.il-setup-plan { font-size: 13.5px; margin: 8px 0 0; }
+.il-setup-plan { font-size: 0.84375rem; margin: 8px 0 0; }
 .il-setup-progress { display: block; width: 100%; height: 8px; margin-top: 10px; accent-color: var(--primary); }
-.il-setup-path { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; opacity: 0.8; word-break: break-all; margin: 4px 0 0; }
-.il-setup-cmd { font-size: 12.5px; padding: 8px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.06); overflow-x: auto; margin: 8px 0 0; }
+.il-setup-path { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.75rem; opacity: 0.8; word-break: break-all; margin: 4px 0 0; }
+.il-setup-cmd { font-size: 0.78125rem; padding: 8px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.06); overflow-x: auto; margin: 8px 0 0; }
 [data-theme="night"] .il-setup-cmd { background: rgba(255, 255, 255, 0.08); }
 
 }

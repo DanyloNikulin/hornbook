@@ -2,6 +2,12 @@ import type { Catalog } from './i18n.js';
 
 /** Italian chrome copy. Same keys as `EN`; missing keys fall back to English. */
 export const IT = {
+  'appearance.title': 'Leggibilità',
+  'appearance.help': 'Le preferenze di accessibilità del sistema sono sempre attive. Queste opzioni le integrano.',
+  'appearance.reduceTransparency': 'Riduci trasparenza',
+  'appearance.increaseContrast': 'Aumenta contrasto',
+  'appearance.textSize': 'Dimensione del testo',
+  'appearance.saveFailed': 'Impostazione applicata, ma non salvata. Prova a modificarla di nuovo.',
   'settings.localeFailed':
     'Impossibile caricare la lingua dell’interfaccia. Controlla la connessione e selezionala di nuovo.',
   'setup.guide.kicker': 'Consigliato · senza abbonamento',
