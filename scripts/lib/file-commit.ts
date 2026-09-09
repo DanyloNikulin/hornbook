@@ -28,6 +28,8 @@ export interface CommitStep {
 }
 export type CommitObserver = (step: CommitStep) => void;
 const TRANSACTION = '_transaction';
+/** Retained originals live here; the journal reads it back to report and clear. */
+export const TRASH = '_trash';
 const LOCK = '_write.lock';
 const RECLAIM = '_write.reclaim';
 const Manifest = z.object({
@@ -207,7 +209,7 @@ export function commitFiles<T>(
     const changes = [...planned.changes];
     if (changes.length === 0) return result;
     const retained: FileChange[] = [];
-    const trash = `_trash/${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID()}`;
+    const trash = `${TRASH}/${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID()}`;
     for (const change of changes) {
       if (!change.retainPrevious) continue;
       const path = checkedJournalPath(root, change.path);

@@ -83,6 +83,13 @@ export interface DesktopUpdateState {
   error?: string;
 }
 
+/** Weight of the copies kept behind destructive writes, for the settings page. */
+export interface TrashView {
+  entries: number;
+  files: number;
+  bytes: number;
+}
+
 export interface DesktopPreferencesView {
   automaticUpdates: boolean;
   startWithSystem: boolean;

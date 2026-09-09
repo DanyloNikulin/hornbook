@@ -3,6 +3,18 @@ import type { EN } from './i18n.en.js';
 
 export const FR = {
   'recovery.trashHelp': "Les cours supprimés ou remplacés, les paires supprimées et les images remplacées sont conservés dans le dossier _trash du journal. Restaurez les fichiers depuis ce dossier ; les copies restent jusqu’à leur suppression manuelle.",
+  'trash.title': 'Copies récupérables',
+  'trash.help': 'Rien ne les supprime tout seul. Videz la corbeille lorsque vous êtes sûr de ne plus avoir besoin des originaux.',
+  'trash.none': "Rien n’a encore été conservé.",
+  'trash.empty': 'Vider la corbeille',
+  'trash.emptying': 'Vidage…',
+  'trash.confirm': "Supprimer définitivement toutes les copies conservées ? Récupérez d’abord dans le dossier ce dont vous avez encore besoin.",
+  'trash.confirmYes': 'Supprimer définitivement',
+  'trash.keep': 'Les conserver',
+  'trash.emptied': 'Corbeille vidée.',
+  'trash.failed': 'Impossible de vider la corbeille. Fermez ce qui utilise le dossier du journal, puis réessayez.',
+  'count.trashFiles': { one: '{n} fichier', other: '{n} fichiers' },
+  'count.trashRemovals': { one: '{n} suppression', other: '{n} suppressions' },
   'lessons.damaged': "Les fichiers de cours ci-dessous sont illisibles. Les originaux sont conservés. Les autres cours restent disponibles ; réparez ou déplacez ces fichiers avant de modifier ou exporter cette paire.",
   'appearance.title': 'Lisibilité',
   'appearance.help': 'Les préférences d’accessibilité du système s’appliquent toujours. Ces options les complètent.',
@@ -102,7 +114,7 @@ export const FR = {
   'update.dismiss': 'Ignorer cette mise à jour',
   'update.settingsTitle': 'Mises à jour',
   'update.settingsSub':
-    'Hornbook consulte les versions publiques sur GitHub au plus une fois par jour et n’envoie aucune donnée du journal.',
+    "Hornbook consulte les versions publiques sur GitHub au démarrage et toutes les heures, et n’envoie aucune donnée du journal.",
   'update.installedVersion': 'Version installée',
   'update.automatic': 'Vérifier automatiquement',
   'update.automaticSub': 'Désactivez cette option pour vérifier uniquement à votre demande.',

@@ -113,7 +113,8 @@ body:has(.il-titlebar) .il-page { height: calc(100dvh - 36px); }
 .il-update-dismiss { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 1.25rem; line-height: 1; }
 
 .il-desktop-card,
-.il-update-settings {
+.il-update-settings,
+.il-trash-settings {
   margin: 22px 0;
   padding: 20px;
   border: 1px solid var(--line);
@@ -143,6 +144,12 @@ body:has(.il-titlebar) .il-page { height: calc(100dvh - 36px); }
 .il-update-settings .il-desktop-toggle { grid-column: auto; border: 0; padding: 0; }
 .il-update-settings-action { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; min-width: 0; gap: 10px; color: var(--success); font-size: 0.75rem; }
 .il-update-settings-action .il-error-inline { flex-basis: 100%; min-width: 0; overflow-wrap: anywhere; }
+.il-trash-settings .il-compose-h { margin: 0; }
+.il-trash-settings .il-section-sub { margin: 6px 0 0; }
+.il-trash-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 13px 0 0; color: var(--muted); font-size: 0.6875rem; font-weight: 700; }
+.il-trash-stats strong { padding: 3px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--primary-ink); font: 700 0.6875rem var(--font-mono); }
+.il-trash-action { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; min-width: 0; font-size: 0.75rem; }
+.il-trash-action .il-error-inline { flex-basis: 100%; min-width: 0; overflow-wrap: anywhere; }
 .il-error-inline { color: #a33; }
 
 .il-jobs-page .il-panel-inner { max-width: 900px; margin: 0 auto; }

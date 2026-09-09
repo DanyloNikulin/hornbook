@@ -3,6 +3,18 @@ import type { EN } from './i18n.en.js';
 
 export const SV = {
   'recovery.trashHelp': "Borttagna eller ersatta lektioner, borttagna språkpar och ersatta bilder sparas i journalens mapp _trash. Återställ filer därifrån; kopiorna finns kvar tills du tar bort dem manuellt.",
+  'trash.title': 'Återställningsbara kopior',
+  'trash.help': 'Ingenting tar bort dem av sig självt. Töm papperskorgen när du är säker på att du inte längre behöver originalen.',
+  'trash.none': 'Ingenting har sparats än.',
+  'trash.empty': 'Töm papperskorgen',
+  'trash.emptying': 'Tömmer…',
+  'trash.confirm': 'Ta bort alla sparade kopior permanent? Hämta först det du fortfarande behöver från mappen.',
+  'trash.confirmYes': 'Ta bort permanent',
+  'trash.keep': 'Behåll dem',
+  'trash.emptied': 'Papperskorgen tömd.',
+  'trash.failed': 'Det gick inte att tömma papperskorgen. Stäng allt som använder dagboksmappen och försök igen.',
+  'count.trashFiles': { one: '{n} fil', other: '{n} filer' },
+  'count.trashRemovals': { one: '{n} borttagning', other: '{n} borttagningar' },
   'lessons.damaged': "Lektionsfilerna nedan kunde inte läsas. Originalen finns kvar. Övriga lektioner är tillgängliga; reparera eller flytta dessa filer innan du redigerar eller exporterar språkparet.",
   'appearance.title': 'Läsbarhet',
   'appearance.help': 'Systemets tillgänglighetsinställningar gäller alltid. Dessa alternativ kompletterar dem.',
@@ -101,7 +113,7 @@ export const SV = {
   'update.dismiss': 'Avvisa den här uppdateringen',
   'update.settingsTitle': 'Uppdateringar',
   'update.settingsSub':
-    'Hornbook söker efter offentliga GitHub-versioner högst en gång om dagen och skickar inga journaldata.',
+    'Hornbook söker efter offentliga GitHub-versioner vid start och varje timme, och skickar inga journaldata.',
   'update.installedVersion': 'Installerad version',
   'update.automatic': 'Kontrollera automatiskt',
   'update.automaticSub': 'Stäng av för att bara kontrollera när du ber om det.',

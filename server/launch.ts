@@ -9,7 +9,7 @@ import { commitFiles, recoverJournal, type CommitObserver, type FileChange } fro
 import { normalizeJournalConfig } from '../src/lib/journal-config.ts';
 
 /** Files inside a journal that belong to one machine or one run, never to a copy. */
-const SKIP_IN_SEED = new Set(['_derived', '_progress.json', '_uploads', 'secrets.json', '_transaction', '_write.lock', '_write.reclaim']);
+const SKIP_IN_SEED = new Set(['_derived', '_progress.json', '_uploads', 'secrets.json', '_transaction', '_write.lock', '_write.reclaim', '_trash']);
 
 /**
  * Copy the demo journal into `dst` when `dst` has no journal yet. Returns

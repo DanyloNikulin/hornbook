@@ -1,6 +1,6 @@
 {
   "name": "hornbook",
-  "version": "0.9.7",
+  "version": "0.9.8",
   "description": "A local-first conspect journal for one-to-one language lessons.",
   "author": "Danylo Nikulin",
   "license": "MIT",
@@ -31,7 +31,7 @@
     "watch": "ng build --watch --configuration development",
     "pretest": "tsx scripts/build-derived.ts",
     "test": "ng test",
-    "test:scripts": "vitest run scripts server electron harness",
+    "test:scripts": "vitest run --config vitest.scripts.config.ts",
     "typecheck:scripts": "tsc -p tsconfig.scripts.json",
     "lint": "ng lint",
     "format": "prettier --write \"src/**/*.{ts,html,scss,json}\"",

@@ -201,6 +201,30 @@ describe('API — pipeline probe', () => {
   });
 });
 
+type Trash = { entries: number; files: number; bytes: number };
+
+describe('API — retained copies', () => {
+  it('reports the trash, grows it with a destructive write and clears it on request', async () => {
+    // Earlier suites share this journal, so measure the growth rather than the total.
+    const before = await json<Trash>('/api/trash');
+
+    const slug = 'trash-probe';
+    await json(`/api/sections/it-en/lessons`, post({
+      id: '2026-03-01-' + slug, slug, date: '2026-03-01', title: 'Probe',
+      summary: 'Probe', article_md: 'Probe', vocabulary: [{ target: 'ciao', learner: 'hello' }],
+    }));
+    expect((await api(`/api/sections/it-en/lessons/${slug}`, { method: 'DELETE' })).status).toBe(200);
+
+    const kept = await json<Trash>('/api/trash');
+    expect(kept.entries).toBe(before.entries + 1);
+    expect(kept.files).toBeGreaterThan(before.files);
+    expect(kept.bytes).toBeGreaterThan(before.bytes);
+
+    expect(await json('/api/trash', { method: 'DELETE' })).toEqual({ entries: 0, files: 0, bytes: 0 });
+    expect(await json('/api/trash')).toEqual({ entries: 0, files: 0, bytes: 0 });
+  });
+});
+
 describe('API — setup inside the app', () => {
   it('reports the five tools, the machine and a recommendation', async () => {
     const view = await json<SetupView>('/api/setup');

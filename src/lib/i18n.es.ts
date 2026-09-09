@@ -3,6 +3,18 @@ import type { EN } from './i18n.en.js';
 
 export const ES = {
   'recovery.trashHelp': "Las lecciones eliminadas o reemplazadas, los pares eliminados y las imágenes reemplazadas se conservan en la carpeta _trash de tu diario. Restaura los archivos desde allí; las copias permanecen hasta que las borres manualmente.",
+  'trash.title': 'Copias recuperables',
+  'trash.help': 'Nada las elimina por su cuenta. Vacía la papelera cuando estés seguro de que ya no necesitas los originales.',
+  'trash.none': 'Todavía no se ha conservado nada.',
+  'trash.empty': 'Vaciar papelera',
+  'trash.emptying': 'Vaciando…',
+  'trash.confirm': '¿Eliminar definitivamente todas las copias conservadas? Recupera antes de la carpeta lo que aún necesites.',
+  'trash.confirmYes': 'Eliminar definitivamente',
+  'trash.keep': 'Conservarlas',
+  'trash.emptied': 'Papelera vaciada.',
+  'trash.failed': 'No se pudo vaciar la papelera. Cierra lo que esté usando la carpeta del diario e inténtalo de nuevo.',
+  'count.trashFiles': { one: '{n} archivo', other: '{n} archivos' },
+  'count.trashRemovals': { one: '{n} eliminación', other: '{n} eliminaciones' },
   'lessons.damaged': "No se pudieron leer los archivos de lecciones indicados abajo. Los originales se conservan. Las demás lecciones siguen disponibles; repara o mueve estos archivos antes de editar o exportar este par.",
   'appearance.title': 'Legibilidad',
   'appearance.help': 'Las preferencias de accesibilidad del sistema siempre se aplican. Estas opciones las complementan.',
@@ -102,7 +114,7 @@ export const ES = {
   'update.dismiss': 'Omitir esta actualización',
   'update.settingsTitle': 'Actualizaciones',
   'update.settingsSub':
-    'Hornbook comprueba las versiones públicas de GitHub como máximo una vez al día y no envía datos del diario.',
+    'Hornbook comprueba las versiones públicas de GitHub al iniciarse y cada hora, y no envía datos del diario.',
   'update.installedVersion': 'Versión instalada',
   'update.automatic': 'Comprobar automáticamente',
   'update.automaticSub': 'Desactívalo para comprobar solo cuando lo pidas.',

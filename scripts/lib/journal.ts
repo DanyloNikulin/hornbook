@@ -9,6 +9,7 @@
 //   <journal>/<section>/_topics.json          topic catalogue: categories, topics, tagger patterns
 //   <journal>/<section>/_topics-version.json / _topics-suggestions.json / _topic-reviews/
 //   <journal>/<section>/_derived/            meta, vocab, cards, search index
+//   <journal>/_trash/<stamp>-<uuid>/         originals kept behind a destructive write
 //
 // Location: HORNBOOK_JOURNAL, else <repo>/journal (the demo journal).
 
@@ -19,6 +20,7 @@ import {
   lstatSync,
   realpathSync,
   rmdirSync,
+  statSync,
 } from 'node:fs';
 import { join, resolve, relative, isAbsolute, sep } from 'node:path';
 import { packageRoot } from './runtime.ts';
@@ -36,12 +38,19 @@ import {
   type TopicCatalogT,
 } from '../../src/lib/schema.ts';
 import { buildDerived, type DerivedBundle } from './derived.ts';
-import { commitFiles, recoverJournal, type FileChange, type CommitObserver } from './file-commit.ts';
+import { commitFiles, recoverJournal, TRASH, type FileChange, type CommitObserver } from './file-commit.ts';
 import { finalizeLesson, readStoredLesson } from './lesson-storage.ts';
 import { sectionWriteChanges } from './section-write.ts';
 
 const repoRoot = process.env['HORNBOOK_APP_ROOT']?.trim() || packageRoot(import.meta.url);
 export const DERIVED_FORMAT_VERSION = 2;
+
+/** Weight of the retained originals: how many writes, files and bytes. */
+export interface TrashSummary {
+  entries: number;
+  files: number;
+  bytes: number;
+}
 
 export function defaultJournalDir(): string {
   return resolve(process.env['HORNBOOK_JOURNAL'] || join(repoRoot, 'journal'));
@@ -269,6 +278,70 @@ export class JournalRepository {
 
   derivedDir(id: string): string {
     return this.sectionPath(id, '_derived');
+  }
+
+  trashDir(): string {
+    return join(this.root, TRASH);
+  }
+
+  /**
+   * What a destructive write has kept so far. Nothing prunes the trash, so the
+   * interface reports its weight and offers to clear it.
+   */
+  scanTrash(): TrashSummary {
+    const root = this.trashDir();
+    if (!existsSync(root)) return { entries: 0, files: 0, bytes: 0 };
+    let files = 0;
+    let bytes = 0;
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) walk(path);
+        else if (entry.isFile()) {
+          files++;
+          bytes += statSync(path).size;
+        }
+      }
+    };
+    const entries = readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+    // Only the retained originals; each entry's manifest is bookkeeping, not kept content.
+    for (const entry of entries) {
+      const files = join(root, entry.name, 'files');
+      if (existsSync(files)) walk(files);
+    }
+    return { entries: entries.length, files, bytes };
+  }
+
+  /**
+   * Drop every retained copy. Removal runs through a commit so no other writer
+   * is mid-transaction, and the changes carry no `retainPrevious`: re-trashing
+   * the trash would leave it exactly as full as before.
+   */
+  emptyTrash(): TrashSummary {
+    const removed = this.scanTrash();
+    if (removed.files === 0 && removed.entries === 0) return removed;
+    const directories = this.commit(() => {
+      const root = this.trashDir();
+      const changes: FileChange[] = [];
+      const dirs: string[] = [];
+      const walk = (parts: string[]): void => {
+        const dir = join(root, ...parts);
+        if (!existsSync(dir)) return;
+        dirs.push(dir);
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const child = [...parts, entry.name];
+          if (entry.isDirectory()) walk(child);
+          else changes.push({ path: [TRASH, ...child].join('/'), data: null });
+        }
+      };
+      walk([]);
+      return { changes, result: dirs };
+    });
+    // Only empty directories are disposable, and another writer may be filling one.
+    for (const dir of directories.reverse()) {
+      try { rmdirSync(dir); } catch { /* Empty directory cleanup can be retried manually. */ }
+    }
+    return removed;
   }
 
   cheatsheetPath(id: string): string {
