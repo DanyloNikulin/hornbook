@@ -167,8 +167,11 @@ async function main(): Promise<void> {
     await page.goto(`${origin}/settings`);
     await page.locator('.il-locale-select select').selectOption('it');
     await page.waitForFunction(() => document.documentElement.lang === 'it', undefined, { timeout: 15_000 });
+    const chosenTheme = await page.evaluate(() =>
+      document.documentElement.getAttribute('data-theme') === 'night' ? 'day' : 'night',
+    );
     await page.locator('.il-theme-btn:visible').first().click();
-    const chosenTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    await page.waitForFunction((theme) => document.documentElement.getAttribute('data-theme') === theme, chosenTheme, { timeout: 10_000 });
     const handed = await page.evaluate(async (theme) => {
       const bridge = (window as Window & { hornbookDesktop?: { state(): Promise<{ preferences: { locale?: string; theme?: string } }> } }).hornbookDesktop;
       const deadline = Date.now() + 10_000;
@@ -183,7 +186,7 @@ async function main(): Promise<void> {
     report.rec(
       'language and theme choices reach the desktop preferences file',
       handed?.locale === 'it' && handed.theme === chosenTheme && kept.locale === 'it' && kept.theme === chosenTheme,
-      JSON.stringify({ bridge: handed, file: { locale: kept.locale, theme: kept.theme } }),
+      JSON.stringify({ expectedTheme: chosenTheme, bridge: handed, file: { locale: kept.locale, theme: kept.theme } }),
     );
 
     await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close());
@@ -226,6 +229,7 @@ async function main(): Promise<void> {
         const again = await relaunched.firstWindow({ timeout: 30_000 });
         stage = 'navigation';
         await again.locator('.il-nav-links').waitFor({ timeout: 20_000 });
+        await again.waitForFunction((theme) => document.documentElement.lang === 'it' && document.documentElement.getAttribute('data-theme') === theme, chosenTheme, { timeout: 10_000 });
         const restored = await again.evaluate(() => ({
           lang: document.documentElement.lang,
           theme: document.documentElement.getAttribute('data-theme'),
