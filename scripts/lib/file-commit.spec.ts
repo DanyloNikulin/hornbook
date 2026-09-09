@@ -82,6 +82,20 @@ describe('recoverable file commits', () => {
     });
     expect(readFileSync(join(root, 'es-en/new.json'), 'utf8')).toBe('new lesson');
   });
+  it.each(['', '{broken', '{}', '{"pid":0}'])('preserves an unrecognized lock for manual recovery: %s', (raw) => {
+    writeFileSync(join(root, '_write.lock'), raw);
+    expect(() => recoverJournal(root)).toThrow('Unrecognized journal lock');
+    expect(readFileSync(join(root, '_write.lock'), 'utf8')).toBe(raw);
+    expect(existsSync(join(root, '_write.reclaim'))).toBe(false);
+    expectOriginal();
+  });
+  it('preserves an interrupted reclaim directory', () => {
+    writeFileSync(join(root, '_write.lock'), '{broken');
+    mkdirSync(join(root, '_write.reclaim'));
+    expect(() => recoverJournal(root)).toThrow('inspect _write.reclaim');
+    expect(existsSync(join(root, '_write.reclaim'))).toBe(true);
+    expect(readFileSync(join(root, '_write.lock'), 'utf8')).toBe('{broken');
+  });
   it.each(['../outside', '_transaction/before-0', '_WRITE.LOCK', 'es-en/../../outside'])(
     'rejects unsafe destination %s before mutation',
     (path) => {

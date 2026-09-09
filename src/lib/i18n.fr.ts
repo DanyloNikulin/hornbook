@@ -2,6 +2,8 @@ import type { Catalog } from './i18n.js';
 import type { EN } from './i18n.en.js';
 
 export const FR = {
+  'recovery.trashHelp': "Les cours supprimés ou remplacés, les paires supprimées et les images remplacées sont conservés dans le dossier _trash du journal. Restaurez les fichiers depuis ce dossier ; les copies restent jusqu’à leur suppression manuelle.",
+  'lessons.damaged': "Les fichiers de cours ci-dessous sont illisibles. Les originaux sont conservés. Les autres cours restent disponibles ; réparez ou déplacez ces fichiers avant de modifier ou exporter cette paire.",
   'appearance.title': 'Lisibilité',
   'appearance.help': 'Les préférences d’accessibilité du système s’appliquent toujours. Ces options les complètent.',
   'appearance.reduceTransparency': 'Réduire la transparence',

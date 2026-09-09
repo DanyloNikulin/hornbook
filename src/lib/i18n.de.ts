@@ -2,6 +2,8 @@ import type { Catalog } from './i18n.js';
 import type { EN } from './i18n.en.js';
 
 export const DE = {
+  'recovery.trashHelp': "Gelöschte oder ersetzte Lektionen, entfernte Sprachpaare und ersetzte Bilder bleiben im Ordner _trash deines Journals erhalten. Stelle Dateien von dort wieder her; Kopien bleiben bis zum manuellen Löschen.",
+  'lessons.damaged': "Einige Unterrichtsdateien konnten nicht gelesen werden und sind unten aufgeführt. Die Originale bleiben erhalten. Andere Lektionen sind verfügbar. Repariere oder verschiebe diese Dateien, bevor du dieses Sprachpaar bearbeitest oder exportierst.",
   'appearance.title': 'Lesbarkeit',
   'appearance.help': 'Die Barrierefreiheitseinstellungen des Systems gelten immer. Diese Optionen ergänzen sie.',
   'appearance.reduceTransparency': 'Transparenz reduzieren',

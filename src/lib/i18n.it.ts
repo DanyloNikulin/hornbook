@@ -2,6 +2,8 @@ import type { Catalog } from './i18n.js';
 
 /** Italian chrome copy. Same keys as `EN`; missing keys fall back to English. */
 export const IT = {
+  'recovery.trashHelp': "Le lezioni eliminate o sostituite, le coppie rimosse e le immagini sostituite restano nella cartella _trash del diario. Ripristina i file da lì; le copie restano finché non le elimini manualmente.",
+  'lessons.damaged': "Non è stato possibile leggere i file delle lezioni elencati sotto. Gli originali sono conservati. Le altre lezioni restano disponibili; ripara o sposta questi file prima di modificare o esportare questa coppia.",
   'appearance.title': 'Leggibilità',
   'appearance.help': 'Le preferenze di accessibilità del sistema sono sempre attive. Queste opzioni le integrano.',
   'appearance.reduceTransparency': 'Riduci trasparenza',

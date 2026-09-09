@@ -2,6 +2,8 @@ import type { Catalog } from './i18n.js';
 
 /** Default chrome copy. Keys are stable; values are what the UI used to hardcode. */
 export const EN = {
+  'recovery.trashHelp': "Deleted or replaced lessons, removed pairs and replaced images are kept in your journal’s _trash folder. Restore files from there; copies stay until you remove them manually.",
+  'lessons.damaged': "Some lesson files could not be read and are listed below. Their originals are preserved. Healthy lessons remain available; repair or move these files before editing or exporting this pair.",
   'appearance.title': 'Readability',
   'appearance.help': 'System accessibility preferences always apply. These options add to them.',
   'appearance.reduceTransparency': 'Reduce transparency',

@@ -110,7 +110,7 @@ export class JournalProgress {
         /* Derived files are rebuildable caches. */
       }
       cards ??= buildDerived(
-        this.journal.readSectionLessons(id).map((entry) => entry.lesson),
+        this.journal.scanSectionLessons(id).lessons.map((entry) => entry.lesson),
         section.target,
       ).cards;
       const sm2 = { ...current.value.sm2 };

@@ -29,8 +29,8 @@ beforeEach(() => {
   word = 'orbit';
   localStorage.clear();
   get = vi.fn(async (path: string) => {
-    if (path.endsWith('/lessons'))
-      return [
+    if (path.endsWith('/lessons?diagnostics=1'))
+      return { issues: [], lessons: [
         {
           slug: 'shared',
           title: word,
@@ -42,7 +42,7 @@ beforeEach(() => {
           slidesCount: 0,
           quizCount: 0,
         },
-      ];
+      ] };
     if (path.endsWith('/lessons/shared')) return lesson();
     if (path.endsWith('/cards'))
       return [

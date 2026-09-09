@@ -390,12 +390,15 @@ export async function studyScenario({
   await goto('/es-en/cheatsheet');
   await seen('Cheatsheet');
   const sheetRail = page.locator('.il-sheet-rail');
+  await sheetRail.waitFor({ state: 'visible' });
+  await page.waitForFunction(() => document.querySelectorAll('.il-sheet-rail-link').length === 4);
   r.rec(
     'cheat sheet has a grouped section rail',
     (await sheetRail.isVisible()) && (await sheetRail.locator('.il-sheet-rail-link').count()) === 4,
   );
   const railSearch = sheetRail.locator('input[type=search]');
   await railSearch.fill('modal');
+  await page.waitForFunction(() => document.querySelectorAll('.il-sheet-rail-link').length === 1);
   r.rec(
     'cheat sheet rail finds a section by name',
     (await sheetRail.locator('.il-sheet-rail-link').count()) === 1 &&

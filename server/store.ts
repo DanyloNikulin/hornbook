@@ -3,7 +3,7 @@
 // src/lib/schema.ts, derived data in scripts/lib/derived.ts. This class adds
 // the HTTP-facing rules (404/409) and keeps derived files fresh on writes.
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename } from 'node:path';
 import {
   Cheatsheet,
@@ -36,6 +36,7 @@ import {
 import { connectionViews, planSecretsUpdate } from './secrets.ts';
 import { parseProbeInput, probePipeline } from './probe.ts';
 import { JournalRepository, LessonConflictError, SectionNotEmptyError, defaultJournalDir, DERIVED_FORMAT_VERSION, lessonFileStem } from '../scripts/lib/journal.ts';
+import { buildDerived, type DerivedBundle } from '../scripts/lib/derived.ts';
 import { z } from 'zod';
 import { JournalProgress, ProgressError } from './progress.ts';
 import type { ProgressView } from '../src/lib/api-types.ts';
@@ -113,6 +114,10 @@ const SectionImportInput = z.object({
 
 export class FolderStore {
   private readonly journal: JournalRepository;
+  private readonly readableCache = new Map<string, {
+    fingerprint: string;
+    bundle: DerivedBundle;
+  }>();
 
   constructor(journalDir = defaultJournalDir(), observeCommit?: CommitObserver) {
     this.journal = new JournalRepository(journalDir, observeCommit);
@@ -198,21 +203,66 @@ export class FolderStore {
 
   // ── lessons ──────────────────────────────────────────────────────────────
 
-  private ensureDerived(id: string): void {
-    let version = 0;
+  /** Include ctime and file identity so replacements and restored mtimes invalidate the cache. */
+  private lessonFingerprint(id: string, target: string): string | undefined {
     try {
-      version = (JSON.parse(readFileSync(this.journal.sectionPath(id, '_derived', 'format.json'), 'utf8')) as { version?: number }).version ?? 0;
+      const files = this.journal.lessonFiles(id);
+      const stamps = [...files.map((file) => [file]), ['_derived', 'format.json'], ['_derived', 'meta.json']].map((parts) => {
+        const path = this.journal.sectionPath(id, ...parts);
+        try {
+          const stat = statSync(path, { bigint: true });
+          return [parts, String(stat.ino), String(stat.size), String(stat.mtimeNs), String(stat.ctimeNs)];
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [parts, 'missing'];
+          throw error;
+        }
+      });
+      return JSON.stringify([target, stamps]);
     } catch {
-      // A missing or malformed marker belongs to an older derived format.
+      // If metadata cannot be inspected, read sources normally and report their diagnostics.
+      return undefined;
     }
-    if (version !== DERIVED_FORMAT_VERSION || !existsSync(this.journal.sectionPath(id, '_derived', 'meta.json'))) this.journal.writeDerived(id);
+  }
+
+  private readableBundle(id: string) {
+    const section = this.section(id);
+    const fingerprint = this.lessonFingerprint(id, section.target);
+    const cached = this.readableCache.get(id);
+    if (fingerprint !== undefined && cached?.fingerprint === fingerprint) {
+      return { bundle: cached.bundle, issues: [] };
+    }
+    this.readableCache.delete(id);
+    const scan = this.journal.scanSectionLessons(id);
+    if (scan.issues.length === 0) {
+      let version = 0;
+      try {
+        version = JSON.parse(readFileSync(this.journal.sectionPath(id, '_derived', 'format.json'), 'utf8')).version;
+      } catch { /* Older caches need a format upgrade. */ }
+      if (version !== DERIVED_FORMAT_VERSION || !existsSync(this.journal.sectionPath(id, '_derived', 'meta.json'))) this.journal.writeDerived(id);
+    }
+    const bundle = buildDerived(scan.lessons.map((entry) => entry.lesson), section.target);
+    // Do not cache diagnostics: permission repairs should be visible on the next read too.
+    if (scan.issues.length === 0 && fingerprint !== undefined) {
+      const after = this.lessonFingerprint(id, section.target);
+      // A source change during scanning must not associate old content with a new fingerprint.
+      if (after === fingerprint) {
+        if (this.readableCache.size >= 8) this.readableCache.delete(this.readableCache.keys().next().value!);
+        this.readableCache.set(id, { fingerprint, bundle });
+      }
+    }
+    return { bundle, issues: scan.issues };
   }
 
   lessonMetas(id: string): LessonMetaT[] {
-    this.section(id);
-    this.ensureDerived(id);
-    const raw = JSON.parse(readFileSync(this.journal.sectionPath(id, '_derived', 'meta.json'), 'utf8')) as unknown[];
-    return raw.map((m) => LessonMeta.parse(m));
+    return this.lessonListing(id).lessons;
+  }
+
+  lessonListing(id: string): { lessons: LessonMetaT[]; issues: { file: string; message: string }[] } {
+    const { bundle, issues } = this.readableBundle(id);
+    return {
+      lessons: bundle.metas.map((meta) => LessonMeta.parse(meta)),
+      issues,
+    };
   }
 
   private lessonFileFor(id: string, slug: string): string | null {
@@ -372,11 +422,10 @@ export class FolderStore {
     });
   }
 
-  /** Raw JSON text of a derived file, served as-is. */
+  /** Project healthy sources on read so stale caches cannot reintroduce damaged lessons. */
   derived(id: string, kind: DerivedKind): string {
-    this.section(id);
-    this.ensureDerived(id);
-    return readFileSync(this.journal.sectionPath(id, '_derived', `${kind}.json`), 'utf8');
+    const { bundle } = this.readableBundle(id);
+    return JSON.stringify(kind === 'search-index' ? bundle.searchDocs : bundle[kind]);
   }
 
   cheatsheet(id: string): CheatsheetT {

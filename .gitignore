@@ -69,6 +69,7 @@ Thumbs.db
 /journal/*/_progress.corrupt-*.json
 /journal/secrets.json
 /journal/_uploads/
+/journal/_trash/
 
 
 # Only the demo lessons are tracked. Anything else written into the repo

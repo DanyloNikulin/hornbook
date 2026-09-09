@@ -18,6 +18,8 @@ import { z } from 'zod';
 export interface FileChange {
   path: string;
   data: string | Uint8Array | null;
+  /** Keep the original bytes in journal trash as part of the same transaction. */
+  retainPrevious?: boolean;
 }
 export interface CommitStep {
   phase: 'stage' | 'apply' | 'restore';
@@ -200,8 +202,28 @@ export function commitFiles<T>(
   let committed = false;
   try {
     recover(root);
-    const { changes, result } = plan();
+    const planned = plan();
+    const result = planned.result;
+    const changes = [...planned.changes];
     if (changes.length === 0) return result;
+    const retained: FileChange[] = [];
+    const trash = `_trash/${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID()}`;
+    for (const change of changes) {
+      if (!change.retainPrevious) continue;
+      const path = checkedJournalPath(root, change.path);
+      if (!existsSync(path)) continue;
+      const data = readFileSync(path);
+      if (change.data !== null && data.equals(Buffer.from(change.data))) continue;
+      retained.push({ path: `${trash}/files/${change.path}`, data });
+    }
+    if (retained.length) {
+      const manifest = {
+        version: 1,
+        createdAt: new Date().toISOString(),
+        files: retained.map((file) => file.path.slice(`${trash}/files/`.length)),
+      };
+      changes.push(...retained, { path: `${trash}/manifest.json`, data: JSON.stringify(manifest, null, 2) + '\n' });
+    }
     const paths = new Set<string>();
     const directories = new Set<string>();
     const files = changes.map((change) => {

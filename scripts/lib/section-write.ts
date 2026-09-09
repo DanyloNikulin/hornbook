@@ -18,13 +18,14 @@ export function sectionWriteChanges(
   const bundle = buildDerived(finalLessons, section.target);
   const base = section.id;
   return [
-    ...canonical.map(({ lesson, json }) => ({ path: `${base}/${lesson.id}.json`, data: json })),
-    ...retired.map((lesson) => ({ path: `${base}/${lesson.id}.json`, data: null })),
+    ...canonical.map(({ lesson, json }) => ({ path: `${base}/${lesson.id}.json`, data: json, retainPrevious: true })),
+    ...retired.map((lesson) => ({ path: `${base}/${lesson.id}.json`, data: null, retainPrevious: true })),
     ...canonical.map(({ lesson }) => ({
       path: `${base}/${lesson.id}.md`,
       data: lessonToMarkdown(lesson),
+      retainPrevious: true,
     })),
-    ...retired.map((lesson) => ({ path: `${base}/${lesson.id}.md`, data: null })),
+    ...retired.map((lesson) => ({ path: `${base}/${lesson.id}.md`, data: null, retainPrevious: true })),
     ...Object.entries({
       meta: bundle.metas,
       vocab: bundle.vocab,

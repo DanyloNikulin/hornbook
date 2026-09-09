@@ -30,6 +30,7 @@ export class LessonsService {
   readonly sectionId = signal<string | null>(null);
   readonly metas = signal<readonly LessonMetaT[]>([]);
   readonly loadError = signal<string | null>(null);
+  readonly damagedFiles = signal<readonly string[]>([]);
   readonly count = computed(() => this.metas().length);
 
   readonly revision = signal(0);
@@ -40,10 +41,16 @@ export class LessonsService {
     const generation = ++this.loadGeneration;
     this.sectionId.set(sectionId);
     this.metas.set([]);
+    this.damagedFiles.set([]);
     this.revision.update((value) => value + 1);
     try {
-      const raw = await this.api.get<unknown[]>(`${this.base(sectionId)}/lessons`);
+      const response = await this.api.get<unknown[] | { lessons?: unknown; issues?: unknown } | null>(`${this.base(sectionId)}/lessons?diagnostics=1`);
       if (generation !== this.loadGeneration || this.sectionId() !== sectionId) return;
+      const raw: unknown[] = Array.isArray(response) ? response : Array.isArray(response?.lessons) ? response.lessons : [];
+      const issues: unknown[] = !Array.isArray(response) && Array.isArray(response?.issues) ? response.issues : [];
+      this.damagedFiles.set(issues.flatMap((issue) =>
+        issue && typeof issue === 'object' && 'file' in issue && typeof issue.file === 'string' ? [issue.file] : [],
+      ));
       this.metas.set(
         raw.flatMap((entry, idx) => {
           const result = LessonMeta.safeParse(entry);

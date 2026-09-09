@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { loadPreferences, savePreferences } from './preferences.ts';
+import { loadPreferences, savePreferences, validLocale, validTheme } from './preferences.ts';
 
 const dirs: string[] = [];
 afterEach(() => dirs.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })));
@@ -25,6 +25,22 @@ describe('desktop preferences', () => {
     expect(loadPreferences(path)).toEqual({ automaticUpdates: true, startWithSystem: false });
     savePreferences(path, { automaticUpdates: false, startWithSystem: true, journal: 'C:\\Lessons', window: { width: 1200, height: 800 } });
     expect(loadPreferences(path)).toMatchObject({ automaticUpdates: false, startWithSystem: true, journal: 'C:\\Lessons', window: { width: 1200, height: 800 } });
+  });
+
+  it('keeps the interface language and day/night mode, dropping values that are neither', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hornbook-desktop-'));
+    dirs.push(dir);
+    const path = join(dir, 'preferences.json');
+    savePreferences(path, { automaticUpdates: true, startWithSystem: false, locale: 'uk', theme: 'night' });
+    expect(loadPreferences(path)).toMatchObject({ locale: 'uk', theme: 'night' });
+    writeFileSync(path, JSON.stringify({ locale: 'Ukrainian', theme: 'blue' }));
+    const loaded = loadPreferences(path);
+    expect(loaded.locale).toBeUndefined();
+    expect(loaded.theme).toBeUndefined();
+    expect(validLocale('pt-BR')).toBe(true);
+    expect(validLocale(7)).toBe(false);
+    expect(validTheme('day')).toBe(true);
+    expect(validTheme('dark')).toBe(false);
   });
 
   it('falls back safely for corrupt or implausible values', () => {

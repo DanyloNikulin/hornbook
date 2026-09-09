@@ -216,6 +216,7 @@
               <aside class="il-transfer-conflict" role="alert">
                 <strong>{{ 'transfer.lessonConflictTitle' | t }}</strong>
                 <p>{{ 'transfer.lessonConflictSub' | t: { slug: conflict.slug } }}</p>
+                <p>{{ 'recovery.trashHelp' | t }}</p>
                 <div class="il-compose-actions">
                   <button type="button" class="il-btn" [disabled]="busy()" (click)="importLesson('keep-both')">{{ 'transfer.keepBoth' | t }}</button>
                   <button type="button" class="il-btn danger" [disabled]="busy()" (click)="importLesson('replace')">{{ 'transfer.replace' | t }}</button>

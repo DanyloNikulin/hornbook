@@ -29,7 +29,7 @@ import { allowsPrereleases, compareVersions, ReleaseChecker, UPDATE_INTERVAL_MS 
 import { packageRoot } from '../scripts/lib/runtime.ts';
 import { countLessons, seedJournal } from '../server/launch.ts';
 import { DEMO_JOURNAL } from '../scripts/lib/demo-journal.ts';
-import { loadPreferences, savePreferences, type DesktopPreferences } from './preferences.ts';
+import { loadPreferences, savePreferences, validLocale, validTheme, type DesktopPreferences } from './preferences.ts';
 import { validAppearance } from '../src/lib/appearance.ts';
 import { trayVersionCopy } from './tray-version.ts';
 
@@ -95,6 +95,8 @@ function publicState(): DesktopState {
     preferences: {
       automaticUpdates: preferences.automaticUpdates,
       startWithSystem: preferences.startWithSystem,
+      ...(preferences.locale ? { locale: preferences.locale } : {}),
+      ...(preferences.theme ? { theme: preferences.theme } : {}),
       ...(preferences.appearance ? { appearance: preferences.appearance } : {}),
     },
     update: updateState,
@@ -376,6 +378,8 @@ function registerIpc(): void {
     const input = patch as Record<string, unknown>;
     const automatic = input['automaticUpdates'];
     if (typeof automatic === 'boolean') preferences.automaticUpdates = automatic;
+    if (validLocale(input['locale'])) preferences.locale = input['locale'];
+    if (validTheme(input['theme'])) preferences.theme = input['theme'];
     if (validAppearance(input['appearance'])) preferences.appearance = input['appearance'];
     if (typeof input['startWithSystem'] === 'boolean') {
       preferences.startWithSystem = input['startWithSystem'];

@@ -46,6 +46,7 @@ import { SectionService } from '../section.service';
               <aside class="il-transfer-conflict" role="alert">
                 <strong>{{ 'transfer.pairConflictTitle' | t: { n: conflicts().length } }}</strong>
                 <p>{{ 'transfer.pairConflictSub' | t }}</p>
+                <p>{{ 'recovery.trashHelp' | t }}</p>
                 <ul>
                   @for (conflict of conflicts().slice(0, 4); track conflict.incomingId) {
                     <li><code>{{ conflict.incomingId }}</code></li>

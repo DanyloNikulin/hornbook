@@ -7,6 +7,7 @@ import { JournalService } from './journal.service';
 import { SectionRouteReuse } from './route-reuse';
 import { UpdateService } from './update.service';
 import { I18nService } from './i18n.service';
+import { ThemeService } from './theme.service';
 import { AppearanceService } from './appearance.service';
 import { ContainerViewportScroller } from './viewport-scroller';
 
@@ -24,6 +25,7 @@ export const appConfig: ApplicationConfig = {
     { provide: ViewportScroller, useClass: ContainerViewportScroller },
     provideAppInitializer(() => inject(ViewportScroller).setOffset([0, 24])),
     provideAppInitializer(() => inject(I18nService).initialize()),
+    provideAppInitializer(() => inject(ThemeService).initialize()),
     provideAppInitializer(() => inject(AppearanceService).initialize()),
     // Brand and the section list are needed before the first paint.
     provideAppInitializer(() => inject(JournalService).load()),

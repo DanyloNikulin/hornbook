@@ -126,6 +126,35 @@ describe('computeRelatedByTopicsMeta', () => {
 describe('LessonsService — load and fetch', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it.each([undefined, null, {}, [null, {}, { file: 42 }]])('accepts metadata with omitted or malformed diagnostics: %j', async (issues) => {
+    TestBed.resetTestingModule();
+    const svc = TestBed.inject(LessonsService);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+      lessons: [{ ...meta('healthy', []), summary: 'Healthy lesson' }], issues,
+    }) }));
+    await svc.load('es-en');
+    expect(svc.metas().map((entry) => entry.slug)).toEqual(['healthy']);
+    expect(svc.damagedFiles()).toEqual([]);
+    expect(svc.loadError()).toBeNull();
+  });
+
+  it('shows healthy metadata and damaged filenames, then clears diagnostics on reload', async () => {
+    TestBed.resetTestingModule();
+    const svc = TestBed.inject(LessonsService);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+      lessons: [{ ...meta('healthy', []), summary: 'Healthy lesson' }], issues: [{ file: 'broken.json', message: 'Invalid JSON' }],
+    }) });
+    vi.stubGlobal('fetch', fetchMock);
+    await svc.load('es-en');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/lessons?diagnostics=1');
+    expect(svc.metas().map((entry) => entry.slug)).toEqual(['healthy']);
+    expect(svc.damagedFiles()).toEqual(['broken.json']);
+    expect(svc.loadError()).toBeNull();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ lessons: [], issues: [] }) });
+    await svc.load('it-en');
+    expect(svc.damagedFiles()).toEqual([]);
+  });
+
   function service(): LessonsService {
     TestBed.resetTestingModule();
     const svc = TestBed.inject(LessonsService);

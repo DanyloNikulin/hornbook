@@ -2,6 +2,8 @@ import type { Catalog } from './i18n.js';
 import type { EN } from './i18n.en.js';
 
 export const NL = {
+  'recovery.trashHelp': "Verwijderde of vervangen lessen, verwijderde talenparen en vervangen afbeeldingen blijven in de map _trash van je dagboek. Herstel bestanden vanuit die map; kopieën blijven staan totdat je ze handmatig verwijdert.",
+  'lessons.damaged': "De onderstaande lesbestanden konden niet worden gelezen. De originelen blijven bewaard. Andere lessen blijven beschikbaar; herstel of verplaats deze bestanden voordat je dit talenpaar bewerkt of exporteert.",
   'appearance.title': 'Leesbaarheid',
   'appearance.help': 'De toegankelijkheidsvoorkeuren van het systeem blijven altijd gelden. Deze opties vullen ze aan.',
   'appearance.reduceTransparency': 'Transparantie verminderen',
