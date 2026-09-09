@@ -38,6 +38,7 @@ export class LessonListComponent {
   // Manifest was loaded by the section guard; a signal so a save refreshes it.
   private readonly allMetas = computed(() => this.lessonsSvc.metas());
   protected readonly loadError = computed(() => this.lessonsSvc.loadError());
+  protected readonly damagedFiles = this.lessonsSvc.damagedFiles;
 
   // Word of day pulls from the lazy-loaded vocab. The page renders without
   // it on cold visits; the cell pops in once the fetch resolves.

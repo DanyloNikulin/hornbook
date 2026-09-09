@@ -86,6 +86,8 @@ export interface DesktopUpdateState {
 export interface DesktopPreferencesView {
   automaticUpdates: boolean;
   startWithSystem: boolean;
+  locale?: string;
+  theme?: 'day' | 'night';
   appearance?: import('./appearance.js').AppearancePreferences;
 }
 

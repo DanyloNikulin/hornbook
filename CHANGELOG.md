@@ -4,6 +4,21 @@ All notable changes to Hornbook.
 
 ## Unreleased
 
+## 0.9.7 — 2026-09-09
+
+- Deleted or replaced lessons, removed pairs, and replaced or removed backdrop
+  images retain recoverable copies in the journal's trash folder. Recovery
+  guidance is visible in settings and import replacement prompts.
+- Damaged lesson files are named in the lesson list while healthy lessons,
+  vocabulary, cards and search remain available. Unchanged healthy content is
+  cached, and source edits invalidate that cache automatically.
+- Document recovery from interrupted writer locks and restoring retained files.
+
+- The desktop application keeps the interface language and the day/night
+  choice across restarts and updates. The window's storage is tied to a
+  loopback port that changes at every launch, so both choices now also live
+  in the desktop preferences file and are restored from there.
+
 ## 0.9.6 — 2026-09-09
 
 - Matching cards keep a new selection when earlier mismatch feedback ends.

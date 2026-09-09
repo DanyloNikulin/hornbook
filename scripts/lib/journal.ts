@@ -179,10 +179,10 @@ export class JournalRepository {
       const dir = this.sectionDir(id);
       const changes: FileChange[] = (existsSync(dir) ? readdirSync(dir) : [])
         .filter((name) => /^_backdrop\./.test(name) && name !== image?.name)
-        .map((name) => ({ path: `${id}/${name}`, data: null }));
+        .map((name) => ({ path: `${id}/${name}`, data: null, retainPrevious: true }));
       const theme = { ...section.theme };
       if (image) {
-        changes.push({ path: `${id}/${image.name}`, data: image.data });
+        changes.push({ path: `${id}/${image.name}`, data: image.data, retainPrevious: true });
         theme.backdrop = image.name;
       } else delete theme.backdrop;
       const next = { ...section };
@@ -207,12 +207,12 @@ export class JournalRepository {
           const child = [...parts, name];
           const path = this.sectionPath(id, ...child);
           if (lstatSync(path).isDirectory()) collect(child);
-          else changes.push({ path: [id, ...child].join('/'), data: null });
+          else changes.push({ path: [id, ...child].join('/'), data: null, retainPrevious: true });
         }
       };
       collect([]);
       const config = this.loadJournalConfig();
-      changes.push(configChange({ ...config, sections: config.sections.filter((s) => s.id !== id) }));
+      changes.push({ ...configChange({ ...config, sections: config.sections.filter((s) => s.id !== id) }), retainPrevious: true });
       return { changes, result: directories };
     });
     // Only empty directories are disposable after commit; another writer may recreate the section.
@@ -327,23 +327,29 @@ export class JournalRepository {
    * collected when any file is malformed, so a build fails loudly.
    */
   readSectionLessons(id: string): LoadedLesson[] {
-    const errors: string[] = [];
+    const { lessons, issues } = this.scanSectionLessons(id);
+    if (issues.length > 0) {
+      throw new Error(`Some lessons failed validation:\n${issues.map((issue) => `${id}/${issue.file}: ${issue.message}`).join('\n')}`);
+    }
+    return lessons;
+  }
+
+  /** Browsing may skip damaged lessons; writers use the strict reader above. */
+  scanSectionLessons(id: string): { lessons: LoadedLesson[]; issues: { file: string; message: string }[] } {
+    const issues: { file: string; message: string }[] = [];
     const out: LoadedLesson[] = [];
     for (const f of this.lessonFiles(id)) {
       let parsed: unknown;
       try {
         parsed = JSON.parse(readFileSync(this.sectionPath(id, f), 'utf8'));
       } catch (err) {
-        errors.push(`${id}/${f}: parse error: ${(err as Error).message}`);
+        issues.push({ file: f, message: `Parse error: ${(err as Error).message}` });
         continue;
       }
       try { out.push({ file: f, lesson: readStoredLesson(parsed) }); }
-      catch (error) { errors.push(`${id}/${f}: ${(error as Error).message}`); }
+      catch (error) { issues.push({ file: f, message: (error as Error).message }); }
     }
-    if (errors.length > 0) {
-      throw new Error(`Some lessons failed validation:\n${errors.join('\n')}`);
-    }
-    return out;
+    return { lessons: out, issues };
   }
 
   /** slug → file name for every lesson of a section (for uniqueness checks). */

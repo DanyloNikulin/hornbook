@@ -78,7 +78,10 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
     return { ok: true };
   });
 
-  on('GET', '/api/sections/:id/lessons', (_r, _s, p) => store.lessonMetas(p['id']));
+  on('GET', '/api/sections/:id/lessons', (req, _s, p) =>
+    new URL(req.url ?? '/', 'http://localhost').searchParams.get('diagnostics') === '1'
+      ? store.lessonListing(p['id'])
+      : store.lessonMetas(p['id']));
   on('POST', '/api/sections/:id/lessons', async (_r, _s, p, body) => store.saveLesson(p['id'], await body()), LESSON_BYTES);
   on('POST', '/api/sections/:id/lessons/import', async (_r, _s, p, body) => store.importLesson(p['id'], await body()), LESSON_BYTES);
   on('GET', '/api/sections/:id/lessons/:slug/export', (_r, res, p) => {

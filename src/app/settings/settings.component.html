@@ -4,6 +4,7 @@
     <h1 class="il-section-title">{{ 'settings.pairTitle' | t: { pair: sec.label() } }}</h1>
     <p class="il-section-sub">{{ 'settings.pairSub' | t }}</p>
     <app-settings-nav />
+    <p class="il-settings-help">{{ 'recovery.trashHelp' | t }}</p>
 
     @if (loading()) {
       <p class="il-stat-sub">{{ 'common.loading' | t }}</p>

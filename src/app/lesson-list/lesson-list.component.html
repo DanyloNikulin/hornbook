@@ -16,6 +16,15 @@
 <div class="il-panel">
   <div class="il-panel-inner">
 
+    @if (damagedFiles().length) {
+      <div role="alert">
+        <p>{{ 'lessons.damaged' | t }}</p>
+        <ul>
+          @for (file of damagedFiles(); track file) { <li>{{ file }}</li> }
+        </ul>
+      </div>
+    }
+
     @if (lessons().length === 0 && !activeTopic()) {
       <div class="il-empty-state il-empty-state--lessons">
         <span class="il-empty-mark" aria-hidden="true">＋</span>
@@ -23,7 +32,7 @@
         <h2>{{ 'lessons.empty' | t }}</h2>
         @if (loadError()) {
           <p role="alert">{{ 'lessons.loadError' | t: { error: loadError()! } }}</p>
-        } @else {
+        } @else if (!damagedFiles().length) {
           <p>{{ 'lessons.emptySub' | t }}</p>
           <a [routerLink]="sec.link('compose')" class="il-btn sm">{{ 'lessons.addFirst' | t }}</a>
         }

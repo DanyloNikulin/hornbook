@@ -5,6 +5,7 @@ import {
   type AppliedTheme,
   type ThemeMode,
 } from '../lib/themes';
+import { DesktopService } from './desktop.service';
 import { SectionService } from './section.service';
 
 const THEME_KEY = 'hornbook-theme';
@@ -19,6 +20,7 @@ const THEME_KEY = 'hornbook-theme';
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private readonly section = inject(SectionService);
+  private readonly desktop = inject(DesktopService);
 
   readonly mode = signal<ThemeMode>(this.savedMode());
 
@@ -49,8 +51,23 @@ export class ThemeService {
     });
   }
 
+  /**
+   * The desktop shell's memory wins over this origin's storage: the packaged
+   * window's origin is a loopback port picked at every launch.
+   */
+  initialize(): Promise<void> {
+    return this.desktop.initialize().then(() => {
+      const remembered = this.desktop.state()?.preferences.theme;
+      if (remembered === 'day' || remembered === 'night') this.mode.set(remembered);
+    });
+  }
+
   toggle(): void {
-    this.mode.update((m) => (m === 'night' ? 'day' : 'night'));
+    const mode: ThemeMode = this.mode() === 'night' ? 'day' : 'night';
+    this.mode.set(mode);
+    if (this.desktop.available() && this.desktop.state()?.preferences.theme !== mode) {
+      void this.desktop.setPreferences({ theme: mode });
+    }
   }
 
   /** Paint a look without saving it — used by the picker for a live preview. */

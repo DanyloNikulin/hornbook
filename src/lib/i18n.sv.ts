@@ -2,6 +2,8 @@ import type { Catalog } from './i18n.js';
 import type { EN } from './i18n.en.js';
 
 export const SV = {
+  'recovery.trashHelp': "Borttagna eller ersatta lektioner, borttagna språkpar och ersatta bilder sparas i journalens mapp _trash. Återställ filer därifrån; kopiorna finns kvar tills du tar bort dem manuellt.",
+  'lessons.damaged': "Lektionsfilerna nedan kunde inte läsas. Originalen finns kvar. Övriga lektioner är tillgängliga; reparera eller flytta dessa filer innan du redigerar eller exporterar språkparet.",
   'appearance.title': 'Läsbarhet',
   'appearance.help': 'Systemets tillgänglighetsinställningar gäller alltid. Dessa alternativ kompletterar dem.',
   'appearance.reduceTransparency': 'Minska genomskinlighet',

@@ -2,6 +2,8 @@ import type { Catalog } from './i18n.js';
 import type { EN } from './i18n.en.js';
 
 export const ES = {
+  'recovery.trashHelp': "Las lecciones eliminadas o reemplazadas, los pares eliminados y las imágenes reemplazadas se conservan en la carpeta _trash de tu diario. Restaura los archivos desde allí; las copias permanecen hasta que las borres manualmente.",
+  'lessons.damaged': "No se pudieron leer los archivos de lecciones indicados abajo. Los originales se conservan. Las demás lecciones siguen disponibles; repara o mueve estos archivos antes de editar o exportar este par.",
   'appearance.title': 'Legibilidad',
   'appearance.help': 'Las preferencias de accesibilidad del sistema siempre se aplican. Estas opciones las complementan.',
   'appearance.reduceTransparency': 'Reducir transparencia',

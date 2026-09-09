@@ -1,8 +1,11 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as catalogs from '../lib/i18n';
 import { EN } from '../lib/i18n.en';
 import { I18nService, LOCALE_LOADER } from './i18n.service';
+import { DesktopService } from './desktop.service';
+import type { DesktopPreferencesView, DesktopState } from '../lib/api-types';
 
 const loadLocale = vi.fn<typeof catalogs.loadCatalog>();
 
@@ -107,5 +110,65 @@ describe('I18nService language loading', () => {
     expect(service.locale()).toBe('en');
     expect(service.loadFailed()).toBe(true);
     expect(localStorage.getItem('hornbook-locale')).toBe('pt');
+  });
+});
+
+// The packaged window's origin is a loopback port picked at every launch, so
+// its localStorage starts empty: the desktop shell keeps the choice instead.
+describe('I18nService in the desktop shell', () => {
+  function desktopWith(locale?: string) {
+    const state = signal<DesktopState | null>({
+      journal: 'C:\\Hornbook',
+      platform: 'win32',
+      preferences: { automaticUpdates: true, startWithSystem: false, ...(locale ? { locale } : {}) },
+      update: { phase: 'idle', currentVersion: '0.9.5', installable: false },
+    });
+    const setPreferences = vi.fn(async (patch: Partial<DesktopPreferencesView>) => {
+      state.update((current) => (current ? { ...current, preferences: { ...current.preferences, ...patch } } : current));
+    });
+    return { state, available: signal(true), update: signal(null), initialize: vi.fn().mockResolvedValue(undefined), setPreferences };
+  }
+
+  function setup(desktop: ReturnType<typeof desktopWith>): I18nService {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: DesktopService, useValue: desktop },
+        { provide: LOCALE_LOADER, useValue: { load: () => Promise.resolve(EN), isLoaded: () => true } },
+      ],
+    });
+    return TestBed.inject(I18nService);
+  }
+
+  beforeEach(() => localStorage.removeItem('hornbook-locale'));
+  afterEach(() => localStorage.removeItem('hornbook-locale'));
+
+  it('restores the language the desktop shell remembered ahead of this origin\'s storage', async () => {
+    localStorage.setItem('hornbook-locale', 'fr');
+    const desktop = desktopWith('uk');
+    const service = setup(desktop);
+    await service.initialize();
+    TestBed.tick();
+    expect(service.locale()).toBe('uk');
+    expect(document.documentElement.lang).toBe('uk');
+    expect(desktop.setPreferences).not.toHaveBeenCalled();
+  });
+
+  it('ignores a remembered tag that has no catalog', async () => {
+    localStorage.setItem('hornbook-locale', 'fr');
+    const service = setup(desktopWith('tlh'));
+    await service.initialize();
+    expect(service.locale()).toBe('fr');
+  });
+
+  it('hands a language chosen in this window to the desktop shell, once', async () => {
+    const desktop = desktopWith();
+    const service = setup(desktop);
+    await service.initialize();
+    expect(desktop.setPreferences).not.toHaveBeenCalled();
+    await service.set('it');
+    expect(desktop.setPreferences).toHaveBeenCalledWith({ locale: 'it' });
+    await service.set('it');
+    expect(desktop.setPreferences).toHaveBeenCalledTimes(1);
   });
 });

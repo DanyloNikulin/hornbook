@@ -60,7 +60,7 @@ async function main(): Promise<void> {
   const profile = join(outDir, 'electron-profile');
   rmSync(profile, { recursive: true, force: true });
   mkdirSync(profile, { recursive: true });
-  const electronApp = await electron.launch({
+  const launch = () => electron.launch({
     executablePath: exe,
     args: ['--journal', journal],
     env: {
@@ -73,6 +73,7 @@ async function main(): Promise<void> {
     },
     timeout: 30_000,
   });
+  const electronApp = await launch();
 
   try {
     const page = await electronApp.firstWindow({ timeout: 30_000 });
@@ -161,13 +162,81 @@ async function main(): Promise<void> {
     mkdirSync(screenDir, { recursive: true });
     await page.screenshot({ path: join(screenDir, `electron-${process.platform}.png`), fullPage: true });
 
+    // The window's origin is a loopback port picked at every launch, so these
+    // choices must reach the desktop preferences file to outlive a restart.
+    await page.goto(`${origin}/settings`);
+    await page.locator('.il-locale-select select').selectOption('it');
+    await page.waitForFunction(() => document.documentElement.lang === 'it', undefined, { timeout: 15_000 });
+    await page.locator('.il-theme-btn:visible').first().click();
+    const chosenTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    const handed = await page.evaluate(async (theme) => {
+      const bridge = (window as Window & { hornbookDesktop?: { state(): Promise<{ preferences: { locale?: string; theme?: string } }> } }).hornbookDesktop;
+      const deadline = Date.now() + 10_000;
+      for (;;) {
+        const state = await bridge?.state();
+        const done = state?.preferences.locale === 'it' && state.preferences.theme === theme;
+        if (done || Date.now() > deadline) return state?.preferences;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }, chosenTheme);
+    const kept = JSON.parse(readFileSync(join(profile, 'preferences.json'), 'utf8')) as { locale?: string; theme?: string };
+    report.rec(
+      'language and theme choices reach the desktop preferences file',
+      handed?.locale === 'it' && handed.theme === chosenTheme && kept.locale === 'it' && kept.theme === chosenTheme,
+      JSON.stringify({ bridge: handed, file: { locale: kept.locale, theme: kept.theme } }),
+    );
+
     await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close());
-    await page.waitForTimeout(150);
-    const hidden = await electronApp.evaluate(({ BrowserWindow }) => {
-      const window = BrowserWindow.getAllWindows()[0];
-      return !!window && !window.isVisible() && !window.isDestroyed();
-    });
-    report.rec('closing the window keeps Hornbook alive in the tray', hidden);
+    const tray = await (async () => {
+      const deadline = Date.now() + 3_000;
+      for (;;) {
+        const windows = await electronApp.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows().map((window) => ({ visible: window.isVisible(), destroyed: window.isDestroyed() })),
+        );
+        const [first] = windows;
+        const hidden = windows.length === 1 && !!first && !first.visible && !first.destroyed;
+        if (hidden || Date.now() > deadline) return { hidden, windows };
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    })();
+    report.rec('closing the window keeps Hornbook alive in the tray', tray.hidden, JSON.stringify(tray.windows));
+
+    // Quit through the application: the hidden tray window keeps the process
+    // alive, and the single-instance lock must be free before the relaunch.
+    let stage = 'quit';
+    try {
+      const exited = new Promise<void>((resolve) => {
+        const child = electronApp.process();
+        if (child.exitCode !== null) return resolve();
+        const timer = setTimeout(() => {
+          child.kill();
+          resolve();
+        }, 15_000);
+        child.once('exit', () => {
+          clearTimeout(timer);
+          resolve();
+        });
+      });
+      await electronApp.evaluate(({ app }) => app.quit()).catch(() => undefined);
+      await exited;
+      stage = 'relaunch';
+      const relaunched = await launch();
+      try {
+        stage = 'first window';
+        const again = await relaunched.firstWindow({ timeout: 30_000 });
+        stage = 'navigation';
+        await again.locator('.il-nav-links').waitFor({ timeout: 20_000 });
+        const restored = await again.evaluate(() => ({
+          lang: document.documentElement.lang,
+          theme: document.documentElement.getAttribute('data-theme'),
+        }));
+        report.rec('interface language and theme survive a relaunch', restored.lang === 'it' && restored.theme === chosenTheme, JSON.stringify(restored));
+      } finally {
+        await relaunched.close().catch(() => undefined);
+      }
+    } catch (error) {
+      report.rec('interface language and theme survive a relaunch', false, `${stage}: ${String(error)}`);
+    }
   } catch (error) {
     report.rec('packaged Electron walk', false, String(error));
   } finally {
