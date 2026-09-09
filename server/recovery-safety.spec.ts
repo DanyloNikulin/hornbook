@@ -155,3 +155,37 @@ it('reads progress with a damaged lesson and no derived cache without deleting i
   rmSync(derived, { recursive: true });
   expect(store.progressView('es-en').sm2['unavailable-card']).toEqual(history);
 });
+
+it('reports the weight of what destructive writes kept', () => {
+  expect(store.trash()).toEqual({ entries: 0, files: 0, bytes: 0 });
+  store.saveBackdrop('es-en', { filename: 'old.png', base64: Buffer.from('original').toString('base64') });
+  store.deleteBackdrop('es-en');
+  store.deleteLesson('es-en', 'good');
+  const kept = store.trash();
+  expect(kept.entries).toBe(2);
+  expect(kept.files).toBeGreaterThanOrEqual(2);
+  expect(kept.bytes).toBe(
+    trashEntries()
+      .flatMap((entry) => readdirSync(join(entry, 'files'), { recursive: true, withFileTypes: true }))
+      .filter((file) => file.isFile())
+      .reduce((sum, file) => sum + statSync(join(file.parentPath, file.name)).size, 0),
+  );
+});
+
+it('empties the trash without keeping a copy of the copies', () => {
+  store.deleteLesson('es-en', 'good');
+  expect(trashEntries()).toHaveLength(1);
+  expect(store.emptyTrash()).toEqual({ entries: 0, files: 0, bytes: 0 });
+  expect(trashEntries()).toEqual([]);
+  expect(existsSync(join(root, '_trash'))).toBe(false);
+  // The journal itself is untouched: only the retained copies are gone.
+  expect(store.lessonMetas('es-en')).toEqual([]);
+  expect(readFileSync(join(root, 'journal.config.json'), 'utf8')).toContain('es-en');
+});
+
+it('empties a trash that is already empty without failing', () => {
+  expect(store.emptyTrash()).toEqual({ entries: 0, files: 0, bytes: 0 });
+  store.deleteLesson('es-en', 'good');
+  store.emptyTrash();
+  expect(store.emptyTrash()).toEqual({ entries: 0, files: 0, bytes: 0 });
+});

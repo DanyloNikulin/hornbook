@@ -143,6 +143,38 @@
       </details>
     }
 
+    <section class="il-trash-settings" aria-labelledby="trash-settings-title">
+      <h2 id="trash-settings-title" class="il-compose-h">{{ 'trash.title' | t }}</h2>
+      <p class="il-section-sub">{{ 'recovery.trashHelp' | t }}</p>
+      <p class="il-section-sub">{{ 'trash.help' | t }}</p>
+      @if (trash(); as kept) {
+        @if (kept.files) {
+          <p class="il-trash-stats">
+            <strong>{{ trashSize(kept.bytes) }}</strong>
+            <span>{{ 'count.trashFiles' | t: { n: kept.files } }}</span>
+            <span>{{ 'count.trashRemovals' | t: { n: kept.entries } }}</span>
+          </p>
+        } @else {
+          <p class="il-trash-stats"><span>{{ 'trash.none' | t }}</span></p>
+        }
+        <div class="il-trash-action">
+          @if (confirmingEmpty()) {
+            <span>{{ 'trash.confirm' | t }}</span>
+            <button type="button" class="il-btn danger sm" [disabled]="emptying()" (click)="emptyTrash()">
+              {{ emptying() ? ('trash.emptying' | t) : ('trash.confirmYes' | t) }}
+            </button>
+            <button type="button" class="il-btn ghost sm" [disabled]="emptying()" (click)="cancelEmptyTrash()">
+              {{ 'trash.keep' | t }}
+            </button>
+          } @else if (kept.files) {
+            <button type="button" class="il-btn ghost sm" (click)="askEmptyTrash()">{{ 'trash.empty' | t }}</button>
+          }
+          @if (trashMessage(); as message) { <span>{{ message }}</span> }
+          @if (trashError(); as failure) { <span class="il-error-inline">{{ failure }}</span> }
+        </div>
+      }
+    </section>
+
     <section class="il-update-settings" aria-labelledby="update-settings-title">
       <div>
         <h2 id="update-settings-title" class="il-compose-h">{{ 'update.settingsTitle' | t }}</h2>

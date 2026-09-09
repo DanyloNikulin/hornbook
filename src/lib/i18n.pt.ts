@@ -3,6 +3,18 @@ import type { EN } from './i18n.en.js';
 
 export const PT = {
   'recovery.trashHelp': "As lições eliminadas ou substituídas, os pares removidos e as imagens substituídas ficam na pasta _trash do diário. Restaura os ficheiros a partir dessa pasta; as cópias ficam até as eliminares manualmente.",
+  'trash.title': 'Cópias recuperáveis',
+  'trash.help': 'Nada as remove sozinho. Esvazia a reciclagem quando tiveres a certeza de que já não precisas dos originais.',
+  'trash.none': 'Ainda não foi guardado nada.',
+  'trash.empty': 'Esvaziar reciclagem',
+  'trash.emptying': 'A esvaziar…',
+  'trash.confirm': 'Eliminar definitivamente todas as cópias guardadas? Recupera primeiro da pasta aquilo de que ainda precisas.',
+  'trash.confirmYes': 'Eliminar definitivamente',
+  'trash.keep': 'Manter',
+  'trash.emptied': 'Reciclagem esvaziada.',
+  'trash.failed': 'Não foi possível esvaziar a reciclagem. Fecha o que estiver a usar a pasta do diário e tenta novamente.',
+  'count.trashFiles': { one: '{n} ficheiro', other: '{n} ficheiros' },
+  'count.trashRemovals': { one: '{n} eliminação', other: '{n} eliminações' },
   'lessons.damaged': "Não foi possível ler os ficheiros de lições abaixo. Os originais foram preservados. As outras lições continuam disponíveis; repara ou move estes ficheiros antes de editar ou exportar este par.",
   'appearance.title': 'Legibilidade',
   'appearance.help': 'As preferências de acessibilidade do sistema aplicam-se sempre. Estas opções complementam-nas.',
@@ -102,7 +114,7 @@ export const PT = {
   'update.dismiss': 'Ignorar esta atualização',
   'update.settingsTitle': 'Atualizações',
   'update.settingsSub':
-    'O Hornbook verifica as versões públicas do GitHub no máximo uma vez por dia e não envia dados do diário.',
+    'O Hornbook verifica as versões públicas do GitHub ao arrancar e a cada hora, e não envia dados do diário.',
   'update.installedVersion': 'Versão instalada',
   'update.automatic': 'Verificar automaticamente',
   'update.automaticSub': 'Desativa para verificar apenas quando pedires.',

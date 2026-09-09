@@ -140,6 +140,10 @@ export function createApi(ctx: ApiContext): (req: IncomingMessage, res: ServerRe
   on('PUT', '/api/sections/:id/backdrop', async (_r, _s, p, body) => store.saveBackdrop(p['id'], await body()), IMAGE_BYTES);
   on('DELETE', '/api/sections/:id/backdrop', (_r, _s, p) => store.deleteBackdrop(p['id']));
 
+  // Retained copies behind destructive writes: nothing prunes them on its own.
+  on('GET', '/api/trash', () => store.trash());
+  on('DELETE', '/api/trash', () => store.emptyTrash());
+
   // Settings: journal-level provider defaults + connection values.
   on('GET', '/api/settings', () => store.settings());
   on('PUT', '/api/settings', async (_r, _s, _p, body) => store.updateSettings(await body()));

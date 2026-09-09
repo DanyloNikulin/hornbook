@@ -4,6 +4,16 @@ All notable changes to Hornbook.
 
 ## Unreleased
 
+## 0.9.8 — 2026-09-09
+
+- Application settings report how much the journal's trash is holding and can
+  empty it after a confirmation. Nothing prunes the retained copies on its own,
+  so the weight is now visible rather than only discoverable in the folder.
+- Seeding a new journal from an existing folder no longer copies that folder's
+  trash along with it.
+- The release check is described as it behaves: at launch and hourly, rather
+  than once a day.
+
 ## 0.9.7 — 2026-09-09
 
 - Deleted or replaced lessons, removed pairs, and replaced or removed backdrop

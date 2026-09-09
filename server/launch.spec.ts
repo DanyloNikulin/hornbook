@@ -26,6 +26,8 @@ function demo(): string {
   writeFileSync(join(src, 'es-en', '_cheatsheet.json'), '{}');
   writeFileSync(join(src, 'es-en', '_progress.json'), '{}');
   writeFileSync(join(src, 'es-en', '_derived', 'meta.json'), '[]');
+  mkdirSync(join(src, '_trash', '2026-01-01T00-00-00-000Z-abc', 'files', 'es-en'), { recursive: true });
+  writeFileSync(join(src, '_trash', '2026-01-01T00-00-00-000Z-abc', 'files', 'es-en', 'gone.json'), '{}');
   return src;
 }
 
@@ -56,6 +58,7 @@ describe('seedJournal', () => {
     expect(existsSync(join(dst, 'es-en', '_derived'))).toBe(false);
     expect(existsSync(join(dst, 'secrets.json'))).toBe(false);
     expect(existsSync(join(dst, '_uploads'))).toBe(false);
+    expect(existsSync(join(dst, '_trash'))).toBe(false);
     expect(countLessons(dst)).toBe(1);
   });
 

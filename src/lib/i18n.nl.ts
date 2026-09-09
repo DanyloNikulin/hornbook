@@ -3,6 +3,18 @@ import type { EN } from './i18n.en.js';
 
 export const NL = {
   'recovery.trashHelp': "Verwijderde of vervangen lessen, verwijderde talenparen en vervangen afbeeldingen blijven in de map _trash van je dagboek. Herstel bestanden vanuit die map; kopieën blijven staan totdat je ze handmatig verwijdert.",
+  'trash.title': 'Herstelbare kopieën',
+  'trash.help': 'Niets verwijdert ze vanzelf. Leeg de prullenbak zodra je zeker weet dat je de originelen niet meer nodig hebt.',
+  'trash.none': 'Er is nog niets bewaard.',
+  'trash.empty': 'Prullenbak legen',
+  'trash.emptying': 'Bezig met legen…',
+  'trash.confirm': 'Alle bewaarde kopieën definitief verwijderen? Haal eerst uit de map wat je nog nodig hebt.',
+  'trash.confirmYes': 'Definitief verwijderen',
+  'trash.keep': 'Bewaren',
+  'trash.emptied': 'Prullenbak geleegd.',
+  'trash.failed': 'Kon de prullenbak niet legen. Sluit alles wat de dagboekmap gebruikt en probeer het opnieuw.',
+  'count.trashFiles': { one: '{n} bestand', other: '{n} bestanden' },
+  'count.trashRemovals': { one: '{n} verwijdering', other: '{n} verwijderingen' },
   'lessons.damaged': "De onderstaande lesbestanden konden niet worden gelezen. De originelen blijven bewaard. Andere lessen blijven beschikbaar; herstel of verplaats deze bestanden voordat je dit talenpaar bewerkt of exporteert.",
   'appearance.title': 'Leesbaarheid',
   'appearance.help': 'De toegankelijkheidsvoorkeuren van het systeem blijven altijd gelden. Deze opties vullen ze aan.',
@@ -103,7 +115,7 @@ export const NL = {
   'update.dismiss': 'Deze update negeren',
   'update.settingsTitle': 'Updates',
   'update.settingsSub':
-    'Hornbook controleert de openbare GitHub-releases maximaal eenmaal per dag en verstuurt geen logboekgegevens.',
+    'Hornbook controleert de openbare GitHub-releases bij het starten en elk uur, en verstuurt geen logboekgegevens.',
   'update.installedVersion': 'Geïnstalleerde versie',
   'update.automatic': 'Automatisch controleren',
   'update.automaticSub': 'Schakel dit uit om alleen op jouw verzoek te controleren.',

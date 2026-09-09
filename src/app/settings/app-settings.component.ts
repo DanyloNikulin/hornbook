@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import type { ProvidersT } from '../../lib/journal-config';
 import { LOCALE_META, SUPPORTED_LOCALES, type LocaleId } from '../../lib/i18n';
-import { CONNECTION_KEYS, type ConnectionKey, type SettingsView } from '../../lib/api-types';
+import { CONNECTION_KEYS, type ConnectionKey, type SettingsView, type TrashView } from '../../lib/api-types';
 import { TPipe } from '../i18n.pipe';
 import { I18nService } from '../i18n.service';
 import { ApiService } from '../api.service';
@@ -49,6 +49,12 @@ export class AppSettingsComponent {
   protected readonly advanced = signal(false);
   protected readonly settings = signal<SettingsView | null>(null);
 
+  protected readonly trash = signal<TrashView | null>(null);
+  protected readonly confirmingEmpty = signal(false);
+  protected readonly emptying = signal(false);
+  protected readonly trashMessage = signal<string | null>(null);
+  protected readonly trashError = signal<string | null>(null);
+
   protected defaults: ProvidersT = {
     transcribe: { driver: 'whisper-cli', model: 'base' },
     extract: { driver: 'ollama', model: 'llama3.1' },
@@ -66,6 +72,53 @@ export class AppSettingsComponent {
   constructor() {
     if (!this.route.snapshot.paramMap.get('section')) this.sec.set(null);
     void this.load();
+    void this.loadTrash();
+  }
+
+  /** Matches the size shown for a chosen recording on the Add page. */
+  protected trashSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  protected askEmptyTrash(): void {
+    this.trashMessage.set(null);
+    this.trashError.set(null);
+    this.confirmingEmpty.set(true);
+  }
+
+  protected cancelEmptyTrash(): void {
+    this.confirmingEmpty.set(false);
+  }
+
+  protected async emptyTrash(): Promise<void> {
+    this.emptying.set(true);
+    this.trashError.set(null);
+    try {
+      const kept = await this.api.delete<TrashView>('/api/trash');
+      if (this.destroyRef.destroyed) return;
+      this.trash.set(kept);
+      this.confirmingEmpty.set(false);
+      this.trashMessage.set(this.i18n.t('trash.emptied'));
+    } catch (err) {
+      // The server says why when it can — a busy journal is worth reading.
+      if (!this.destroyRef.destroyed) {
+        this.trashError.set((err as Error).message || this.i18n.t('trash.failed'));
+      }
+    } finally {
+      this.emptying.set(false);
+    }
+  }
+
+  /** Informational: a journal that cannot report its trash still has settings. */
+  private async loadTrash(): Promise<void> {
+    try {
+      const kept = await this.api.get<TrashView>('/api/trash');
+      if (!this.destroyRef.destroyed) this.trash.set(kept);
+    } catch {
+      /* Left unreported: the section stays hidden until a later visit. */
+    }
   }
 
   protected setLocale(id: LocaleId): void {

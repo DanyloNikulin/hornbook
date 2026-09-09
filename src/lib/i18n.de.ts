@@ -3,6 +3,18 @@ import type { EN } from './i18n.en.js';
 
 export const DE = {
   'recovery.trashHelp': "Gelöschte oder ersetzte Lektionen, entfernte Sprachpaare und ersetzte Bilder bleiben im Ordner _trash deines Journals erhalten. Stelle Dateien von dort wieder her; Kopien bleiben bis zum manuellen Löschen.",
+  'trash.title': 'Wiederherstellbare Kopien',
+  'trash.help': 'Nichts entfernt sie von selbst. Leere den Papierkorb, wenn du die Originale sicher nicht mehr brauchst.',
+  'trash.none': 'Es wurde noch nichts aufbewahrt.',
+  'trash.empty': 'Papierkorb leeren',
+  'trash.emptying': 'Wird geleert…',
+  'trash.confirm': 'Alle aufbewahrten Kopien endgültig löschen? Hole vorher aus dem Ordner, was du noch brauchst.',
+  'trash.confirmYes': 'Endgültig löschen',
+  'trash.keep': 'Behalten',
+  'trash.emptied': 'Papierkorb geleert.',
+  'trash.failed': 'Der Papierkorb konnte nicht geleert werden. Schließe alles, was den Journalordner verwendet, und versuche es erneut.',
+  'count.trashFiles': { one: '{n} Datei', other: '{n} Dateien' },
+  'count.trashRemovals': { one: '{n} Löschung', other: '{n} Löschungen' },
   'lessons.damaged': "Einige Unterrichtsdateien konnten nicht gelesen werden und sind unten aufgeführt. Die Originale bleiben erhalten. Andere Lektionen sind verfügbar. Repariere oder verschiebe diese Dateien, bevor du dieses Sprachpaar bearbeitest oder exportierst.",
   'appearance.title': 'Lesbarkeit',
   'appearance.help': 'Die Barrierefreiheitseinstellungen des Systems gelten immer. Diese Optionen ergänzen sie.',
@@ -104,7 +116,7 @@ export const DE = {
   'update.dismiss': 'Diese Aktualisierung ausblenden',
   'update.settingsTitle': 'Aktualisierungen',
   'update.settingsSub':
-    'Hornbook prüft die öffentlichen GitHub-Veröffentlichungen höchstens einmal täglich und sendet keine Journaldaten.',
+    'Hornbook prüft die öffentlichen GitHub-Veröffentlichungen beim Start und stündlich und sendet keine Journaldaten.',
   'update.installedVersion': 'Installierte Version',
   'update.automatic': 'Automatisch prüfen',
   'update.automaticSub': 'Deaktiviere dies, um nur auf Anfrage zu prüfen.',

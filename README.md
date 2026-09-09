@@ -299,16 +299,20 @@ feed and a compiled background job. See [harness/README.md](harness/README.md).
 ## Status
 
 Hornbook 0.9 is the product preview. The whole workflow is there and used daily;
-what stands between it and 1.0 is polish rather than features:
+what stands between it and 1.0 is distribution rather than code:
 
 - **Signed installers.** Builds are unsigned until a Windows and an Apple
   certificate are wired into the release workflow, hence the warnings above.
-- **Hardening.** A backup behind destructive actions, quarantine for a damaged
-  lesson file, and a documented way out of every stuck state.
+
+Hardening landed in 0.9.7: destructive actions keep a recoverable copy in the
+journal's `_trash` folder, a damaged lesson file is named in the lesson list
+instead of taking its pair down, and every stuck state has a documented way out
+in [docs/JOURNAL-RECOVERY.md](docs/JOURNAL-RECOVERY.md).
 
 Releases are automatic: a version bump merged into `main` publishes installers
-and Docker images. The app checks GitHub once a day and installs updates after
-**Restart to update**; releases below 1.0 are marked as pre-releases. See
+and Docker images. The app checks GitHub at launch and hourly, and installs
+updates after **Restart to update**; releases below 1.0 are marked as
+pre-releases. See
 [CHANGELOG.md](CHANGELOG.md) for what changed and
 [docs/RELEASING.md](docs/RELEASING.md) for how a release is made.
 

@@ -25,7 +25,9 @@ describe('AppSettingsComponent', () => {
           useValue: {
             get: vi.fn().mockImplementation((url: string) =>
               Promise.resolve(
-                url === '/api/setup/clis'
+                url === '/api/trash'
+                  ? { entries: 2, files: 3, bytes: 2_100_000 }
+                  : url === '/api/setup/clis'
                   ? []
                   : url === '/api/setup'
                   ? {
@@ -51,6 +53,7 @@ describe('AppSettingsComponent', () => {
               ),
             ),
             post: vi.fn(),
+            delete: vi.fn().mockResolvedValue({ entries: 0, files: 0, bytes: 0 }),
             put: vi.fn().mockImplementation((_url, input) => {
               const saved = {
                 providers: structuredClone(input.providers),
@@ -83,6 +86,56 @@ describe('AppSettingsComponent', () => {
     expect(root.textContent).toContain('Applicazione');
     expect(root.textContent).toContain('Interfaccia');
     expect(TestBed.inject(I18nService).locale()).toBe('it');
+  });
+
+  it('reports the retained copies and empties them after a confirmation', async () => {
+    const fixture = TestBed.createComponent(AppSettingsComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const button = (label: string) =>
+      [...root.querySelectorAll('.il-trash-action button')].find((b) =>
+        b.textContent?.includes(label),
+      ) as HTMLButtonElement | undefined;
+
+    expect(root.querySelector('.il-trash-stats')!.textContent).toContain('2.0 MB');
+    expect(root.querySelector('.il-trash-stats')!.textContent).toContain('3 files');
+    expect(root.querySelector('.il-trash-stats')!.textContent).toContain('2 removals');
+
+    // Emptying is destructive and asks before it runs.
+    button('Empty trash')!.click();
+    fixture.detectChanges();
+    expect(TestBed.inject(ApiService).delete).not.toHaveBeenCalled();
+    expect(root.querySelector('.il-trash-action')!.textContent).toContain('permanently?');
+
+    button('Delete permanently')!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(TestBed.inject(ApiService).delete).toHaveBeenCalledWith('/api/trash');
+    expect(root.querySelector('.il-trash-stats')!.textContent).toContain('Nothing has been kept yet.');
+    expect(root.querySelector('.il-trash-action')!.textContent).toContain('Trash emptied.');
+    expect(button('Empty trash')).toBeUndefined();
+  });
+
+  it('keeps the retained copies when the confirmation is declined', async () => {
+    const fixture = TestBed.createComponent(AppSettingsComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const button = (label: string) =>
+      [...root.querySelectorAll('.il-trash-action button')].find((b) =>
+        b.textContent?.includes(label),
+      ) as HTMLButtonElement | undefined;
+
+    button('Empty trash')!.click();
+    fixture.detectChanges();
+    button('Keep them')!.click();
+    fixture.detectChanges();
+    expect(TestBed.inject(ApiService).delete).not.toHaveBeenCalled();
+    expect(root.querySelector('.il-trash-stats')!.textContent).toContain('3 files');
+    expect(button('Empty trash')).toBeTruthy();
   });
 
   it('shows the exact installed version in application settings', async () => {

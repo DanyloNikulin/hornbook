@@ -32,6 +32,7 @@ import {
   type ProbeResult,
   type LessonImportResult,
   type SectionImportResult,
+  type TrashView,
 } from '../src/lib/api-types.ts';
 import { connectionViews, planSecretsUpdate } from './secrets.ts';
 import { parseProbeInput, probePipeline } from './probe.ts';
@@ -501,6 +502,15 @@ export class FolderStore {
   }
 
   // ── settings ─────────────────────────────────────────────────────────────
+
+  trash(): TrashView {
+    return this.journal.scanTrash();
+  }
+
+  emptyTrash(): TrashView {
+    this.journal.emptyTrash();
+    return this.journal.scanTrash();
+  }
 
   settings(): SettingsView {
     this.journal.invalidateConfig();
