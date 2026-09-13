@@ -2,7 +2,7 @@ import { retryableShutdown } from '../scripts/lib/shutdown.ts';
 import { randomBytes } from 'node:crypto';
 import { UpdateController } from './update-controller.ts';
 import { desktopProgressDraft } from './progress-drafts.ts';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import {
@@ -32,15 +32,20 @@ import { DEMO_JOURNAL } from '../scripts/lib/demo-journal.ts';
 import { loadPreferences, savePreferences, validLocale, validTheme, type DesktopPreferences } from './preferences.ts';
 import { validAppearance } from '../src/lib/appearance.ts';
 import { trayVersionCopy } from './tray-version.ts';
+import { storeDistribution } from './distribution.ts';
 
 const APP_ID = 'io.github.danylonikulin.hornbook';
 // Longer than UPDATE_INTERVAL_MS, or a tick would only ever meet the previous tick's cache.
 const UPDATE_POLL_MS = 60 * 60 * 1000;
 const appRoot = packageRoot(import.meta.url);
-const { autoUpdater } = electronUpdater;
+const metadata = JSON.parse(readFileSync(join(appRoot, 'package.json'), 'utf8')) as Record<string, unknown>;
+const storeBuild = storeDistribution(process.windowsStore, metadata);
+const storePreview = storeBuild && metadata['hornbookStorePreview'] === true;
+const autoUpdater = storeBuild ? null : electronUpdater.autoUpdater;
 
 app.enableSandbox();
-app.setAppUserModelId(APP_ID);
+if (!process.windowsStore) app.setAppUserModelId(APP_ID);
+if (storePreview) app.setPath('userData', join(app.getPath('appData'), 'Hornbook MSIX Preview'));
 if (process.env['HORNBOOK_ELECTRON_PROFILE']?.trim()) {
   app.setPath('userData', resolve(process.env['HORNBOOK_ELECTRON_PROFILE']));
 }
@@ -66,6 +71,7 @@ let updateState: DesktopUpdateState = {
   phase: 'idle',
   currentVersion: app.getVersion(),
   installable: isInstallable(),
+  ...(storeBuild ? { managedBy: 'microsoft-store' as const } : {}),
 };
 let checker: ReleaseChecker;
 let resizeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -77,7 +83,7 @@ function argValue(name: string, argv: readonly string[] = process.argv): string 
 }
 
 function isInstallable(): boolean {
-  return app.isPackaged && process.env['HORNBOOK_SKIP_AUTO_UPDATER'] !== '1';
+  return !storeBuild && app.isPackaged && process.env['HORNBOOK_SKIP_AUTO_UPDATER'] !== '1';
 }
 
 function isAppOrigin(url: string): boolean {
@@ -159,7 +165,7 @@ function createWindow(route = '/'): BrowserWindow {
   // Windows Shell needs a real icon file, outside the application archive.
   // The packaged executable carries the icon itself; pointing the taskbar at
   // a file that an unpacked build may lack left it showing a blank window.
-  if (process.platform === 'win32') {
+  if (process.platform === 'win32' && !process.windowsStore) {
     window.setAppDetails({ appId: APP_ID, appIconPath: app.isPackaged ? process.execPath : icon, appIconIndex: 0 });
   }
   if (process.platform !== 'darwin') window.setMenu(null);
@@ -232,7 +238,7 @@ function rebuildTray(): void {
       { label: 'Open', click: () => showWindow('/') },
       { label: `Jobs (${activeJobs} running)`, click: () => showWindow('/jobs') },
       { type: 'separator' },
-      { label: 'Check for updates', click: () => void checkForUpdates(true) },
+      { label: storeBuild ? 'Microsoft Store' : 'Check for updates', click: () => void checkForUpdates(true) },
       { type: 'separator' },
       {
         label: 'Quit',
@@ -253,11 +259,16 @@ function publishUpdate(state: DesktopUpdateState): DesktopUpdateState {
 }
 
 async function checkForUpdates(force: boolean): Promise<DesktopUpdateState> {
+  if (storeBuild) {
+    if (force) await shell.openExternal('ms-windows-store://downloadsandupdates');
+    return updateState;
+  }
   if (!force && !preferences.automaticUpdates) return updateState;
   return updater.check(force);
 }
 
 function configureUpdater(): void {
+  if (!autoUpdater) return;
   updater = new UpdateController({
     currentVersion: app.getVersion(),
     installable: isInstallable(),
@@ -377,11 +388,11 @@ function registerIpc(): void {
     if (!patch || typeof patch !== 'object') throw new Error('Invalid preferences');
     const input = patch as Record<string, unknown>;
     const automatic = input['automaticUpdates'];
-    if (typeof automatic === 'boolean') preferences.automaticUpdates = automatic;
+    if (!storeBuild && typeof automatic === 'boolean') preferences.automaticUpdates = automatic;
     if (validLocale(input['locale'])) preferences.locale = input['locale'];
     if (validTheme(input['theme'])) preferences.theme = input['theme'];
     if (validAppearance(input['appearance'])) preferences.appearance = input['appearance'];
-    if (typeof input['startWithSystem'] === 'boolean') {
+    if (!storeBuild && typeof input['startWithSystem'] === 'boolean') {
       preferences.startWithSystem = input['startWithSystem'];
       if (process.platform === 'win32' || process.platform === 'darwin') {
         app.setLoginItemSettings({ openAtLogin: preferences.startWithSystem, path: process.execPath });
@@ -397,7 +408,7 @@ function registerIpc(): void {
   });
   ipcMain.handle('hornbook:restart-update', async (event) => {
     assertRenderer(event);
-    if (updateState.phase !== 'ready') return false;
+    if (!autoUpdater || updateState.phase !== 'ready') return false;
     await stopServer();
     quitting = true;
     autoUpdater.quitAndInstall(false, true);
@@ -408,7 +419,11 @@ function registerIpc(): void {
 async function start(): Promise<void> {
   preferencesPath = join(app.getPath('userData'), 'preferences.json');
   preferences = loadPreferences(preferencesPath);
-  journal = resolve(argValue('--journal') ?? preferences.journal ?? defaultJournalDir());
+  journal = resolve(argValue('--journal') ?? preferences.journal ??
+    (storePreview ? join(app.getPath('userData'), 'journal') : defaultJournalDir()));
+  if (storePreview && !process.env['HORNBOOK_TOOLS']) {
+    process.env['HORNBOOK_TOOLS'] = join(app.getPath('userData'), 'tools');
+  }
   if (seedJournal(DEMO_JOURNAL, journal)) {
     console.log(`Created journal at ${journal} with ${countLessons(journal)} demo lesson(s).`);
   }
@@ -416,6 +431,7 @@ async function start(): Promise<void> {
   const token = randomBytes(32).toString('hex');
   checker = new ReleaseChecker({
     currentVersion: app.getVersion(),
+    enabled: !storeBuild,
     url: process.env['HORNBOOK_RELEASES_URL']?.trim() || undefined,
   });
   configureUpdater();
@@ -461,11 +477,13 @@ async function start(): Promise<void> {
   tray.on('click', () => showWindow('/'));
   rebuildTray();
   createWindow();
-  if (preferences.startWithSystem && (process.platform === 'win32' || process.platform === 'darwin')) {
+  if (!storeBuild && preferences.startWithSystem && (process.platform === 'win32' || process.platform === 'darwin')) {
     app.setLoginItemSettings({ openAtLogin: true, path: process.execPath });
   }
-  setTimeout(() => void checkForUpdates(false), 2500).unref();
-  setInterval(() => void checkForUpdates(false), UPDATE_POLL_MS).unref();
+  if (!storeBuild) {
+    setTimeout(() => void checkForUpdates(false), 2500).unref();
+    setInterval(() => void checkForUpdates(false), UPDATE_POLL_MS).unref();
+  }
 }
 
 if (ownsInstance) {

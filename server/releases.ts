@@ -6,6 +6,8 @@ export const UPDATE_INTERVAL_MS = 15 * 60 * 1000;
 export const FORCED_UPDATE_INTERVAL_MS = 60 * 1000;
 
 export interface ReleaseCheckerOptions {
+  /** Store builds are updated by Windows and must never query the GitHub feed. */
+  enabled?: boolean;
   currentVersion: string;
   url?: string;
   fetch?: typeof fetch;
@@ -21,6 +23,11 @@ export class ReleaseChecker {
   constructor(private readonly opts: ReleaseCheckerOptions) {}
 
   async check(force = false): Promise<ReleaseCheckView> {
+    if (this.opts.enabled === false) return {
+      currentVersion: this.opts.currentVersion,
+      available: false,
+      checkedAt: new Date((this.opts.now ?? Date.now)()).toISOString(),
+    };
     if (this.pending) return this.pending;
     const now = (this.opts.now ?? Date.now)();
     if (force && this.cached && now - this.lastFetchAt < FORCED_UPDATE_INTERVAL_MS) return this.cached;

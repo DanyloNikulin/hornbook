@@ -107,6 +107,8 @@ export const EN = {
   'update.settingsTitle': 'Updates',
   'update.settingsSub': 'Hornbook checks the public GitHub release feed at launch and hourly, and sends no journal data.',
   'update.installedVersion': 'Installed version',
+  'update.storeManaged': 'Updates are managed by Microsoft Store.',
+  'update.openStore': 'Open Microsoft Store',
   'update.automatic': 'Check automatically',
   'update.automaticSub': 'Turn this off to check only when you ask.',
   'update.check': 'Check for updates',

@@ -52,6 +52,7 @@
     "hornbook:app": "npm run build && electron .",
     "package:dir": "npm run build && electron-builder --dir --config electron-builder.config.cjs",
     "package": "npm run build && electron-builder --config electron-builder.config.cjs",
+    "package:msix": "npm run build && tsx scripts/package-msix.ts",
     "release:check": "tsx scripts/release.ts",
     "release:notes": "tsx scripts/release.ts --output release-notes.md",
     "harness:electron": "tsx harness/electron.ts",

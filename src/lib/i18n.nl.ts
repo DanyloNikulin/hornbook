@@ -117,6 +117,8 @@ export const NL = {
   'update.settingsSub':
     'Hornbook controleert de openbare GitHub-releases bij het starten en elk uur, en verstuurt geen logboekgegevens.',
   'update.installedVersion': 'Geïnstalleerde versie',
+  'update.storeManaged': 'Updates worden beheerd door Microsoft Store.',
+  'update.openStore': 'Microsoft Store openen',
   'update.automatic': 'Automatisch controleren',
   'update.automaticSub': 'Schakel dit uit om alleen op jouw verzoek te controleren.',
   'update.check': 'Controleren op updates',

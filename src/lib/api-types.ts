@@ -74,6 +74,7 @@ export interface ReleaseCheckView {
 export type UpdatePhase = 'idle' | 'checking' | 'current' | 'available' | 'downloading' | 'ready' | 'error';
 
 export interface DesktopUpdateState {
+  managedBy?: 'microsoft-store';
   phase: UpdatePhase;
   currentVersion: string;
   installable: boolean;

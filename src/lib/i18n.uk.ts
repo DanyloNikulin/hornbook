@@ -117,6 +117,8 @@ export const UK = {
   'update.settingsSub':
     'Hornbook перевіряє публічні випуски на GitHub під час запуску та щогодини й не надсилає дані щоденника.',
   'update.installedVersion': 'Встановлена версія',
+  'update.storeManaged': 'Оновленнями керує Microsoft Store.',
+  'update.openStore': 'Відкрити Microsoft Store',
   'update.automatic': 'Перевіряти автоматично',
   'update.automaticSub': 'Вимкніть, щоб перевіряти лише за вашим запитом.',
   'update.check': 'Перевірити оновлення',
