@@ -1,0 +1,65 @@
+name: MSIX preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Local preview identity or reserved Partner Center identity
+        type: choice
+        options: [preview, store]
+        default: preview
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      HORNBOOK_STORE_IDENTITY_NAME: ${{ vars.HORNBOOK_STORE_IDENTITY_NAME }}
+      HORNBOOK_STORE_PUBLISHER: ${{ vars.HORNBOOK_STORE_PUBLISHER }}
+      HORNBOOK_STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.HORNBOOK_STORE_PUBLISHER_DISPLAY_NAME }}
+      HORNBOOK_STORE_DISPLAY_NAME: ${{ vars.HORNBOOK_STORE_DISPLAY_NAME }}
+      MSIX_MODE: ${{ inputs.mode }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck:scripts
+      - run: npm run test:scripts -- electron/distribution.spec.ts electron/update-controller.spec.ts server/releases.spec.ts scripts/lib/msix.spec.ts
+      - name: Build unsigned x64 MSIX
+        shell: pwsh
+        run: |
+          if ($env:MSIX_MODE -eq 'preview') {
+            npm run package:msix -- --preview
+          } else {
+            npm run package:msix
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Smoke the packaged Store payload
+        shell: pwsh
+        run: |
+          $info = Get-ChildItem release/msix -Recurse -Filter build-info.json | Select-Object -First 1
+          if (-not $info) { throw 'Missing MSIX build info' }
+          node node_modules/tsx/dist/cli.mjs harness/msix.ts $info.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hornbook-msix-${{ inputs.mode }}-x64
+          if-no-files-found: error
+          path: |
+            release/msix/**/*.msix
+            release/msix/**/AppxManifest.xml
+            release/msix/**/build-info.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: msix-smoke
+          path: |
+            work/harness/msix.json
+            work/harness/msix-profile-*/store-settings.png

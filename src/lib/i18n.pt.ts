@@ -116,6 +116,8 @@ export const PT = {
   'update.settingsSub':
     'O Hornbook verifica as versões públicas do GitHub ao arrancar e a cada hora, e não envia dados do diário.',
   'update.installedVersion': 'Versão instalada',
+  'update.storeManaged': 'As atualizações são geridas pela Microsoft Store.',
+  'update.openStore': 'Abrir Microsoft Store',
   'update.automatic': 'Verificar automaticamente',
   'update.automaticSub': 'Desativa para verificar apenas quando pedires.',
   'update.check': 'Procurar atualizações',

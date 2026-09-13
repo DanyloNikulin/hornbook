@@ -1,0 +1,20 @@
+Hornbook is a free, open-source desktop journal for language lessons. No Hornbook account, subscription, API key or external service is required to test reading and study features.
+
+Basic test scenario:
+1. Launch Hornbook. On a fresh journal, the Language pairs page includes fictional Spanish-English and Italian-English demo lessons.
+2. Open Spanish-English and then "El fin de semana: pretérito indefinido". Read Notes, Glossary, Grammar and Slides; complete the Quiz.
+3. Open Cards to practise the demo vocabulary. Open Glossary, Sheet and Search to browse the same journal.
+4. Use Pairs or the language-pair selector to switch to Italian-English and back.
+5. Open Add to create/import lesson material. JSON exported from an existing demo lesson can be imported to exercise the local background-processing path without an AI provider.
+6. Restart the app and verify journal contents and preferences persist. Journals are ordinary local files outside the read-only app package.
+
+runFullTrust capability:
+Hornbook uses Electron with a local Node.js server to read/write the user's chosen journal folder and run lesson-processing subprocesses. The packaged renderer authenticates local API requests with a per-launch token. The app runs as the current user and does not request administrator elevation. The Microsoft Store build disables the GitHub/EXE updater and uses Microsoft Store for application updates.
+
+Optional dependencies:
+Transcription and AI-assisted lesson extraction are optional. Local processing can use separately downloaded FFmpeg, Whisper and Ollama executables/models. The app exposes setup/download controls; models are not bundled and can require substantial disk space and memory. Hosted AI integrations use the user's own separately configured provider/account and may incur provider charges. Material is sent to a hosted provider only when that provider is selected for the requested processing operation. Core journal, search, cards and quizzes can be reviewed without downloading these tools or using paid services.
+
+Validation scope:
+A locally test-signed x64 preview was installed on Windows 11. Package identity, launch, local API authentication, a compiled JSON-import subprocess, journal writes and persistence after restart passed. Real model/tool installation and AI inference inside the installed MSIX, ARM64 and Store-delivered updates have not yet been validated. No claim of certification is made.
+
+Source and support: https://github.com/DanyloNikulin/hornbook

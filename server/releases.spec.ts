@@ -2,6 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { allowsPrereleases, compareVersions, DEFAULT_RELEASES_URL, parseRelease, ReleaseChecker, UPDATE_INTERVAL_MS } from './releases.ts';
 
 describe('release checks', () => {
+  it('never contacts GitHub for Store builds, including forced API requests', async () => {
+    const fetchImpl = vi.fn();
+    const checker = new ReleaseChecker({ currentVersion: '0.9.9', enabled: false, fetch: fetchImpl });
+    for (const force of [false, true]) {
+      expect(await checker.check(force)).toMatchObject({ currentVersion: '0.9.9', available: false });
+    }
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
   it('discovers a GitHub preview from the release list for a 0.x installation', async () => {
     const fetchImpl = vi.fn(async () => Response.json([
       { tag_name: 'v0.9.1', prerelease: true, html_url: 'https://github.com/fixture/releases/tag/v0.9.1' },

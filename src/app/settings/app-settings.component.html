@@ -26,7 +26,7 @@
             </button>
           </div>
         </div>
-        @if (shell.platform === 'win32' || shell.platform === 'darwin') {
+        @if (!shell.update.managedBy && (shell.platform === 'win32' || shell.platform === 'darwin')) {
           <label class="il-desktop-toggle">
             <input
               type="checkbox"
@@ -178,7 +178,7 @@
     <section class="il-update-settings" aria-labelledby="update-settings-title">
       <div>
         <h2 id="update-settings-title" class="il-compose-h">{{ 'update.settingsTitle' | t }}</h2>
-        <p class="il-section-sub">{{ 'update.settingsSub' | t }}</p>
+        <p class="il-section-sub">{{ (updates.state().managedBy ? 'update.storeManaged' : 'update.settingsSub') | t }}</p>
         @if (updates.state().currentVersion; as version) {
           <p class="il-installed-version">
             <span>{{ 'update.installedVersion' | t }}</span>
@@ -186,6 +186,9 @@
           </p>
         }
       </div>
+      @if (updates.state().managedBy) {
+        <button type="button" class="il-btn ghost sm" (click)="checkUpdates()">{{ 'update.openStore' | t }}</button>
+      } @else {
       <label class="il-desktop-toggle">
         <input
           type="checkbox"
@@ -227,6 +230,7 @@
           <span class="il-error-inline">{{ updates.state().error }}</span>
         }
       </div>
+      }
     </section>
 
     @if (error()) {

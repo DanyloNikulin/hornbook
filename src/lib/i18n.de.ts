@@ -118,6 +118,8 @@ export const DE = {
   'update.settingsSub':
     'Hornbook prüft die öffentlichen GitHub-Veröffentlichungen beim Start und stündlich und sendet keine Journaldaten.',
   'update.installedVersion': 'Installierte Version',
+  'update.storeManaged': 'Updates werden vom Microsoft Store verwaltet.',
+  'update.openStore': 'Microsoft Store öffnen',
   'update.automatic': 'Automatisch prüfen',
   'update.automaticSub': 'Deaktiviere dies, um nur auf Anfrage zu prüfen.',
   'update.check': 'Nach Updates suchen',

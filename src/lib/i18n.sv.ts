@@ -115,6 +115,8 @@ export const SV = {
   'update.settingsSub':
     'Hornbook söker efter offentliga GitHub-versioner vid start och varje timme, och skickar inga journaldata.',
   'update.installedVersion': 'Installerad version',
+  'update.storeManaged': 'Uppdateringar hanteras av Microsoft Store.',
+  'update.openStore': 'Öppna Microsoft Store',
   'update.automatic': 'Kontrollera automatiskt',
   'update.automaticSub': 'Stäng av för att bara kontrollera när du ber om det.',
   'update.check': 'Sök efter uppdateringar',

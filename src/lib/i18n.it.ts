@@ -105,6 +105,8 @@ export const IT = {
   'update.settingsTitle': 'Aggiornamenti',
   'update.settingsSub': "Hornbook controlla il feed pubblico delle release GitHub all’avvio e ogni ora, e non invia dati del diario.",
   'update.installedVersion': 'Versione installata',
+  'update.storeManaged': 'Gli aggiornamenti sono gestiti da Microsoft Store.',
+  'update.openStore': 'Apri Microsoft Store',
   'update.automatic': 'Controlla automaticamente',
   'update.automaticSub': 'Disattiva per controllare solo quando lo chiedi.',
   'update.check': 'Controlla aggiornamenti',
