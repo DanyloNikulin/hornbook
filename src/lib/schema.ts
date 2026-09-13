@@ -1,4 +1,5 @@
-import { z } from 'zod';
+// The namespace import lets esbuild discard unused Zod exports (including locales).
+import * as z from 'zod';
 import { lessonContentId } from './content-ids.js';
 
 export const Level = z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']);

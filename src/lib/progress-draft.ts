@@ -1,4 +1,5 @@
-import { z } from 'zod';
+// Keep this namespace import so browser builds can discard unused Zod exports.
+import * as z from 'zod';
 import { Progress } from './schema.js';
 
 export const ProgressDraft = z.object({ revision: z.string(), snapshot: Progress });

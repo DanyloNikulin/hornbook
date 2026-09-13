@@ -1,19 +1,5 @@
 @mixin styles {
 /* ---------- Glossary: dense reference index ---------- */
-.il-vocab-page {
-  width: min(100%, 1100px);
-  min-height: 100vh;
-  margin: 0 auto;
-  padding: 48px 40px 64px;
-}
-.il-vocab-page-head { margin-bottom: 20px; }
-.il-vocab-back,
-.il-sheet-back { display: inline-block; margin-bottom: 7px; color: var(--ink-2); font-size: 0.84375rem; }
-.il-vocab-title-row,
-.il-sheet-title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
-.il-vocab-title-row h1,
-.il-sheet-title-row h1 { margin: 0; font-family: var(--font-display); font-size: 2.5rem; font-weight: 500; line-height: 1.1; }
-.il-vocab-title-row p { max-width: 720px; margin: 5px 0 0; color: var(--muted); font-size: 0.875rem; }
 .il-vocab-title-row > span { flex: 0 0 auto; color: var(--muted); font: 0.75rem var(--font-mono); }
 .il-vocab-controls { display: grid; grid-template-columns: minmax(250px, 1fr) auto auto; gap: 10px; margin-bottom: 15px; }
 .il-vocab-controls select {
@@ -25,20 +11,6 @@
   color: var(--ink);
   font: 0.8125rem var(--font-body);
 }
-.il-vocab-search {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 46px;
-  padding: 0 16px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--paper-2);
-}
-.il-vocab-search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent); }
-.il-vocab-search svg,
-.il-sheet-rail-search svg { width: 16px; height: 16px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-.il-vocab-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: 0.84375rem var(--font-body); }
 .il-vocab-letters {
   display: grid;
   grid-template-columns: 58px repeat(27, minmax(28px, 1fr));
@@ -86,8 +58,6 @@
 .il-vocab-example-cell em { display: block; color: var(--ink-2); }
 .il-vocab-example-cell small { display: block; margin-top: 2px; color: var(--muted); font-size: 0.71875rem; }
 .il-vocab-seen { color: var(--muted) !important; font: 0.6875rem var(--font-mono); text-align: center; }
-.il-vocab-state,
-.il-sheet-state { padding: 44px; border: 1px dashed var(--line); border-radius: 16px; color: var(--muted); text-align: center; }
 .il-vocab-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; color: var(--muted); font: 0.6875rem var(--font-mono); }
 .il-vocab-pagination > div { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .il-vocab-pagination .il-chip { min-width: 34px; justify-content: center; }

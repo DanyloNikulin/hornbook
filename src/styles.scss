@@ -1,4 +1,5 @@
 @use 'app/shell';
+@use 'app/shared';
 @use 'app/accessibility';
 @use 'app/search/search';
 @use 'app/lesson-list/lesson-list';
@@ -67,6 +68,8 @@
   --r-md: 14px;
   --r-lg: 22px;
   --r-xl: 28px;
+  --page-max-width: 1100px;
+  --page-gutter: 40px;
 
   /* Backdrop layers. A section theme overrides these on the root element
      (see src/app/theme.service.ts); --backdrop-image stays `none` unless the
@@ -191,24 +194,35 @@ h1, h2, h3, h4 {
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
-.il-scroll > main { flex: 1; }
+/* Let the shared panel fill the available page, including short/empty pages. */
+.il-scroll > main,
+.il-route-content,
+.il-route-content > :not(router-outlet) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
 
 @include shell.navigation;
+@include shared.styles;
 @include shell.hero;
 @include search.bar;
+@include search.page;
 /* ---------- Content panel (cream layer) ---------- */
 .il-panel {
   background: var(--paper);
   border-radius: var(--r-xl) var(--r-xl) 0 0;
   margin: 24px auto 0;
-  padding: 56px 40px 80px;
+  padding: 56px var(--page-gutter) 80px;
   box-shadow: 0 -10px 40px -10px rgba(0, 0, 0, 0.18);
   flex: 1;
   width: 100%;
-  max-width: 1100px;
+  max-width: var(--page-max-width);
 }
 .il-panel-inner {
-  max-width: 1240px;
+  width: 100%;
+  min-width: 0;
   margin: 0 auto;
 }
 
@@ -219,8 +233,8 @@ h1, h2, h3, h4 {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 0 22px;
+  min-height: 2.75rem;
+  padding: 0.375rem 22px;
   font-family: inherit;
   font-size: 0.9375rem;
   font-weight: 600;
@@ -233,7 +247,8 @@ h1, h2, h3, h4 {
   text-decoration: none;
   transition: transform 0.15s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 2px 4px rgba(0, 0, 0, 0.06);
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
 }
 .il-btn:hover {
   transform: translateY(-1px);
@@ -243,7 +258,7 @@ h1, h2, h3, h4 {
 .il-btn:active { transform: translateY(0); filter: brightness(0.96); }
 .il-btn:focus-visible { outline: 3px solid rgba(192, 101, 63, 0.5); outline-offset: 2px; }
 
-.il-btn.sm { min-height: 36px; padding: 0 16px; font-size: 0.84375rem; }
+.il-btn.sm { min-height: 2.25rem; padding: 0 16px; font-size: 0.84375rem; }
 
 .il-btn.ghost {
   background: transparent;
@@ -286,8 +301,9 @@ h1, h2, h3, h4 {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 36px;
-  padding: 0 14px;
+  height: auto;
+  min-height: 2.25rem;
+  padding: 0.375rem 14px;
   border-radius: 999px;
   background: var(--paper);
   color: var(--ink-2);
@@ -313,7 +329,8 @@ h1, h2, h3, h4 {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 26px;
+  height: auto;
+  min-height: 1.625rem;
   padding: 0 10px;
   border-radius: 999px;
   background: var(--paper-2);
@@ -478,16 +495,15 @@ h1, h2, h3, h4 {
 .il-slug-chip:hover { background: var(--primary); color: var(--paper); }
 .il-row-hover:hover { background: var(--paper); }
 .il-row-hover-soft:hover { background: rgba(180, 136, 74, 0.05); }
-.il-result-card { background: var(--paper-2); border: 1px solid var(--line); }
-.il-result-card:hover { border-color: var(--primary); }
 .il-vocab-row:hover { background: var(--paper-2); }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 880px) {
+  :root { --page-gutter: 20px; }
   .il-nav { padding: 14px 20px; }
   .il-nav-row { gap: 12px; }
-  .il-hero { padding: 48px 20px 32px; }
-  .il-panel { padding: 36px 20px 80px; }
+  .il-hero { padding-block: 48px 32px; }
+  .il-panel { padding-block: 36px 80px; }
   .il-footer { padding: 20px; }
   .il-fab { right: 16px; bottom: 16px; padding: 0 18px 0 14px; height: 54px; }
   .il-grid { grid-template-columns: 1fr; }
@@ -546,8 +562,6 @@ h1, h2, h3, h4 {
 @include vocab.styles;
 @include cheatsheet.page;
 @media (max-width: 880px) {
-  .il-vocab-page,
-  .il-sheet-page { padding: 32px 22px 56px; }
   .il-sheet-layout { grid-template-columns: 1fr; gap: 22px; }
   .il-sheet-rail { position: static; max-height: none; overflow: visible; }
   .il-sheet-rail-groups { display: flex; gap: 8px; overflow-x: auto; padding: 1px 1px 8px; }
@@ -557,8 +571,6 @@ h1, h2, h3, h4 {
   .il-sheet-rail-link.active { border-color: var(--primary); }
 }
 @media (max-width: 640px) {
-  .il-vocab-title-row,
-  .il-sheet-title-row { align-items: flex-start; flex-direction: column; gap: 10px; }
   .il-vocab-controls { grid-template-columns: 1fr 1fr; }
   .il-vocab-search { grid-column: 1 / -1; }
   .il-vocab-letters { grid-template-columns: 58px repeat(27, 30px); }

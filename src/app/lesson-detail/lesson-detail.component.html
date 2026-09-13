@@ -1,5 +1,5 @@
 @if (lesson(); as l) {
-  <div class="il-lesson-page">
+  <div class="il-panel il-lesson-page">
 
     <!-- Breadcrumb -->
     <nav class="il-lesson-breadcrumb" [attr.aria-label]="'lesson.breadcrumb' | t">
@@ -364,7 +364,7 @@
 } @else if (loading()) {
   <!-- Loading skeleton: shows manifest metadata immediately so the page
        chrome reads as "real" even before the body is fetched. -->
-  <div class="il-lesson-page" aria-busy="true">
+  <div class="il-panel il-lesson-page" aria-busy="true">
     <nav class="il-lesson-breadcrumb" [attr.aria-label]="'lesson.breadcrumb' | t">
       <a [routerLink]="sec.home()" class="il-lesson-bc-link">{{ 'nav.lessons' | t }}</a>
       <span class="il-lesson-bc-sep" aria-hidden="true">›</span>
@@ -393,7 +393,7 @@
     </div>
   </div>
 } @else if (error()) {
-  <section class="max-w-2xl mx-auto px-6 py-24 text-center space-y-6" style="background: var(--paper); min-height: 100vh;">
+  <section class="il-panel text-center space-y-6">
     <h1 class="font-display text-3xl font-semibold" style="color: var(--ink);">{{ 'lesson.loadFailed' | t }}</h1>
     <p style="color: var(--ink-2);">
       {{ 'lesson.loadFailedHint' | t }}
@@ -404,7 +404,7 @@
     </div>
   </section>
 } @else {
-  <section class="max-w-2xl mx-auto px-6 py-24 text-center space-y-6" style="background: var(--paper); min-height: 100vh;">
+  <section class="il-panel text-center space-y-6">
     <h1 class="font-display text-3xl font-semibold" style="color: var(--ink);">{{ 'lesson.notFound' | t }}</h1>
     <p style="color: var(--ink-2);">
       {{ 'lesson.slugMissing' | t: { slug: slug() } }}

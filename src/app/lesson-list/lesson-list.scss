@@ -160,26 +160,6 @@
 }
 
 /* ---------- Lesson card ---------- */
-.il-card {
-  position: relative;
-  background: var(--paper);
-  border-radius: var(--r-lg);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow-1);
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.2s ease;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  text-decoration: none;
-  color: inherit;
-}
-.il-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-3);
-  border-color: rgba(42, 37, 32, 0.22);
-}
-.il-card:focus-visible { outline: 3px solid rgba(192, 101, 63, 0.5); outline-offset: 3px; }
 
 .il-card-body {
   padding: 20px 22px 22px;
@@ -246,13 +226,6 @@
 
 @mixin night {
 /* Cards */
-[data-theme="night"] .il-card:hover {
-  border-color: rgba(217, 201, 168, 0.16);
-  box-shadow: var(--shadow-3);
-}
-[data-theme="night"] .il-card:focus-visible {
-  outline-color: rgba(138, 172, 204, 0.55);
-}
 
 /* Heatmap: blue tones instead of terracotta */
 [data-theme="night"] .il-heatmap-cell-0 { background: rgba(217, 201, 168, 0.05); }

@@ -5,16 +5,15 @@
   font-size: 0.8125rem;
   color: var(--ink);
   background: var(--paper-2);
-  border: 1px solid rgba(42, 37, 32, 0.18);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 4px 8px;
   margin-right: 6px;
 }
 .il-section-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   gap: 16px;
-  margin-top: 1.5rem;
 }
 .il-section-card {
   display: block;
@@ -22,11 +21,11 @@
   text-decoration: none;
   color: var(--ink);
 }
-.il-section-card--new { border-style: dashed; opacity: 0.85; }
+.il-section-card--new { border-style: dashed; }
 .il-flag, .il-lang-flag, .il-section-flags { font-family: var(--font-flags); }
 .il-section-flags { font-size: 1.75rem; line-height: 1; margin-bottom: 10px; }
 .il-section-arrow { font-size: 1.125rem; color: var(--muted); margin: 0 4px; }
-.il-section-label { font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; margin-bottom: 4px; }
+.il-section-label { overflow-wrap: anywhere; font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; margin-bottom: 4px; }
 
 .il-empty-state {
   position: relative;
@@ -35,7 +34,7 @@
   padding: 46px 48px;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 24px;
+  border-radius: var(--r-lg);
   background:
     linear-gradient(125deg, color-mix(in srgb, var(--primary) 7%, transparent), transparent 44%),
     var(--paper-2);
@@ -65,7 +64,7 @@
 .il-empty-state > p:not(.il-empty-kicker) { max-width: 52ch; margin: 0 0 22px; color: var(--ink-2); font-size: 0.875rem; }
 .il-empty-state .il-btn { position: relative; z-index: 1; }
 @media (max-width: 640px) {
-  .il-empty-state { padding: 38px 28px; border-radius: 20px; }
+  .il-empty-state { padding: 38px 28px; border-radius: var(--r-lg); }
 }
 
 }

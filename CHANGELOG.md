@@ -4,6 +4,17 @@ All notable changes to Hornbook.
 
 ## Unreleased
 
+## 0.9.9 — 2026-09-13
+
+- Return to the language-pair chooser through a visible Pairs link. Journals
+  with one pair no longer immediately redirect back into that pair.
+- Lessons, Sheet, Search, Glossary, Cards and settings share panel dimensions,
+  page headings, navigation links and responsive spacing. Shared search fields,
+  loading states and catalogue cards keep the interface consistent across themes.
+- Reduce the initial application bundle from 990 KB to 610 KB by excluding
+  unused Zod exports and loading the Italian interface translation on demand.
+  Lesson, settings and progress validation remain intact.
+
 ## 0.9.8 — 2026-09-09
 
 - Application settings report how much the journal's trash is holding and can

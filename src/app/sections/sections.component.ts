@@ -1,21 +1,23 @@
-import { Component, computed, effect, inject } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { TPipe } from '../i18n.pipe';
 import { JournalService } from '../journal.service';
 import { SectionService } from '../section.service';
 
 /**
- * Home: the language pairs of this journal. With exactly one pair the user
- * lands in it directly; with none, the page points at /setup.
+ * Home: always show the pair chooser, including with a single pair, so the
+ * user can return here to create another one.
  */
 @Component({
   selector: 'app-sections',
   imports: [RouterLink, TPipe],
   template: `
-    <section class="il-panel" style="padding-top: 2rem;">
-      <div class="il-panel-inner" style="max-width: 860px; margin: 0 auto;">
-        <h1 class="il-section-title">{{ 'pairs.title' | t }}</h1>
-        <p class="il-section-sub">{{ 'pairs.sub' | t }}</p>
+    <section class="il-panel">
+      <div class="il-panel-inner">
+        <header class="il-page-head">
+          <h1 class="il-section-title">{{ 'pairs.title' | t }}</h1>
+          <p class="il-section-sub">{{ 'pairs.sub' | t }}</p>
+        </header>
 
         @if (sections().length === 0) {
           <div class="il-empty-state il-empty-state--journal">
@@ -48,18 +50,10 @@ import { SectionService } from '../section.service';
 export class SectionsComponent {
   private readonly journal = inject(JournalService);
   private readonly section = inject(SectionService);
-  private readonly router = inject(Router);
 
   protected readonly sections = computed(() => this.journal.sections());
 
   constructor() {
     this.section.set(null);
-    // One pair only: no reason to make the user click through a list.
-    effect(() => {
-      const list = this.sections();
-      if (this.journal.loaded() && list.length === 1) {
-        void this.router.navigate(['/', list[0].id], { replaceUrl: true });
-      }
-    });
   }
 }

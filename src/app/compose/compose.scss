@@ -7,10 +7,6 @@
   margin: 18px 0 6px;
   color: var(--ink);
 }
-.il-compose-page { padding-top: 32px; }
-.il-compose-inner { max-width: 760px; margin: 0 auto; }
-.il-compose-back { margin: 0 0 22px; }
-.il-compose-sub { margin: 0 0 22px; }
 .il-compose-tabs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -271,7 +267,6 @@
 .il-transfer-progress span { display: grid; gap: 2px; }
 .il-transfer-progress small { color: var(--muted); font-size: 0.75rem; font-weight: 400; }
 @media (max-width: 640px) {
-  .il-compose-page { padding-top: 24px; }
   .il-compose-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 16px; }
   .il-compose-tabs button { min-height: 44px; overflow-wrap: anywhere; }
   .il-compose-basics { grid-template-columns: 1fr; }

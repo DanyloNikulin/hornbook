@@ -1,8 +1,8 @@
-<section class="il-cards-page">
-  <header class="il-cards-head">
-    <a [routerLink]="sec.home()" class="il-cards-back">{{ 'common.allLessons' | t }}</a>
-    <div class="il-cards-title-row">
-      <h1>{{ 'cards.title' | t }}</h1>
+<section class="il-panel il-cards-page">
+  <header class="il-page-head il-cards-head">
+    <a [routerLink]="sec.home()" class="il-back-link">{{ 'common.allLessons' | t }}</a>
+    <div class="il-page-title-row il-cards-title-row">
+      <h1 class="il-section-title">{{ 'cards.title' | t }}</h1>
       <span class="il-cards-session-count">
         @if (mode() === 'pairs') {
           {{ 'cards.roundsCount' | t: { done: pairsDone(), limit: PAIRS_LIMIT } }}

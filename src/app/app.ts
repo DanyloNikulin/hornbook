@@ -46,7 +46,8 @@ export class AppComponent {
   // Section pages show the section nav; home and setup show only the brand.
   protected readonly inSection = computed(() => {
     const path = routePath(this.url());
-    return this.section.current() !== null && path !== '/' && !path.startsWith('/setup') && path !== '/settings';
+    const id = this.section.id();
+    return !!id && (path === `/${id}` || path.startsWith(`/${id}/`));
   });
 
   protected readonly isCheatsheet = computed(() => routePath(this.url()).endsWith('/cheatsheet'));

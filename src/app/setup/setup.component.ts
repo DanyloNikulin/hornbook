@@ -19,11 +19,13 @@ import { SectionService } from '../section.service';
   selector: 'app-setup',
   imports: [FormsModule, RouterLink, TPipe],
   template: `
-    <section class="il-panel" style="padding-top: 2rem;">
-      <div class="il-panel-inner" style="max-width: 720px; margin: 0 auto;">
-        <p><a routerLink="/" class="il-lesson-bc-link">{{ 'setup.back' | t }}</a></p>
-        <h1 class="il-section-title">{{ 'setup.title' | t }}</h1>
-        <p class="il-section-sub">{{ 'setup.sub' | t }}</p>
+    <section class="il-panel">
+      <div class="il-panel-inner">
+        <header class="il-page-head">
+          <a routerLink="/" class="il-back-link">{{ 'setup.back' | t }}</a>
+          <h1 class="il-section-title">{{ 'setup.title' | t }}</h1>
+          <p class="il-section-sub">{{ 'setup.sub' | t }}</p>
+        </header>
 
         <div class="il-transfer-card il-transfer-card--pair">
           <span class="il-transfer-mark" aria-hidden="true">ZIP</span>

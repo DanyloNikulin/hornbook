@@ -1,17 +1,17 @@
-<section class="il-vocab-page">
-  <header class="il-vocab-page-head">
-    <a [routerLink]="sec.home()" class="il-vocab-back">{{ 'common.allLessons' | t }}</a>
-    <div class="il-vocab-title-row">
+<section class="il-panel il-vocab-page">
+  <header class="il-page-head il-vocab-page-head">
+    <a [routerLink]="sec.home()" class="il-back-link">{{ 'common.allLessons' | t }}</a>
+    <div class="il-page-title-row il-vocab-title-row">
       <div>
-        <h1>{{ 'vocab.title' | t }}</h1>
-        <p>{{ 'vocab.sub' | t }}</p>
+        <h1 class="il-section-title">{{ 'vocab.title' | t }}</h1>
+        <p class="il-section-sub">{{ 'vocab.sub' | t }}</p>
       </div>
       <span>{{ 'vocab.wordsTotal' | t: { total: vocab().length } }}</span>
     </div>
   </header>
 
   <div class="il-vocab-controls">
-    <label class="il-vocab-search">
+    <label class="il-search-field il-vocab-search">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <span class="sr-only">{{ 'vocab.searchPlaceholder' | t }}</span>
       <input type="search" [ngModel]="query()" (ngModelChange)="setQuery($event)" [placeholder]="'vocab.searchPlaceholder' | t" />
@@ -44,14 +44,14 @@
   </nav>
 
   @if (loading() && vocab().length === 0) {
-    <div class="il-vocab-state">{{ 'vocab.loading' | t }}</div>
+    <div class="il-content-state">{{ 'vocab.loading' | t }}</div>
   } @else if (error()) {
-    <div class="il-vocab-state">
+    <div class="il-content-state">
       <p>{{ 'vocab.loadFailed' | t }}</p>
       <button type="button" (click)="reload()" class="il-btn sm">{{ 'common.tryAgain' | t }}</button>
     </div>
   } @else if (filtered().length === 0) {
-    <div class="il-vocab-state">{{ 'vocab.empty' | t }}</div>
+    <div class="il-content-state">{{ 'vocab.empty' | t }}</div>
   } @else {
     <div class="il-vocab-table-wrap">
       <table class="il-vocab-table">

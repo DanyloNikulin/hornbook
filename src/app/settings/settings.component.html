@@ -1,8 +1,10 @@
-<section class="il-panel" style="padding-top: 2rem;">
-  <div class="il-panel-inner" style="max-width: 860px; margin: 0 auto;">
-    <p><a [routerLink]="sec.home()" class="il-lesson-bc-link">{{ 'common.backToLessons' | t }}</a></p>
-    <h1 class="il-section-title">{{ 'settings.pairTitle' | t: { pair: sec.label() } }}</h1>
-    <p class="il-section-sub">{{ 'settings.pairSub' | t }}</p>
+<section class="il-panel">
+  <div class="il-panel-inner">
+    <header class="il-page-head">
+      <a [routerLink]="sec.home()" class="il-back-link">{{ 'common.backToLessons' | t }}</a>
+      <h1 class="il-section-title">{{ 'settings.pairTitle' | t: { pair: sec.label() } }}</h1>
+      <p class="il-section-sub">{{ 'settings.pairSub' | t }}</p>
+    </header>
     <app-settings-nav />
     <p class="il-settings-help">{{ 'recovery.trashHelp' | t }}</p>
 

@@ -15,8 +15,7 @@ import { TPipe } from '../i18n.pipe';
   imports: [RouterLink, TPipe],
   template: `
     <section
-      class="max-w-2xl mx-auto px-6 py-24 text-center space-y-6"
-      style="background: var(--paper); min-height: 100vh;"
+      class="il-panel text-center space-y-6"
     >
       <h1 class="font-display text-3xl font-semibold" style="color: var(--ink);">{{ 'notFound.title' | t }}</h1>
       <p style="color: var(--ink-2);">

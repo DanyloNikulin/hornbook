@@ -1,10 +1,10 @@
-<section class="il-sheet-page">
-  <header class="il-sheet-head">
-    <a [routerLink]="sec.home()" class="il-sheet-back">{{ 'common.allLessons' | t }}</a>
-    <div class="il-sheet-title-row">
+<section class="il-panel il-sheet-page">
+  <header class="il-page-head il-sheet-head">
+    <a [routerLink]="sec.home()" class="il-back-link">{{ 'common.allLessons' | t }}</a>
+    <div class="il-page-title-row il-sheet-title-row">
       <div>
-        <h1>{{ 'sheet.title' | t }}</h1>
-        <p>{{ 'sheet.meta' | t: { lessons: cheatsheet().processed_lessons.length, date: updatedAt() } }}</p>
+        <h1 class="il-section-title">{{ 'sheet.title' | t }}</h1>
+        <p class="il-section-sub">{{ 'sheet.meta' | t: { lessons: cheatsheet().processed_lessons.length, date: updatedAt() } }}</p>
       </div>
       <div class="il-sheet-actions">
         <button type="button" class="il-btn sm" [disabled]="jobRunning()" (click)="rebuild(false)">{{ jobRunning() ? ('sheet.updating' | t) : ('sheet.update' | t) }}</button>
@@ -25,15 +25,15 @@
   </header>
 
   @if (loading() && cheatsheet().categories.length === 0) {
-    <div class="il-sheet-state">{{ 'sheet.loading' | t }}</div>
+    <div class="il-content-state">{{ 'sheet.loading' | t }}</div>
   } @else if (error()) {
-    <div class="il-sheet-state"><p>{{ 'sheet.loadFailed' | t }}</p><button type="button" (click)="reload()" class="il-btn sm">{{ 'common.tryAgain' | t }}</button></div>
+    <div class="il-content-state"><p>{{ 'sheet.loadFailed' | t }}</p><button type="button" (click)="reload()" class="il-btn sm">{{ 'common.tryAgain' | t }}</button></div>
   } @else if (cheatsheet().categories.length === 0) {
-    <div class="il-sheet-state"><p>{{ 'sheet.empty' | t }}</p></div>
+    <div class="il-content-state"><p>{{ 'sheet.empty' | t }}</p></div>
   } @else {
     <div class="il-sheet-layout">
       <nav class="il-sheet-rail" [attr.aria-label]="'sheet.sectionsAria' | t">
-        <label class="il-sheet-rail-search">
+        <label class="il-search-field il-search-field--compact il-sheet-rail-search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
           <span class="sr-only">{{ 'sheet.findSection' | t }}</span>
           <input type="search" [value]="railQuery()" (input)="railQuery.set($any($event.target).value)" [placeholder]="'sheet.findSection' | t" />

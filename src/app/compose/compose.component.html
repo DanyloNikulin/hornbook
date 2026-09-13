@@ -1,8 +1,10 @@
 <section class="il-panel il-compose-page">
-  <div class="il-panel-inner il-compose-inner">
-    <p class="il-compose-back"><a [routerLink]="sec.home()" class="il-lesson-bc-link">{{ 'common.backToLessons' | t }}</a></p>
-    <h1 class="il-section-title">{{ 'compose.title' | t }}</h1>
-    <p class="il-section-sub il-compose-sub">{{ 'compose.sub' | t }}</p>
+  <div class="il-panel-inner">
+    <header class="il-page-head">
+      <a [routerLink]="sec.home()" class="il-back-link">{{ 'common.backToLessons' | t }}</a>
+      <h1 class="il-section-title">{{ 'compose.title' | t }}</h1>
+      <p class="il-section-sub">{{ 'compose.sub' | t }}</p>
+    </header>
 
     <div class="il-compose-tabs" role="tablist" [attr.aria-label]="'compose.tabsAria' | t">
       <button
