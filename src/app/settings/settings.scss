@@ -6,7 +6,7 @@
 }
 @media (max-width: 720px) { .il-settings-grid { grid-template-columns: 1fr; } }
 .il-settings-card {
-  border: 1px solid rgba(42, 37, 32, 0.18);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 14px;
   background: var(--paper-2);
@@ -20,7 +20,7 @@
   margin: 8px 0;
   font-size: 0.875rem;
 }
-.il-settings-row input, .il-settings-row select { width: 100%; font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(42, 37, 32, 0.18); background: var(--paper); color: var(--ink); }
+.il-settings-row input, .il-settings-row select { width: 100%; font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
 /* Interface language: one dropdown instead of nine chips wrapping over two lines. */
 .il-locale-select { display: block; max-width: 340px; margin: 4px 0 18px; }
 .il-locale-select select {
@@ -52,7 +52,7 @@
 }
 @media (max-width: 720px) { .il-pipe-grid { grid-template-columns: 1fr; } }
 .il-pipe {
-  border: 1px solid rgba(42, 37, 32, 0.18);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 16px;
   background: var(--paper-2);
@@ -263,7 +263,7 @@
   text-align: left;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(42, 37, 32, 0.18);
+  border: 1px solid var(--line);
   background: var(--paper-2);
   color: var(--ink);
   font: inherit;
@@ -281,7 +281,7 @@
   aspect-ratio: 16 / 9;
   object-fit: cover;
   border-radius: 8px;
-  border: 1px solid rgba(42, 37, 32, 0.18);
+  border: 1px solid var(--line);
 }
 
 /* ── Local tools: setup inside the app ─────────────────────────────────── */

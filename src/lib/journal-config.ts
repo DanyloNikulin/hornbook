@@ -1,4 +1,5 @@
-import { z } from 'zod';
+// Keep this namespace import so browser builds can discard unused Zod exports.
+import * as z from 'zod';
 import { languageName, speechLocale } from './languages.js';
 import { PROVIDER_DRIVERS } from './provider-capabilities.js';
 

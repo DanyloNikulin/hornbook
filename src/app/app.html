@@ -25,6 +25,7 @@
       <!-- Desktop links (hidden on mobile) -->
       <div class="il-nav-links">
         @if (inSection()) {
+          <a routerLink="/" class="il-nav-link">{{ 'nav.pairs' | t }}</a>
           @if (sections().length > 1) {
             <select class="il-section-switch"
                     [attr.aria-label]="'nav.pair' | t"
@@ -222,7 +223,7 @@
       </aside>
     }
     @if (progress.dirty()) { <p role="status">{{ 'progress.pending' | t }}</p> }
-    <div [attr.inert]="inSection() && !progress.canStudy() ? '' : null">
+    <div class="il-route-content" [attr.inert]="inSection() && !progress.canStudy() ? '' : null">
       <router-outlet />
     </div>
   </main>

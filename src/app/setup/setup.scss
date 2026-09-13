@@ -11,7 +11,7 @@
 .il-lang-list {
   max-height: 320px;
   overflow: auto;
-  border: 1px solid rgba(42, 37, 32, 0.18);
+  border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--paper-2);
 }

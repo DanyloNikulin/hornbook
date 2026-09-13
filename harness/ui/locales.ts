@@ -3,6 +3,7 @@ import type { UiScenario } from './context.ts';
 
 export async function localesScenario({ r, page, goto, shot }: UiScenario): Promise<void> {
   const choices = [
+    { id: 'it', name: 'Italiano', title: 'Applicazione' },
     { id: 'es', name: 'Español', title: 'Aplicación' },
     { id: 'fr', name: 'Français', title: 'Application' },
     { id: 'de', name: 'Deutsch', title: 'Anwendung' },

@@ -1,33 +1,5 @@
 @mixin styles {
 /* ---------- Cards: deck-first study surface ---------- */
-.il-cards-page {
-  width: min(100%, 760px);
-  min-height: 100vh;
-  margin: 0 auto;
-  padding: 56px 40px 64px;
-  color: var(--ink);
-}
-.il-cards-head { margin-bottom: 18px; }
-.il-cards-back {
-  display: inline-block;
-  margin-bottom: 6px;
-  color: var(--ink-2);
-  font-size: 0.84375rem;
-}
-.il-cards-title-row {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-}
-.il-cards-title-row h1 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: clamp(2.25rem, 6vw, 2.625rem);
-  font-weight: 500;
-  line-height: 1.08;
-  letter-spacing: -.005em;
-}
 .il-cards-session-count,
 .il-cards-deck-stats {
   color: var(--muted);
@@ -220,8 +192,6 @@
 .il-study-source a:hover,
 .il-study-source button:hover { color: var(--primary); text-decoration: underline; }
 @media (max-width: 640px) {
-  .il-cards-page { padding: 28px 18px 48px; }
-  .il-cards-title-row { align-items: baseline; }
   .il-cards-deck-row { grid-template-columns: 1fr; gap: 7px; }
   .il-cards-deck-stats { white-space: normal; }
   .il-cards-filters { align-items: flex-start; flex-direction: column; gap: 7px; }

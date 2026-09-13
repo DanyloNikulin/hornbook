@@ -33,7 +33,7 @@ describe('I18nService language loading', () => {
           provide: LOCALE_LOADER,
           useValue: {
             load: loadLocale,
-            isLoaded: (locale: catalogs.LocaleId) => locale === 'en' || locale === 'it',
+            isLoaded: (locale: catalogs.LocaleId) => locale === 'en',
           },
         },
       ],
@@ -46,19 +46,21 @@ describe('I18nService language loading', () => {
     localStorage.removeItem('hornbook-locale');
   });
 
-  it('restores a saved language before completing initialization', async () => {
-    localStorage.setItem('hornbook-locale', 'fr');
+  it.each(['fr', 'it'] as const)('restores saved %s before completing initialization', async (locale) => {
+    localStorage.setItem('hornbook-locale', locale);
     const pending = deferredCatalog();
     loadLocale.mockReturnValueOnce(pending.promise);
     const service = TestBed.inject(I18nService);
     const initializing = service.initialize();
     TestBed.tick();
-    expect(localStorage.getItem('hornbook-locale')).toBe('fr');
+    expect(localStorage.getItem('hornbook-locale')).toBe(locale);
+    await vi.waitFor(() => expect(loadLocale).toHaveBeenCalledWith(locale));
+    expect(service.locale()).toBe('en');
     pending.resolve(EN);
     await initializing;
     TestBed.tick();
-    expect(service.locale()).toBe('fr');
-    expect(document.documentElement.lang).toBe('fr');
+    expect(service.locale()).toBe(locale);
+    expect(document.documentElement.lang).toBe(locale);
   });
 
   it('keeps the newest selection when earlier loading finishes later', async () => {
@@ -94,22 +96,22 @@ describe('I18nService language loading', () => {
     loadLocale.mockReturnValueOnce(first.promise);
     const service = TestBed.inject(I18nService);
     const older = service.set('de');
-    await service.set('it');
+    await service.set('en');
     first.reject(new Error('Unavailable chunk'));
     await older;
-    expect(service.locale()).toBe('it');
+    expect(service.locale()).toBe('en');
     expect(service.loadFailed()).toBe(false);
   });
 
-  it('falls back safely at startup without losing the saved preference', async () => {
-    localStorage.setItem('hornbook-locale', 'pt');
+  it.each(['pt', 'it'] as const)('falls back safely when saved %s fails to load', async (locale) => {
+    localStorage.setItem('hornbook-locale', locale);
     loadLocale.mockRejectedValueOnce(new Error('Unavailable chunk'));
     const service = TestBed.inject(I18nService);
     await service.initialize();
     TestBed.tick();
     expect(service.locale()).toBe('en');
     expect(service.loadFailed()).toBe(true);
-    expect(localStorage.getItem('hornbook-locale')).toBe('pt');
+    expect(localStorage.getItem('hornbook-locale')).toBe(locale);
   });
 });
 

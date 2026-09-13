@@ -3,7 +3,6 @@
 // user toggles; it does not follow the open pair.
 
 import { EN } from './i18n.en.js';
-import { IT } from './i18n.it.js';
 
 export const DEFAULT_LOCALE = 'en' as const;
 export type LocaleId = 'en' | 'it' | 'es' | 'fr' | 'de' | 'pt' | 'nl' | 'sv' | 'uk';
@@ -51,10 +50,10 @@ const TOKEN = /\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
 
 const CATALOGS: Partial<Record<LocaleId, Catalog>> = {
   en: EN,
-  it: IT,
 };
 
 const LOADERS = {
+  it: () => import('./i18n.it.js').then((module) => module.IT),
   es: () => import('./i18n.es.js').then((module) => module.ES),
   fr: () => import('./i18n.fr.js').then((module) => module.FR),
   de: () => import('./i18n.de.js').then((module) => module.DE),

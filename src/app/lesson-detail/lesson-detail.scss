@@ -1,14 +1,6 @@
 @mixin content {
 /* ---------- Lesson detail page ---------- */
 
-.il-lesson-page {
-  max-width: 1040px;
-  margin: 0 auto;
-  padding: 40px 32px 80px;
-  min-height: 100vh;
-  background: var(--paper);
-}
-
 /* Breadcrumb */
 .il-lesson-breadcrumb {
   display: flex;
@@ -592,7 +584,6 @@
 
 /* Responsive */
 @media (max-width: 880px) {
-  .il-lesson-page { padding: 24px 20px 60px; }
   .il-lesson-layout { display: block; }
   .il-lesson-rail {
     position: static;

@@ -1,10 +1,10 @@
-<section class="il-panel" style="padding-top: 2rem">
-  <div class="il-panel-inner" style="max-width: 860px; margin: 0 auto">
-    <p>
-      <a [routerLink]="backHome()" class="il-lesson-bc-link">{{ backLabel() | t }}</a>
-    </p>
-    <h1 class="il-section-title">{{ 'settings.appTitle' | t }}</h1>
-    <p class="il-section-sub">{{ 'settings.appSub' | t }}</p>
+<section class="il-panel">
+  <div class="il-panel-inner">
+    <header class="il-page-head">
+      <a [routerLink]="backHome()" class="il-back-link">{{ backLabel() | t }}</a>
+      <h1 class="il-section-title">{{ 'settings.appTitle' | t }}</h1>
+      <p class="il-section-sub">{{ 'settings.appSub' | t }}</p>
+    </header>
     <app-settings-nav />
 
     @if (desktop.state(); as shell) {
