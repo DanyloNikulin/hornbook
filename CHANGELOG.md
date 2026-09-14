@@ -4,6 +4,16 @@ All notable changes to Hornbook.
 
 ## Unreleased
 
+## 1.0.0 — 2026-09-14
+
+- First stable release of Hornbook, with the same 1.0.0 product version across
+  desktop installers, GitHub releases and Docker images.
+- Add a Microsoft Store MSIX distribution with Store-managed updates and
+  support for all nine interface languages. Local journals remain outside
+  the application package.
+- Use 1.0.0.0 for the Windows package version, preserving the product version
+  and reserving the fourth component for Microsoft Store.
+
 ## 0.9.9 — 2026-09-13
 
 - Return to the language-pair chooser through a visible Pairs link. Journals

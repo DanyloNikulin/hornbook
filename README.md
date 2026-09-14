@@ -20,16 +20,15 @@ through GitHub or any server you do not run yourself.
 
 This is a clean engine. It is **not** a fork of anyone's private lesson archive.
 
-> Hornbook 0.9 is the product preview: feature-complete enough for daily use,
-> with a hardening pass before 1.0. See [Status](#status).
+> Hornbook 1.0 is the first stable release. See [Status](#status) for distribution
+> and update details.
 
 ## Quick start
 
 1. **Install.** Download the installer for Windows, macOS or Linux from
-   [GitHub Releases](https://github.com/DanyloNikulin/hornbook/releases). Preview
-   builds are not code-signed yet: Windows shows a SmartScreen warning (More info →
-   Run anyway) and macOS asks you to allow the app in System Settings → Privacy &
-   Security.
+   [GitHub Releases](https://github.com/DanyloNikulin/hornbook/releases). Direct
+   Windows and macOS downloads are currently unsigned and may show operating-system
+   security warnings. The separate Microsoft Store distribution uses Store signing.
 2. **Open Hornbook.** It creates your journal at `~/Hornbook` from the demo journal
    (a Spanish and an Italian pair you can delete later) and stays in the tray while
    jobs run.
@@ -265,7 +264,7 @@ or with Docker, journal on a volume:
 
 ```bash
 docker run --init -p 8787:8787 -v hornbook-journal:/journal \
-  -e HORNBOOK_PASSWORD=change-me ghcr.io/danylonikulin/hornbook:0.9.3
+  -e HORNBOOK_PASSWORD=change-me ghcr.io/danylonikulin/hornbook:1.0.0
 ```
 
 The container runs as uid 1000. A named volume works without extra setup; if you
@@ -298,11 +297,14 @@ feed and a compiled background job. See [harness/README.md](harness/README.md).
 
 ## Status
 
-Hornbook 0.9 is the product preview. The whole workflow is there and used daily;
-what stands between it and 1.0 is distribution rather than code:
+Hornbook 1.0 is the first stable release, with one product version across desktop
+installers, GitHub releases and Docker images. The Microsoft Store package adds
+the required fourth component: 1.0.0.0.
 
-- **Signed installers.** Builds are unsigned until a Windows and an Apple
-  certificate are wired into the release workflow, hence the warnings above.
+Microsoft Store distribution has its own certification and publication step.
+Store-installed copies use Microsoft Store for signing and updates. Direct
+GitHub Windows and macOS installers remain unsigned until signing credentials
+are configured; see [docs/MICROSOFT-STORE.md](docs/MICROSOFT-STORE.md).
 
 Hardening landed in 0.9.7: destructive actions keep a recoverable copy in the
 journal's `_trash` folder, a damaged lesson file is named in the lesson list
@@ -310,9 +312,9 @@ instead of taking its pair down, and every stuck state has a documented way out
 in [docs/JOURNAL-RECOVERY.md](docs/JOURNAL-RECOVERY.md).
 
 Releases are automatic: a version bump merged into `main` publishes installers
-and Docker images. The app checks GitHub at launch and hourly, and installs
-updates after **Restart to update**; releases below 1.0 are marked as
-pre-releases. See
+and Docker images after the release checks pass. Direct-download copies check
+GitHub at launch and hourly, and install updates after **Restart to update**.
+Stable releases also update the Docker `latest` tag. See
 [CHANGELOG.md](CHANGELOG.md) for what changed and
 [docs/RELEASING.md](docs/RELEASING.md) for how a release is made.
 

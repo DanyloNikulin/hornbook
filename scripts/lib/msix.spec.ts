@@ -13,15 +13,17 @@ describe('MSIX package identity', () => {
     })).toThrow('must not be submitted');
   });
   it('reserves the fourth version component for Store', () => {
-    expect(msixVersion('0.9.9')).toBe('1.9.9.0');
-    expect(msixVersion('1.0.0')).toBe('2.0.0.0');
-    expect(msixVersion('65534.65535.65535')).toBe('65535.65535.65535.0');
-    for (const invalid of ['0.9.9-beta', '0.9.9.1', '65535.0.0', '65536.0.0', '0.65536.0', '0.0.65536', '01.2.3']) {
+    expect(msixVersion('1.0.0')).toBe('1.0.0.0');
+    expect(msixVersion('1.0.1')).toBe('1.0.1.0');
+    expect(msixVersion('1.1.0')).toBe('1.1.0.0');
+    expect(msixVersion('65535.65535.65535')).toBe('65535.65535.65535.0');
+    for (const invalid of ['0.9.9', '0.0.0', '1.0.0-beta', '1.0.0.1', '65536.0.0', '1.65536.0', '1.0.65536', '01.2.3']) {
       expect(() => msixVersion(invalid)).toThrow();
     }
   });
   it('escapes publisher metadata and declares a desktop application, without elevation or startup', () => {
-    const xml = msixManifest({ ...PREVIEW_IDENTITY, publisher: 'CN=Test & "Example"' }, '0.9.9', 'x64');
+    const xml = msixManifest({ ...PREVIEW_IDENTITY, publisher: 'CN=Test & "Example"' }, '1.0.0', 'x64');
+    expect(xml).toContain('Version="1.0.0.0"');
     expect(xml).toContain('CN=Test &amp; &quot;Example&quot;');
     expect(xml).toContain('Executable="app\\Hornbook.exe"');
     expect(xml).toContain('runFullTrust');

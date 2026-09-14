@@ -32,12 +32,11 @@ export function msixIdentity(preview: boolean, env: NodeJS.ProcessEnv): MsixIden
 
 export function msixVersion(version: string): string {
   const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(version);
-  if (!match || Number(match[1]) >= 65535 || match.slice(2).some((part) => Number(part) > 65535)) {
-    throw new Error('MSIX requires a release version with major at most 65534 and minor/patch at most 65535.');
+  if (!match || Number(match[1]) === 0 || match.slice(1).some((part) => Number(part) > 65535)) {
+    throw new Error('MSIX requires a release version with major from 1 to 65535 and minor/patch at most 65535.');
   }
-  // Store requires a nonzero major. Offset every release, including 1.x onward,
-  // so the transition out of 0.x never collides with or downgrades a package.
-  return `${Number(match[1]) + 1}.${match[2]}.${match[3]}.0`;
+  // Keep the product version unchanged; Store reserves the fourth component.
+  return `${version}.0`;
 }
 
 function xml(value: string): string {
