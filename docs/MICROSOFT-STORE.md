@@ -86,12 +86,16 @@ and reserve the app name. From Partner Center's Product identity, supply:
 
 Then run `npm run package:msix` without `--preview`. Missing identity values
 are an error when neither the saved identity nor a complete environment override
-is available; there is no fallback to the preview identity. A package version
-`0.9.9` becomes `1.9.9.0`: the MSIX major always equals the application major
-plus one, because Store forbids a zero major. Thus `1.0.0` becomes `2.0.0.0`,
-preserving upgrade order. The fourth part is reserved for Store. Increment the
-application version for a subsequent Store submission. Application majors above
-65534 and minor/patch values above 65535 are rejected.
+is available; there is no fallback to the preview identity. The package version
+preserves the application version: `1.0.0` becomes `1.0.0.0`, and `1.0.1`
+becomes `1.0.1.0`. The fourth part is reserved for Store. Increment the application
+version for a subsequent Store submission. A zero major, prerelease suffixes
+and components above 65535 are rejected.
+
+The initial 0.9.9 candidate used the older offset scheme and produced 1.9.9.0.
+On 2026-09-14 it was still held at Ready to publish, with publication not started.
+That candidate must be replaced, not published, before releasing 1.0.0.0 under
+this identity. Do not use a lower version to update any published package.
 
 For submission, use the **MSIX preview** Actions workflow in `store` mode from a
 reviewed revision, and upload its unsigned artifact to Partner Center. The

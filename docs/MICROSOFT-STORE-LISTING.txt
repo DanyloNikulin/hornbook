@@ -14,4 +14,4 @@ Lessons are stored locally as JSON and Markdown. You can read and edit existing 
 Choose how AI processing works
 Optional local transcription and lesson extraction use separately downloaded tools and models, including Whisper and Ollama. Downloads can be large, and performance depends on your computer and selected model. You can also connect a supported cloud provider using your own account or API key. Cloud processing sends the required material to that provider and may incur its charges. AI-generated lessons should be reviewed for accuracy.
 
-Hornbook is free and open source. This 0.9 release is a preview under active development. The interface supports English, German, Spanish, French, Italian, Dutch, Portuguese, Swedish and Ukrainian.
+Hornbook is free and open source. The interface supports English, German, Spanish, French, Italian, Dutch, Portuguese, Swedish and Ukrainian.
