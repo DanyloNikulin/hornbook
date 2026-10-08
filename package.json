@@ -102,7 +102,7 @@
     "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^22.20.1",
     "autoprefixer": "^10.6.1",
-    "axe-core": "^4.13.0",
+    "axe-core": "^4.14.0",
     "concurrently": "^9.2.1",
     "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
