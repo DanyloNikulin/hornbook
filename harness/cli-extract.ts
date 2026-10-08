@@ -93,21 +93,23 @@ async function takeQuiz(page: Page, quiz: QuizItem[], mode: 'right' | 'wrong') {
     } else {
       const text = mode === 'right' && q.answer_target ? q.answer_target : 'nope';
       await li.locator('textarea').fill(text);
-      if (!q.auto_check) {
-        await li.getByRole('button', { name: /Show model answer/i }).click();
-        const grade = mode === 'right' ? /Close enough/i : /Not this time/i;
-        await li.getByRole('button', { name: grade }).click();
-      }
     }
   }
+  // One Check grades choices and fill-ins and shows the model answer under
+  // each translation it cannot match itself; those wait for a self-grade
+  // before the score can be saved.
   const check = root.getByRole('button', { name: 'Check', exact: true });
   await check.waitFor({ state: 'visible' });
   const enabled = await check.isEnabled();
   await check.click();
-  await page.waitForTimeout(400);
-  const body = await root.innerText();
-  const score = body.match(/(\d+)\s*\/\s*(\d+)/);
-  return { n, enabled, score: score?.[0] ?? null };
+  const grades = root.getByRole('button', { name: mode === 'right' ? /Close enough/i : /Not this time/i });
+  const toGrade = await grades.count();
+  for (let i = 0; i < toGrade; i++) await grades.nth(i).click();
+  await root.getByRole('button', { name: /^Save score/i }).click();
+  const result = root.locator('.il-quiz-result');
+  await result.waitFor({ timeout: 5_000 });
+  const score = (await result.innerText()).match(/(\d+)\s*\/\s*(\d+)/);
+  return { n, enabled, score: score ? `${score[1]}/${score[2]}` : null };
 }
 
 async function walkLesson(
@@ -130,7 +132,7 @@ async function walkLesson(
     await page.locator('app-quiz').waitFor({ timeout: 15_000 });
 
     const wrong = await takeQuiz(page, quiz, 'wrong');
-    r.rec(`${kind}: Check enables after every item is answered`, wrong.enabled, `questions=${wrong.n}`);
+    r.rec(`${kind}: Check is available once every item is answered`, wrong.enabled, `questions=${wrong.n}`);
     r.rec(`${kind}: wrong answers score below perfect`, !!wrong.score && wrong.score !== `${wrong.n}/${wrong.n}`, wrong.score);
     await page.screenshot({ path: join(shots, 'quiz-wrong.png'), fullPage: true });
 
@@ -143,15 +145,15 @@ async function walkLesson(
     await page.goto(`${base}/es-en/flashcards?lesson=${slug}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
     const input = page.getByPlaceholder(/your answer/i);
     await input.waitFor({ timeout: 15_000 });
-    const front = (await page.locator('div.font-display.text-3xl').first().innerText()).trim();
+    const front = (await page.locator('.il-study-front').first().innerText()).trim();
     r.rec(`${kind}: typing input is ready for a generated card`, front.length > 0, `front=${front}`);
 
     await input.fill('zzzz-wrong');
     await page.getByRole('button', { name: /^Check\b/ }).first().click();
     await page.waitForTimeout(400);
-    const afterWrong = await page.locator('body').innerText();
-    r.rec(`${kind}: nonsense answer is Wrong`, /Wrong/.test(afterWrong), afterWrong.match(/Wrong|Exact|Close/)?.[0] ?? '');
-    const expected = afterWrong.match(/Correct:\s*(.+)/)?.[1]?.split('\n')[0]?.trim();
+    const afterWrong = await page.locator('.il-study-verdict').innerText();
+    r.rec(`${kind}: nonsense answer is Wrong`, /Wrong/.test(afterWrong), afterWrong);
+    const expected = (await page.locator('.il-study-correct').innerText()).trim();
     r.rec(`${kind}: shows the expected answer`, !!expected, expected ?? '');
 
     await page.getByRole('button', { name: /reset/i }).click();
@@ -159,12 +161,8 @@ async function walkLesson(
     await input.fill(expected ?? '');
     await page.getByRole('button', { name: /^Check\b/ }).first().click();
     await page.waitForTimeout(400);
-    const afterRight = await page.locator('body').innerText();
-    r.rec(
-      `${kind}: typing the expected answer is Exact or Close`,
-      /Exact|Close/.test(afterRight) && !/✘ Wrong/.test(afterRight),
-      afterRight.match(/Exact|Close|Wrong/)?.[0] ?? '',
-    );
+    const afterRight = await page.locator('.il-study-verdict').innerText();
+    r.rec(`${kind}: typing the expected answer is Exact or Close`, /Exact|Close/.test(afterRight), afterRight);
     await page.screenshot({ path: join(shots, 'cards.png'), fullPage: true });
   } finally {
     await context.close();
