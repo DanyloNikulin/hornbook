@@ -4,6 +4,28 @@ All notable changes to Hornbook.
 
 ## Unreleased
 
+## 1.0.1 — 2026-10-08
+
+- Hearing through OpenAI sends three-minute chunks instead of fifteen-minute
+  ones. gpt-4o-transcribe stops answering after about 2,000 tokens, so a busy
+  lesson chunk ended mid-word or came back looping one paragraph, and the
+  conspect was written from about half the lesson.
+- A chunk that gpt-4o-transcribe answers with far fewer words than a lesson
+  holds is heard again by whisper-1, and the longer answer is kept. Segments
+  Whisper makes up over silence or repeats in a loop are dropped. The job log
+  says when this happens.
+- A recording a fraction of a second longer than a whole number of chunks no
+  longer ends in an empty chunk that OpenAI rejects, failing the job.
+- Writing through Claude Code or Codex now reads the slides, as the API drivers
+  do. Grok and Kimi still skip them.
+- Update Angular to 21.2.25 (build tools 21.2.26), Electron to 44.7, the
+  OpenAI SDK to 7.30, the Anthropic SDK to 0.125, DOMPurify, the development
+  tools, and the Docker actions of the release workflow. This closes every
+  high and critical `npm audit` advisory, among them undici (which the OpenAI
+  SDK uses), piscina, proxy-addr and shell-quote. Ten moderate advisories
+  remain in build-only dependencies (Tailwind typography, electron-builder)
+  that have no compatible fix.
+
 ## 1.0.0 — 2026-09-14
 
 - First stable release of Hornbook, with the same 1.0.0 product version across

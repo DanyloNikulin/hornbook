@@ -2,7 +2,7 @@ import { mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildCliPrompt, cliCommand, cliFailureSummary, parseCliLesson, removeExtractDir } from './cli-extract.ts';
+import { CliExtractor, buildCliPrompt, cliCommand, cliFailureSummary, parseCliLesson, removeExtractDir } from './cli-extract.ts';
 
 const LESSON = {
   id: '2026-09-03-saludos',
@@ -84,6 +84,62 @@ describe('cliCommand', () => {
     expect(cliCommand('kimi', 'default', 'P', dir, {}).args).not.toContain('-m');
     expect(cliCommand('kimi', 'kimi-for-coding', 'P', dir, {}).args.slice(-2)).toEqual(['-m', 'kimi-for-coding']);
     expect(cliCommand('claude', 'sonnet', 'P', dir, {}).args.slice(-2)).toEqual(['--model', 'sonnet']);
+  });
+
+  const slides = [
+    { path: join(dir, 'slide-01.jpg'), jpeg: Buffer.from('first') },
+    { path: join(dir, 'slide-02.jpg'), jpeg: Buffer.from('second') },
+  ];
+
+  it('sends Claude Code the prompt and the slides as one stream-json user message', () => {
+    const claude = cliCommand('claude', 'sonnet', 'PROMPT', dir, {}, slides);
+    expect(claude.args).toEqual([
+      '-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose',
+      '--tools', '', '--permission-mode', 'dontAsk', '--model', 'sonnet',
+    ]);
+    expect(claude.stdin?.endsWith('\n')).toBe(true);
+    expect(JSON.parse(claude.stdin!)).toEqual({
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'PROMPT' },
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: Buffer.from('first').toString('base64') } },
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: Buffer.from('second').toString('base64') } },
+        ],
+      },
+    });
+  });
+
+  it('attaches each slide to Codex with -i, in order', () => {
+    const codex = cliCommand('codex', '-', 'PROMPT', dir, {}, slides);
+    expect(codex.stdin).toBe('PROMPT');
+    expect(codex.args.slice(-4)).toEqual(['-i', slides[0]!.path, '-i', slides[1]!.path]);
+  });
+
+  it('leaves Grok and Kimi without slides', () => {
+    expect(cliCommand('grok', '-', 'PROMPT', dir, {}, slides).args).not.toContain('-i');
+    expect(cliCommand('kimi', '-', 'PROMPT', dir, {}, slides).args.join(' ')).not.toContain('slide-01');
+  });
+});
+
+describe('CliExtractor.hasVision', () => {
+  it('reads slides through Claude Code and Codex only', async () => {
+    expect(await new CliExtractor('claude', '-').hasVision()).toBe(true);
+    expect(await new CliExtractor('codex', '-').hasVision()).toBe(true);
+    expect(await new CliExtractor('grok', '-').hasVision()).toBe(false);
+    expect(await new CliExtractor('kimi', '-').hasVision()).toBe(false);
+  });
+});
+
+describe('parseCliLesson with Claude Code stream-json', () => {
+  it('takes the answer from the closing result line', () => {
+    const lines = [
+      JSON.stringify({ type: 'system', subtype: 'init', tools: [], model: 'claude' }),
+      JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: JSON.stringify(LESSON) }] } }),
+      JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: JSON.stringify(LESSON) }),
+    ].join('\n');
+    expect(parseCliLesson(lines)).toMatchObject({ slug: 'saludos' });
   });
 });
 

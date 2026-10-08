@@ -663,7 +663,7 @@ export const PT = {
   'pipeline.place.cli': 'Este computador',
   'pipeline.place.cliNote': 'Um programa instalado aqui. O Hornbook chama o whisper.cpp.',
   'pipeline.place.cliExtractNote':
-    'Uma CLI de programação com sessão iniciada neste computador. O Hornbook não guarda chaves. Os diapositivos são ignorados.',
+    'Uma CLI de programação com sessão iniciada neste computador. O Hornbook não guarda chaves. O Claude Code e o Codex leem os diapositivos; o Grok e o Kimi ignoram-nos.',
   'pipeline.whichCli': 'Qual CLI?',
   'pipeline.service.claude-cli': 'Claude Code',
   'pipeline.service.codex-cli': 'Codex',

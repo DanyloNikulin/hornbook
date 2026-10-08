@@ -672,7 +672,7 @@ export const DE = {
   'pipeline.place.cli': 'Dieser Computer',
   'pipeline.place.cliNote': 'Ein hier installiertes Programm. Hornbook ruft whisper.cpp auf.',
   'pipeline.place.cliExtractNote':
-    'Eine Programmier-CLI mit bestehender Anmeldung auf diesem Computer. Hornbook speichert keinen Schlüssel. Folien werden übersprungen.',
+    'Eine Programmier-CLI mit bestehender Anmeldung auf diesem Computer. Hornbook speichert keinen Schlüssel. Claude Code und Codex lesen die Folien, Grok und Kimi überspringen sie.',
   'pipeline.whichCli': 'Welche CLI?',
   'pipeline.service.claude-cli': 'Claude Code',
   'pipeline.service.codex-cli': 'Codex',

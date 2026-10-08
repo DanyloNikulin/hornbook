@@ -601,7 +601,7 @@ export const IT = {
   'pipeline.place.cli': 'Questo computer',
   'pipeline.place.cliNote': 'Un programma installato qui. Hornbook chiama whisper.cpp.',
   'pipeline.place.cliExtractNote':
-    'Una CLI di coding già autenticata su questo computer. Hornbook non salva chiavi. Le diapositive si saltano.',
+    'Una CLI di coding già autenticata su questo computer. Hornbook non salva chiavi. Claude Code e Codex leggono le diapositive; Grok e Kimi le saltano.',
   'pipeline.whichCli': 'Quale CLI?',
   'pipeline.service.claude-cli': 'Claude Code',
   'pipeline.service.codex-cli': 'Codex',

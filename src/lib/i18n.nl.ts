@@ -666,7 +666,7 @@ export const NL = {
   'pipeline.place.cli': 'Deze computer',
   'pipeline.place.cliNote': 'Een hier geïnstalleerd programma. Hornbook roept whisper.cpp aan.',
   'pipeline.place.cliExtractNote':
-    'Een programmeer-CLI die al op deze computer is aangemeld. Hornbook slaat geen sleutel op. Dia’s worden overgeslagen.',
+    'Een programmeer-CLI die al op deze computer is aangemeld. Hornbook slaat geen sleutel op. Claude Code en Codex lezen de dia’s; Grok en Kimi slaan ze over.',
   'pipeline.whichCli': 'Welke CLI?',
   'pipeline.service.claude-cli': 'Claude Code',
   'pipeline.service.codex-cli': 'Codex',

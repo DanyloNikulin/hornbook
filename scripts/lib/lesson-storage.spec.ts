@@ -77,7 +77,10 @@ it('the JSON pipeline writes the same identities to raw files, API, derived data
   expect(cards.some((card: { id: string }) => card.id.startsWith(raw.vocabulary[0].id))).toBe(true);
   const exported = store.exportSection('es-en', true);
   expect(readSectionArchive(exported.data).lessons[0]).toEqual(raw);
-});
+  // A tsx child process starts in about a second alone, but took 6–7 s while
+  // the whole suite ran in parallel on Windows; the other subprocess specs
+  // allow 15–20 s for the same reason.
+}, 20_000);
 
 it('rejects inconsistent stored IDs and explicitly repairs lesson files and progress together', () => {
   const store = new FolderStore(root);

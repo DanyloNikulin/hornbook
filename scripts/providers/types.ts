@@ -4,7 +4,11 @@ export interface Transcriber {
   readonly driver: string;
   /** Container ffmpeg writes for each chunk this transcriber reads (lib/audio-chunk.ts). */
   readonly chunkFormat: ChunkFormat;
-  transcribe(audioPath: string, hint: string): Promise<string>;
+  /** Seconds of the lesson per request, and how far each chunk runs into the next. */
+  readonly chunkSeconds: number;
+  readonly overlapSeconds: number;
+  /** `seconds` is the chunk's length, for telling a quiet chunk from one whose speech was dropped. */
+  transcribe(audioPath: string, hint: string, seconds: number): Promise<string>;
 }
 
 export type ExtractMessagePart =

@@ -4,10 +4,14 @@
 // The CLIs are interactive coding agents; each is run headless the way it
 // takes a one-shot prompt, and one JSON object is parsed out of the answer.
 // They have no tool-call or structured-output channel, so the lesson JSON
-// Schema travels inside the prompt. Images are not sent: slides are skipped.
+// Schema travels inside the prompt. Claude Code and Codex read the slides;
+// Grok and Kimi have no headless way to take an image, so they skip them.
 //
-//   claude -p     prompt on stdin; --output-format json wraps the answer in {result}
-//   codex exec    prompt on stdin; the last message is also written to a file (-o)
+//   claude -p     prompt on stdin; --output-format json wraps the answer in {result}.
+//                 With slides the prompt and the images go in as one stream-json
+//                 user message, and the answer is the last line, {type:"result"}
+//   codex exec    prompt on stdin; the last message is also written to a file (-o);
+//                 each slide is attached with -i
 //   grok          --prompt-file; --output-format json wraps the answer in {text}
 //   kimi -p       ignores stdin and takes the prompt as an argument, which
 //                 Windows caps at 32k characters, so it is asked to read
@@ -50,6 +54,15 @@ export interface CliCommand {
   answerFile?: string;
 }
 
+/** A slide frame saved into the work folder: Codex takes the path, Claude Code the bytes. */
+export interface CliImage {
+  path: string;
+  jpeg: Buffer;
+}
+
+/** The CLIs that take images when run headless. */
+const READS_IMAGES: readonly CodingCliKind[] = ['claude', 'codex'];
+
 export class CliExtractor implements Extractor {
   readonly driver: (typeof DRIVER)[CodingCliKind];
   timeoutMs = 8 * 60 * 1000;
@@ -62,7 +75,7 @@ export class CliExtractor implements Extractor {
   }
 
   hasVision(): Promise<boolean> {
-    return Promise.resolve(false);
+    return Promise.resolve(READS_IMAGES.includes(this.kind));
   }
 
   async extract(req: ExtractRequest): Promise<unknown> {
@@ -70,9 +83,18 @@ export class CliExtractor implements Extractor {
     const prompt = buildCliPrompt(req);
     const dir = mkdtempSync(join(tmpdir(), 'hornbook-cli-extract-'));
     writeFileSync(join(dir, 'prompt.txt'), prompt, 'utf8');
+    const images: CliImage[] = [];
+    if (READS_IMAGES.includes(this.kind)) {
+      for (const part of req.userParts) {
+        if (part.type !== 'image') continue;
+        const path = join(dir, `slide-${String(images.length + 1).padStart(2, '0')}.jpg`);
+        writeFileSync(path, part.imageJpeg);
+        images.push({ path, jpeg: part.imageJpeg });
+      }
+    }
     let retained = false;
     try {
-      const cmd = cliCommand(this.kind, this.model, prompt, dir);
+      const cmd = cliCommand(this.kind, this.model, prompt, dir, process.env, images);
       const bin = resolveCli(cmd.bin, process.env);
       if (!bin) throw new Error(missingCliMessage(this.kind, cmd.bin));
       const { code, out, err } = await runProcess(bin, cmd.args, cmd.stdin, req.timeoutMs ?? this.timeoutMs, dir, req.signal);
@@ -116,22 +138,31 @@ export function buildCliPrompt(req: ExtractRequest): string {
   ].join('\n');
 }
 
-/** What to run for one CLI. `dir` holds prompt.txt with the full prompt. */
+/**
+ * What to run for one CLI. `dir` holds prompt.txt with the full prompt.
+ * `images` are the slides, in order; only Claude Code and Codex get them.
+ */
 export function cliCommand(
   kind: CodingCliKind,
   model: string,
   prompt: string,
   dir: string,
   env: NodeJS.ProcessEnv = process.env,
+  images: readonly CliImage[] = [],
 ): CliCommand {
   const bin = env[CLI_BIN_ENV[kind]]?.trim() || kind;
   const name = model.trim();
   const named = name && name !== '-' && name !== 'default' ? name : undefined;
   const promptFile = join(dir, 'prompt.txt');
   if (kind === 'claude') {
-    const args = ['-p', '--output-format', 'json', '--tools', '', '--permission-mode', 'dontAsk'];
+    // A plain-text prompt cannot carry an image; a stream-json user message
+    // can, and stream-json output then requires --verbose.
+    const format = images.length
+      ? ['--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose']
+      : ['--output-format', 'json'];
+    const args = ['-p', ...format, '--tools', '', '--permission-mode', 'dontAsk'];
     if (named) args.push('--model', named);
-    return { bin, args, stdin: prompt };
+    return { bin, args, stdin: images.length ? claudeUserMessage(prompt, images) : prompt };
   }
   if (kind === 'codex') {
     // `codex exec` is already non-interactive; it rejects the approval flag
@@ -139,6 +170,7 @@ export function cliCommand(
     const answerFile = join(dir, 'answer.txt');
     const args = ['exec', '--skip-git-repo-check', '--sandbox', 'read-only', '-o', answerFile];
     if (named) args.push('-m', named);
+    for (const image of images) args.push('-i', image.path);
     return { bin, args, stdin: prompt, answerFile };
   }
   if (kind === 'grok') {
@@ -168,6 +200,18 @@ export function cliCommand(
   ];
   if (named) args.push('-m', named);
   return { bin, args };
+}
+
+/** One stream-json line: the prompt, then each slide as a base64 JPEG block. */
+export function claudeUserMessage(prompt: string, images: readonly CliImage[]): string {
+  const content = [
+    { type: 'text', text: prompt },
+    ...images.map((image) => ({
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/jpeg', data: image.jpeg.toString('base64') },
+    })),
+  ];
+  return `${JSON.stringify({ type: 'user', message: { role: 'user', content } })}\n`;
 }
 
 export function missingCliMessage(kind: CodingCliKind, bin: string): string {
