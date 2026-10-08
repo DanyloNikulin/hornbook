@@ -265,7 +265,7 @@ or with Docker, journal on a volume:
 
 ```bash
 docker run --init -p 8787:8787 -v hornbook-journal:/journal \
-  -e HORNBOOK_PASSWORD=change-me ghcr.io/danylonikulin/hornbook:1.0.0
+  -e HORNBOOK_PASSWORD=change-me ghcr.io/danylonikulin/hornbook:1.0.1
 ```
 
 The container runs as uid 1000. A named volume works without extra setup; if you
