@@ -664,7 +664,7 @@ export const ES = {
   'pipeline.place.cli': 'Este equipo',
   'pipeline.place.cliNote': 'Un programa instalado aquí. Hornbook ejecuta whisper.cpp.',
   'pipeline.place.cliExtractNote':
-    'Una CLI de programación con sesión iniciada en este equipo. Hornbook no guarda claves. Se omiten las diapositivas.',
+    'Una CLI de programación con sesión iniciada en este equipo. Hornbook no guarda claves. Claude Code y Codex leen las diapositivas; Grok y Kimi las omiten.',
   'pipeline.whichCli': '¿Qué CLI?',
   'pipeline.service.claude-cli': 'Claude Code',
   'pipeline.service.codex-cli': 'Codex',

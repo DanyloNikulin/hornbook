@@ -669,7 +669,7 @@ export const FR = {
   'pipeline.place.cli': 'Cet ordinateur',
   'pipeline.place.cliNote': 'Un programme installé ici. Hornbook appelle whisper.cpp.',
   'pipeline.place.cliExtractNote':
-    'Un CLI de programmation déjà connecté sur cet ordinateur. Hornbook ne stocke aucune clé. Les diapositives sont ignorées.',
+    'Un CLI de programmation déjà connecté sur cet ordinateur. Hornbook ne stocke aucune clé. Claude Code et Codex lisent les diapositives ; Grok et Kimi les ignorent.',
   'pipeline.whichCli': 'Quel CLI ?',
   'pipeline.service.claude-cli': 'Claude Code',
   'pipeline.service.codex-cli': 'Codex',

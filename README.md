@@ -123,7 +123,8 @@ In Application settings: hearing = this computer (`WHISPER_BIN` / `WHISPER_MODEL
 **Writing through a coding assistant.** If Claude Code, Codex, Grok or Kimi Code
 is installed and signed in on this computer, set writing = this computer and pick
 it. Hornbook runs the CLI headless with the prompt and stores no key; the model
-`-` means whatever that CLI is set to. Slides are skipped on this path. Application
+`-` means whatever that CLI is set to. Claude Code and Codex read the slides; Grok
+and Kimi have no headless way to take an image, so they skip them. Application
 settings lists the assistants with their versions and updates each one with its
 own updater, which matters when a model starts refusing an older CLI.
 `npm run harness:cli` runs the fixture through every CLI it finds.

@@ -664,7 +664,7 @@ export const SV = {
   'pipeline.place.cli': 'Den här datorn',
   'pipeline.place.cliNote': 'Ett program installerat här. Hornbook anropar whisper.cpp.',
   'pipeline.place.cliExtractNote':
-    'Ett kod-CLI som redan är inloggat på den här datorn. Hornbook sparar ingen nyckel. Bilder hoppas över.',
+    'Ett kod-CLI som redan är inloggat på den här datorn. Hornbook sparar ingen nyckel. Claude Code och Codex läser bilderna, Grok och Kimi hoppar över dem.',
   'pipeline.whichCli': 'Vilket CLI?',
   'pipeline.service.claude-cli': 'Claude Code',
   'pipeline.service.codex-cli': 'Codex',

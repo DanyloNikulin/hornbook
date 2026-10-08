@@ -657,7 +657,7 @@ export const UK = {
   'pipeline.place.cli': 'Цей комп’ютер',
   'pipeline.place.cliNote': 'Програма, встановлена тут. Hornbook викликає whisper.cpp.',
   'pipeline.place.cliExtractNote':
-    'CLI для програмування, у якій уже виконано вхід на цьому комп’ютері. Hornbook не зберігає ключів. Слайди пропускаються.',
+    'CLI для програмування, у якій уже виконано вхід на цьому комп’ютері. Hornbook не зберігає ключів. Claude Code і Codex читають слайди, Grok і Kimi їх пропускають.',
   'pipeline.whichCli': 'Яка CLI?',
   'pipeline.service.claude-cli': 'Claude Code',
   'pipeline.service.codex-cli': 'Codex',

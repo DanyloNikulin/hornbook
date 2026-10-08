@@ -24,10 +24,13 @@ export class WhisperCliTranscriber implements Transcriber {
   readonly driver = 'whisper-cli';
   /** whisper.cpp reads PCM WAV; it cannot open the opus chunks OpenAI gets. */
   readonly chunkFormat = 'wav';
+  /** whisper.cpp decodes in 30 s windows with no cap on the answer, so long chunks are fine. */
+  readonly chunkSeconds = 15 * 60;
+  readonly overlapSeconds = 30;
 
   constructor(private readonly model: string) {}
 
-  async transcribe(audioPath: string, _hint: string): Promise<string> {
+  async transcribe(audioPath: string, _hint: string, _seconds: number): Promise<string> {
     const bin = process.env['WHISPER_BIN'] ?? 'whisper-cli';
     const modelPath = whisperModelPath(this.model, process.env);
     const outDir = mkdtempSync(join(tmpdir(), 'hornbook-whisper-'));

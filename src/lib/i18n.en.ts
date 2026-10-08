@@ -615,7 +615,7 @@ export const EN = {
   'pipeline.place.cli': 'This computer',
   'pipeline.place.cliNote': 'A program installed here. Hornbook calls whisper.cpp.',
   'pipeline.place.cliExtractNote':
-    'A coding CLI already signed in on this computer. Hornbook stores no key. Slides are skipped.',
+    'A coding CLI already signed in on this computer. Hornbook stores no key. Claude Code and Codex read the slides; Grok and Kimi skip them.',
   'pipeline.whichCli': 'Which CLI?',
   'pipeline.service.claude-cli': 'Claude Code',
   'pipeline.service.codex-cli': 'Codex',
