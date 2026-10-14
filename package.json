@@ -83,7 +83,7 @@
     "electron-updater": "^6.8.9",
     "fflate": "^0.8.3",
     "fuse.js": "^7.3.0",
-    "marked": "^18.0.4",
+    "marked": "^18.1.0",
     "openai": "^7.15.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
