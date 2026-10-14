@@ -48,7 +48,7 @@ jobs:
           if (-not $info) { throw 'Missing MSIX build info' }
           node node_modules/tsx/dist/cli.mjs harness/msix.ts $info.FullName
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: hornbook-msix-${{ inputs.mode }}-x64
           if-no-files-found: error
@@ -56,7 +56,7 @@ jobs:
             release/msix/**/*.msix
             release/msix/**/AppxManifest.xml
             release/msix/**/build-info.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: msix-smoke
